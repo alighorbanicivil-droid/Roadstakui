@@ -626,6 +626,115 @@ th { background: #0b2a43; color: #e8eef3; font-weight: 700; border-bottom: 2px s
 .hm-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #17794a; margin-inline-end: 5px; }
 .hm-legend { display: flex; gap: 14px; margin-top: 8px; font-size: .7rem; color: var(--muted); align-items: center; }
 @media (prefers-color-scheme: dark) { .hm-step svg { stroke: #e8eef3; } .nav-logo { color: var(--muted); } }
+
+/* ===== لیست عمودی پروژه‌ها ===== */
+.pj-card { position: relative; display: block; margin: 0 0 14px; padding: 14px 16px 14px; border-radius: 20px; color: #fff; cursor: pointer; background: #0b2a43 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='320' height='200' viewBox='0 0 320 200'%3E%3Cg fill='none' stroke='%237fa6c4' stroke-opacity='.2'%3E%3Cpath d='M-20 150C40 110 80 170 140 140S250 90 340 120'/%3E%3Cpath d='M-20 128C40 90 82 150 140 120S250 70 340 98'/%3E%3Cpath d='M-20 106C42 72 84 130 140 100S250 52 340 76'/%3E%3Cpath d='M-20 84C44 54 86 110 140 80S250 34 340 54'/%3E%3C/g%3E%3C/svg%3E") center/cover no-repeat; box-shadow: 0 10px 22px rgba(11,42,67,.2); }
+.pj-card.open { box-shadow: 0 0 0 2px var(--gold), 0 10px 22px rgba(11,42,67,.25); }
+.pj-card:active { transform: scale(.995); }
+.pj-top { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.pj-top h3 { flex: 1; margin: 0; font-size: 1.1rem; font-weight: 800; order: -1; min-width: 0; overflow-wrap: anywhere; }
+.pj-badge { background: var(--gold); color: #1a1200; border-radius: 99px; padding: 1px 12px; font-size: .78rem; font-weight: 800; }
+.pj-ic { width: 38px; height: 38px; border-radius: 50%; border: 0; background: rgba(255,255,255,.1); color: #e8eef3; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; }
+.pj-ic svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.pj-more { position: absolute; left: 12px; bottom: 10px; }
+.pj-streets { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.pj-row { display: flex; align-items: center; gap: 8px; font-size: .86rem; color: #c9dae7; margin: 5px 0; padding-inline-end: 44px; }
+.pj-row svg { width: 18px; height: 18px; flex: none; stroke: #9db8cd; fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.pj-row b { color: #fff; }
+.pj-fab { position: fixed; z-index: 25; inset-inline-start: 18px; bottom: calc(var(--nav-h) + env(safe-area-inset-bottom) + 24px); width: 56px; height: 56px; border-radius: 50%; background: var(--gold); display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 18px rgba(11,42,67,.35); }
+.pj-fab svg { width: 28px; height: 28px; stroke: #0b2a43; fill: none; stroke-width: 2.2; stroke-linecap: round; }
+.pj-menu { display: flex; flex-direction: column; gap: 8px; }
+#view:has(.pj-card) { padding-bottom: 70px; }
+@media print, screen {
+  #printArea .rpl-dsf { display: flex; gap: 8pt; align-items: flex-start; }
+  #printArea .rpl-dsf-t { flex: 1; min-width: 0; }
+  #printArea .rpl-dsq { flex: none; width: 38mm; text-align: center; }
+  #printArea .rpl-dsq svg { display: block; width: 38mm; height: 38mm; }
+  #printArea .rpl-dsq span { font-size: 5.8pt; }
+}
+
+/* ===== پیاده: سبز شدن هر میخ، فهرست ===== */
+.rd-card[data-act] { cursor: pointer; }
+.rd-card.staked { background: var(--ok-soft); }
+.rd-card.staked .rd-v { opacity: .82; }
+.stk-tick { display: inline-block; margin-inline-start: 4px; padding: 0 8px; border-radius: 99px; background: var(--ok); color: #fff; font-size: .72rem; font-weight: 700; vertical-align: 2px; }
+.stk-list { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+.stk-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; min-height: 52px; padding: 6px 14px; border: 1px solid var(--line); border-radius: 14px; background: var(--card); color: var(--ink); font: inherit; font-weight: 700; cursor: pointer; }
+.stk-row.done { background: var(--ok-soft); border-color: var(--ok); }
+.stk-row.part { background: var(--warn-soft); border-color: var(--gold); }
+.stk-bx { display: inline-flex; gap: 6px; }
+.stk-bx i { width: 28px; height: 28px; border-radius: 8px; border: 1.5px solid var(--line); display: inline-flex; align-items: center; justify-content: center; font-style: normal; font-size: .85rem; background: var(--card); color: #fff; }
+.stk-bx i.on { background: var(--ok); border-color: var(--ok); }
+.pj-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 2px 0 8px; }
+.pj-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; border-top: 1px solid rgba(255,255,255,.16); padding-top: 8px; margin-bottom: 6px; padding-inline-end: 44px; }
+.pj-stats small { display: block; font-size: .68rem; color: #9db8cd; font-weight: 400; }
+.pj-stats b { font-family: var(--mono); font-size: 1.05rem; }
+.pj-stats b small { display: inline; }
+.pr-head { cursor: default; padding-bottom: 14px; }
+.pr-head .pj-stats { padding-inline-end: 0; }
+.pr-head .btn { background: transparent; color: #e8eef3; border-color: #4d7191; }
+.pr-head .btn.primary { background: var(--gold); border-color: var(--gold); color: #1a1200; }
+
+/* ===== کم‌کردن شلوغی ===== */
+details.more { margin: 2px 0 8px; }
+details.more > summary { cursor: pointer; font-size: .78rem; color: var(--primary); font-weight: 700; list-style: none; padding: 2px 0; }
+details.more > summary::-webkit-details-marker { display: none; }
+details.more > summary::before { content: "ⓘ "; }
+details.more[open] > summary { margin-bottom: 2px; }
+.card p.muted.small { font-size: .78rem; line-height: 1.7; }
+.card + .card { margin-top: 14px; }
+.card { margin-bottom: 14px; }
+.row { gap: 10px; }
+
+/* ===== هماهنگی نهایی رنگ و ظاهر ===== */
+:root {
+  --left: #1769aa; --left-soft: #e8f1f9; --right: #0f6b5e; --right-soft: #e6f3f0; --mid: #8a5a00; --mid-soft: #fdf3da;
+  --axis: #44566a; --axis-soft: #e9eef3; --warn: #6e4a00; --warn-soft: #fdf3da; --ok: #17794a; --ok-soft: #e3f3ea;
+  --err: #a82020; --err-soft: #fbeaea;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --left: #6aaaf0; --left-soft: #15283b; --right: #5fd0bd; --right-soft: #12302b; --mid: #e8c46a; --mid-soft: #33290f; --ok: #5fd08f; --ok-soft: #123021; --err: #ff9b92; --err-soft: #3a1c1c; --warn: #e8c46a; --warn-soft: #33290f; }
+}
+.btn.primary { background: var(--navy); border: 1px solid var(--gold); color: #fff; box-shadow: 0 3px 8px rgba(11,42,67,.28); }
+.btn.primary:active { background: #12395a; }
+#top .btn.primary { background: var(--gold); border-color: var(--gold); color: #1a1200; box-shadow: none; }
+.hm-open, .pr-head .btn.primary { background: var(--gold); border-color: var(--gold); color: #1a1200; }
+.stake-layer { background: var(--axis-soft); color: var(--ink); border: 1px solid var(--line); border-inline-start: 4px solid var(--gold); border-radius: 12px; }
+.stake-layer.on { background: var(--warn-soft); }
+.seg .btn.primary { background: var(--navy); }
+.chip { letter-spacing: 0; }
+a { color: var(--primary); }
+.msg.info { background: var(--axis-soft); border-color: var(--line); color: var(--ink); border-inline-start: 4px solid var(--primary); }
+.msg.err { border-inline-start: 4px solid var(--err); }
+.msg.ok { border-inline-start: 4px solid var(--ok); }
+.credit { color: var(--muted); }
+#modal .box { border-radius: 20px; border-top: 4px solid var(--gold); }
+.card-d > summary { font-weight: 700; }
+select.inp, .inp, .cell { background: var(--card); }
+.rd-card { border-width: 2px; border-radius: 18px; }
+@media (prefers-color-scheme: dark) {
+  .btn.primary { background: #123a5a; }
+  #menuSheet, .pj-card, .hm-card { color: #fff; }
+  th { background: #123a5a; color: #e8eef3; }
+  body { background-image: none; background: var(--bg); }
+  .card { box-shadow: none; }
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #0c141c; --card: #151f29; --ink: #edf2f6; --muted: #9db0c0; --line: #2c3c4b; --primary: #6ab4e8; --primary-soft: #14313f; --axis: #b0bec5; --axis-soft: #1b2833; --gold-ink: #e8c46a; --err-soft: #3a1c1c; --warn-soft: #33290f; }
+  .inp, select.inp, .cell { color: var(--ink); border-color: #3b5063; }
+  .btn { background: var(--card); color: var(--ink); border-color: #3b5063; }
+  .btn.danger { color: var(--err); }
+  .tbl-wrap { background: var(--card); }
+  .stake-layer.on { background: var(--warn-soft); }
+  #nav { background: var(--card); box-shadow: none; border-top: 1px solid var(--line); }
+  #nav a { color: var(--muted); }
+  #nav a.on { color: var(--ink); }
+  .nav-logo svg { box-shadow: 0 0 0 6px var(--bg), 0 8px 16px rgba(0,0,0,.5); }
+  .hm-step svg { stroke: #e8eef3; }
+  h2::after { background: var(--gold); }
+  .msg.warn { color: var(--warn); }
+  .msg.info { background: var(--axis-soft); }
+}
 </style>
 </head>
 <body>
@@ -3033,7 +3142,7 @@ th { background: #0b2a43; color: #e8eef3; font-weight: 700; border-bottom: 2px s
           o.locks = s.locks.filter(function (r) { return r && Array.isArray(r.files); }).map(function (r) {
             return { id: String(r.id || C.uid('lk')), v: num(r.v) === 2 ? 2 : 1, no: Math.max(1, Math.round(num(r.no) || 1)), date: str(r.date), project: str(r.project), street: str(r.street), prev: hx(r.prev), hash: hx(r.hash), by: str(r.by), note: str(r.note),
               files: r.files.filter(function (f) { return f && typeof f === 'object'; }).map(function (f) { return { id: str(f.id), name: str(f.name), size: num(f.size) > 0 ? Math.round(num(f.size)) : 0, sha256: hx(f.sha256), csha256: hx(f.csha256), n: Math.max(0, Math.round(num(f.n) || 0)), layer: str(f.layer) }; }),
-              receipts: Array.isArray(r.receipts) ? r.receipts.slice(0, 50).map(function (x) { return { date: str(x && x.date), to: str(x && x.to), note: str(x && x.note), what: str(x && x.what).slice(0, 200), ack: str(x && x.ack) }; }) : [] };
+              receipts: Array.isArray(r.receipts) ? r.receipts.slice(0, 50).map(function (x) { return { date: str(x && x.date), to: str(x && x.to), note: str(x && x.note), what: str(x && x.what).slice(0, 200), ack: str(x && x.ack), del: str(x && x.del) }; }) : [] };
           });
         }
         if (Array.isArray(s.pdfs)) {
@@ -3044,7 +3153,7 @@ th { background: #0b2a43; color: #e8eef3; font-weight: 700; border-bottom: 2px s
         }
         if (s.staked && typeof s.staked === 'object' && !Array.isArray(s.staked)) {
           o.staked = {};
-          Object.keys(s.staked).forEach(function (k) { if (Array.isArray(s.staked[k])) o.staked[k] = s.staked[k].map(String).filter(function (v) { return /^-?\d+$/.test(v); }); });
+          Object.keys(s.staked).forEach(function (k) { if (Array.isArray(s.staked[k])) o.staked[k] = s.staked[k].map(String).filter(function (v) { return /^-?\d+(:[A-Za-z0-9_]+)?$/.test(v); }); });
         }
         return o;
       });
@@ -3061,6 +3170,7 @@ th { background: #0b2a43; color: #e8eef3; font-weight: 700; border-bottom: 2px s
     base.importTemplates = normTpl(p.importTemplates, 'points').filter(function (t) { return t.roles; });
     if (Array.isArray(p.signers)) base.signers = p.signers.slice(0, 6).map(function (x) { return { title: str(x && x.title), name: str(x && x.name) }; });
     base.signOn = p.signOn !== false;
+    base.stakeStep = typeof p.stakeStep === 'string' ? p.stakeStep.slice(0, 12) : '';
     if (Array.isArray(p.machines)) base.machines = p.machines.filter(function (m) { return m && num(m.cap) !== null && num(m.cap) > 0; }).map(function (m) { return { id: String(m.id || C.uid('mc')), name: str(m.name), label: str(m.label), cap: num(m.cap), icon: str(m.icon) || 'generic' }; });
     if (Array.isArray(p.vehicleTypes)) base.vehicleTypes = p.vehicleTypes.map(function (n) { return String(n).trim(); }).filter(function (n, i, a) { return n && a.indexOf(n) === i; });
     base.exportTemplates = { points: normTpl(p.exportTemplates && p.exportTemplates.points, 'points').filter(function (t) { return t.cols; }), survey: normTpl(p.exportTemplates && p.exportTemplates.survey, 'survey').filter(function (t) { return t.cols; }) };
@@ -3182,6 +3292,222 @@ th { background: #0b2a43; color: #e8eef3; font-weight: 700; border-bottom: 2px s
 });
 </script>
   <script>/*!
+ * RoadQR — سازنده‌ی QR Code (حالت بایت، سطح تصحیح L/M/Q/H، نسخه‌های ۱ تا ۴۰)
+ * پیاده‌سازی مستقل بر پایه‌ی استاندارد ISO/IEC 18004؛ بدون وابستگی بیرونی.
+ */
+(function (root, factory) {
+  if (typeof module === 'object' && module.exports) module.exports = factory();
+  else root.RoadQR = factory();
+})(typeof self !== 'undefined' ? self : this, function () {
+  'use strict';
+  const ECL = { L: 0, M: 1, Q: 2, H: 3 };
+  const FMT_BITS = [1, 0, 3, 2];
+  const ECC_PER_BLOCK = [
+    [-1, 7, 10, 15, 20, 26, 18, 20, 24, 30, 18, 20, 24, 26, 30, 22, 24, 28, 30, 28, 28, 28, 28, 30, 30, 26, 28, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30],
+    [-1, 10, 16, 26, 18, 24, 16, 18, 22, 22, 26, 30, 22, 22, 24, 24, 28, 28, 26, 26, 26, 26, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28],
+    [-1, 13, 22, 18, 26, 18, 24, 18, 22, 20, 24, 28, 26, 24, 20, 30, 24, 28, 28, 26, 30, 28, 30, 30, 30, 30, 28, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30],
+    [-1, 17, 28, 22, 16, 22, 28, 26, 26, 24, 28, 24, 28, 22, 24, 24, 30, 28, 28, 26, 28, 30, 24, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30]
+  ];
+  const NUM_BLOCKS = [
+    [-1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 4, 4, 4, 4, 4, 6, 6, 6, 6, 7, 8, 8, 9, 9, 10, 12, 12, 12, 13, 14, 15, 16, 17, 18, 19, 19, 20, 21, 22, 24, 25],
+    [-1, 1, 1, 1, 2, 2, 4, 4, 4, 5, 5, 5, 8, 9, 9, 10, 10, 11, 13, 14, 16, 17, 17, 18, 20, 21, 23, 25, 26, 28, 29, 31, 33, 35, 37, 38, 40, 43, 45, 47, 49],
+    [-1, 1, 1, 2, 2, 4, 4, 6, 6, 8, 8, 8, 10, 12, 16, 12, 17, 16, 18, 21, 20, 23, 23, 25, 27, 29, 34, 34, 35, 38, 40, 43, 45, 48, 51, 53, 56, 59, 62, 65, 68],
+    [-1, 1, 1, 2, 4, 4, 4, 5, 6, 8, 8, 11, 11, 16, 16, 18, 16, 19, 21, 25, 25, 25, 34, 30, 32, 35, 37, 40, 42, 45, 48, 51, 54, 57, 60, 63, 66, 70, 74, 77, 81]
+  ];
+
+  function rawModules(ver) {
+    let r = (16 * ver + 128) * ver + 64;
+    if (ver >= 2) {
+      const na = Math.floor(ver / 7) + 2;
+      r -= (25 * na - 10) * na - 55;
+      if (ver >= 7) r -= 36;
+    }
+    return r;
+  }
+  function dataCodewords(ver, ecl) {
+    return Math.floor(rawModules(ver) / 8) - ECC_PER_BLOCK[ecl][ver] * NUM_BLOCKS[ecl][ver];
+  }
+
+  // ---- Reed-Solomon روی GF(256) با چندجمله‌ای x^8+x^4+x^3+x^2+1 ----
+  function gfMul(x, y) {
+    let z = 0;
+    for (let i = 7; i >= 0; i--) { z = (z << 1) ^ ((z >>> 7) * 0x11D); z ^= ((y >>> i) & 1) * x; }
+    return z;
+  }
+  function rsDivisor(deg) {
+    const r = []; for (let i = 0; i < deg - 1; i++) r.push(0); r.push(1);
+    let root = 1;
+    for (let i = 0; i < deg; i++) {
+      for (let j = 0; j < r.length; j++) { r[j] = gfMul(r[j], root); if (j + 1 < r.length) r[j] ^= r[j + 1]; }
+      root = gfMul(root, 2);
+    }
+    return r;
+  }
+  function rsRemainder(data, div) {
+    const r = div.map(function () { return 0; });
+    data.forEach(function (b) {
+      const f = b ^ r.shift(); r.push(0);
+      div.forEach(function (c, i) { r[i] ^= gfMul(c, f); });
+    });
+    return r;
+  }
+
+  function bitsOf(val, len, out) { for (let i = len - 1; i >= 0; i--) out.push((val >>> i) & 1); }
+
+  function encodeBytes(bytes, ecl, minVer, maxVer) {
+    let ver, used;
+    for (ver = minVer; ; ver++) {
+      const cap = dataCodewords(ver, ecl) * 8, cc = ver <= 9 ? 8 : 16;
+      used = 4 + cc + bytes.length * 8;
+      if (used <= cap) break;
+      if (ver >= maxVer) throw new RangeError('داده برای QR بیش از حد بزرگ است');
+    }
+    const bb = [];
+    bitsOf(4, 4, bb); bitsOf(bytes.length, ver <= 9 ? 8 : 16, bb);
+    bytes.forEach(function (b) { bitsOf(b, 8, bb); });
+    const cap = dataCodewords(ver, ecl) * 8;
+    bitsOf(0, Math.min(4, cap - bb.length), bb);
+    bitsOf(0, (8 - bb.length % 8) % 8, bb);
+    for (let pad = 0xEC; bb.length < cap; pad ^= 0xEC ^ 0x11) bitsOf(pad, 8, bb);
+    const data = [];
+    for (let i = 0; i < bb.length; i += 8) { let v = 0; for (let j = 0; j < 8; j++) v = (v << 1) | bb[i + j]; data.push(v); }
+    return { ver: ver, data: data };
+  }
+
+  function addEcc(data, ver, ecl) {
+    const nb = NUM_BLOCKS[ecl][ver], bl = ECC_PER_BLOCK[ecl][ver], raw = Math.floor(rawModules(ver) / 8);
+    const short = nb - raw % nb, sl = Math.floor(raw / nb), div = rsDivisor(bl), blocks = [];
+    for (let i = 0, k = 0; i < nb; i++) {
+      const d = data.slice(k, k + sl - bl + (i < short ? 0 : 1)); k += d.length;
+      const e = rsRemainder(d, div);
+      if (i < short) d.push(0);
+      blocks.push(d.concat(e));
+    }
+    const res = [];
+    for (let i = 0; i < blocks[0].length; i++) blocks.forEach(function (b, j) { if (i !== sl - bl || j >= short) res.push(b[i]); });
+    return res;
+  }
+
+  function build(ver, ecl, allCw, maskIn) {
+    const size = ver * 4 + 17, mod = [], fn = [];
+    for (let i = 0; i < size; i++) { mod.push(new Array(size).fill(false)); fn.push(new Array(size).fill(false)); }
+    const setFn = function (x, y, d) { mod[y][x] = d; fn[y][x] = true; };
+    for (let i = 0; i < size; i++) { setFn(6, i, i % 2 === 0); setFn(i, 6, i % 2 === 0); }
+    const finder = function (cx, cy) {
+      for (let dy = -4; dy <= 4; dy++) for (let dx = -4; dx <= 4; dx++) {
+        const d = Math.max(Math.abs(dx), Math.abs(dy)), x = cx + dx, y = cy + dy;
+        if (x >= 0 && x < size && y >= 0 && y < size) setFn(x, y, d !== 2 && d !== 4);
+      }
+    };
+    finder(3, 3); finder(size - 4, 3); finder(3, size - 4);
+    const al = [];
+    if (ver > 1) {
+      const na = Math.floor(ver / 7) + 2, step = ver === 32 ? 26 : Math.ceil((ver * 4 + 4) / (na * 2 - 2)) * 2;
+      al.push(6); for (let p = size - 7; al.length < na; p -= step) al.splice(1, 0, p);
+    }
+    for (let i = 0; i < al.length; i++) for (let j = 0; j < al.length; j++) {
+      if ((i === 0 && j === 0) || (i === 0 && j === al.length - 1) || (i === al.length - 1 && j === 0)) continue;
+      for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) setFn(al[i] + dx, al[j] + dy, Math.max(Math.abs(dx), Math.abs(dy)) !== 1);
+    }
+    const drawFormat = function (mask) {
+      const dd = (FMT_BITS[ecl] << 3) | mask; let rem = dd;
+      for (let i = 0; i < 10; i++) rem = (rem << 1) ^ ((rem >>> 9) * 0x537);
+      const bits = ((dd << 10) | rem) ^ 0x5412, g = function (i) { return ((bits >>> i) & 1) !== 0; };
+      for (let i = 0; i <= 5; i++) setFn(8, i, g(i));
+      setFn(8, 7, g(6)); setFn(8, 8, g(7)); setFn(7, 8, g(8));
+      for (let i = 9; i < 15; i++) setFn(14 - i, 8, g(i));
+      for (let i = 0; i < 8; i++) setFn(size - 1 - i, 8, g(i));
+      for (let i = 8; i < 15; i++) setFn(8, size - 15 + i, g(i));
+      setFn(8, size - 8, true);
+    };
+    drawFormat(0);
+    if (ver >= 7) {
+      let rem = ver;
+      for (let i = 0; i < 12; i++) rem = (rem << 1) ^ ((rem >>> 11) * 0x1F25);
+      const bits = (ver << 12) | rem;
+      for (let i = 0; i < 18; i++) {
+        const b = ((bits >>> i) & 1) !== 0, a = size - 11 + i % 3, c = Math.floor(i / 3);
+        setFn(a, c, b); setFn(c, a, b);
+      }
+    }
+    // جای‌گذاری داده
+    let k = 0;
+    for (let right = size - 1; right >= 1; right -= 2) {
+      if (right === 6) right = 5;
+      for (let v = 0; v < size; v++) for (let j = 0; j < 2; j++) {
+        const x = right - j, up = ((right + 1) & 2) === 0, y = up ? size - 1 - v : v;
+        if (!fn[y][x] && k < allCw.length * 8) { mod[y][x] = ((allCw[k >>> 3] >>> (7 - (k & 7))) & 1) !== 0; k++; }
+      }
+    }
+    const applyMask = function (m) {
+      for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
+        let inv;
+        switch (m) {
+          case 0: inv = (x + y) % 2 === 0; break; case 1: inv = y % 2 === 0; break; case 2: inv = x % 3 === 0; break; case 3: inv = (x + y) % 3 === 0; break;
+          case 4: inv = (Math.floor(x / 3) + Math.floor(y / 2)) % 2 === 0; break; case 5: inv = x * y % 2 + x * y % 3 === 0; break;
+          case 6: inv = (x * y % 2 + x * y % 3) % 2 === 0; break; default: inv = ((x + y) % 2 + x * y % 3) % 2 === 0;
+        }
+        if (!fn[y][x] && inv) mod[y][x] = !mod[y][x];
+      }
+    };
+    const penalty = function () {
+      let res = 0;
+      const runs = function (line) {
+        let r = 0, c = line[0], n = 1; const arr = [];
+        for (let i = 1; i < line.length; i++) { if (line[i] === c) n++; else { arr.push(n); c = line[i]; n = 1; } }
+        arr.push(n); arr.forEach(function (l) { if (l >= 5) r += l - 2; });
+        return r;
+      };
+      for (let y = 0; y < size; y++) res += runs(mod[y]);
+      for (let x = 0; x < size; x++) { const col = []; for (let y = 0; y < size; y++) col.push(mod[y][x]); res += runs(col); }
+      for (let y = 0; y < size - 1; y++) for (let x = 0; x < size - 1; x++) { const c = mod[y][x]; if (c === mod[y][x + 1] && c === mod[y + 1][x] && c === mod[y + 1][x + 1]) res += 3; }
+      const pat = function (line) {
+        let r = 0; const s = line.map(function (b) { return b ? 1 : 0; }).join('');
+        const a = '10111010000', b = '00001011101';
+        for (let i = 0; i + 11 <= s.length; i++) { const t = s.substr(i, 11); if (t === a || t === b) r += 40; }
+        return r;
+      };
+      for (let y = 0; y < size; y++) res += pat(mod[y]);
+      for (let x = 0; x < size; x++) { const col = []; for (let y = 0; y < size; y++) col.push(mod[y][x]); res += pat(col); }
+      let dark = 0; mod.forEach(function (r) { r.forEach(function (b) { if (b) dark++; }); });
+      const tot = size * size; res += (Math.ceil(Math.abs(dark * 20 - tot * 10) / tot) - 1) * 10;
+      return res;
+    };
+    let mask = maskIn;
+    if (mask === undefined || mask < 0) {
+      let best = Infinity;
+      for (let m = 0; m < 8; m++) { applyMask(m); drawFormat(m); const p = penalty(); if (p < best) { best = p; mask = m; } applyMask(m); }
+    }
+    applyMask(mask); drawFormat(mask);
+    return { size: size, version: ver, mask: mask, modules: mod };
+  }
+
+  /** bytes: Uint8Array | Array ← ماتریس QR */
+  function encode(bytes, level, mask) {
+    const ecl = ECL[level || 'M'];
+    const arr = Array.prototype.slice.call(bytes);
+    const e = encodeBytes(arr, ecl, 1, 40);
+    return build(e.ver, ecl, addEcc(e.data, e.ver, ecl), mask);
+  }
+  function encodeText(text, level, mask) { return encode(Array.prototype.slice.call(new TextEncoder().encode(String(text))), level, mask); }
+
+  /** SVG: فاصله‌ی سفید ۴ ماژول؛ اندازه با CSS (مثلاً mm) تعیین می‌شود */
+  function toSvg(qr, size) {
+    const q = 4, n = qr.size + q * 2; let d = '';
+    for (let y = 0; y < qr.size; y++) {
+      let x = 0;
+      while (x < qr.size) {
+        if (!qr.modules[y][x]) { x++; continue; }
+        let x2 = x; while (x2 < qr.size && qr.modules[y][x2]) x2++;
+        d += 'M' + (x + q) + ',' + (y + q) + 'h' + (x2 - x) + 'v1h-' + (x2 - x) + 'z'; x = x2;
+      }
+    }
+    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + n + ' ' + n + '" width="' + (size || '100%') + '" height="' + (size || '100%') + '" shape-rendering="crispEdges" role="img" aria-label="QR"><rect width="' + n + '" height="' + n + '" fill="#fff"/><path d="' + d + '" fill="#000"/></svg>';
+  }
+  return { encode: encode, encodeText: encodeText, toSvg: toSvg, capacity: function (level, ver) { return dataCodewords(ver, ECL[level]); } };
+});
+</script>
+  <script>/*!
  * رابط کاربری اپ «پیاده‌سازی راه و نیوو»
  * تمام محاسبات در RoadCore انجام می‌شود؛ این فایل فقط نمایش و ورودی است.
  */
@@ -3198,7 +3524,7 @@ th { background: #0b2a43; color: #e8eef3; font-weight: 700; border-bottom: 2px s
   const PAGE_SIZE = 50;       // ردیف در هر صفحه‌ی جدول نقاط
   const TABLE_STATIONS = 30;  // مقطع در هر صفحه‌ی جدول سه‌نقطه‌ای
 
-  const APP_VERSION = 'UI-1.1.0 (بر پایه‌ی 1.22.1)';
+  const APP_VERSION = 'UI-2.0.0 (بر پایه‌ی 1.22.1)';
   const S = {
     project: null, dirty: false, rev: 0, calc: null, calcRev: -1,
     page: 'home', imp: null, ptPage: 0, tPage: 0, stakeIdx: 0, rawBad: {},
@@ -3499,19 +3825,21 @@ th { background: #0b2a43; color: #e8eef3; font-weight: 700; border-bottom: 2px s
     mat: '<path d="M3 18h18"/><path d="M5 18 8 9h8l3 9"/><path d="M9 13h6"/>',
     export: '<path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 20h16"/>'
   };
-  const NAV_L = [['home', 'پروژه‌ها'], ['newo', 'نیوو']];
+  const NAV_L = [['home', 'پروژه‌ها'], ['newo', 'بنچ‌مارک']];
   const NAV_R = [['stake', 'پیاده'], ['survey', 'برداشت']];
-  const NAV_ALL = [['home', 'شروع'], ['projects', 'پروژه‌ها و پشتیبان'], ['points', 'محور و لبه‌ها'], ['slopes', 'شیب عرضی'], ['layers', 'لایه‌ها'], ['newo', 'قرائت نیوو'], ['stake', 'پیاده‌سازی'], ['survey', 'برداشت'], ['mat', 'مصالح و تخلیه'], ['export', 'خروجی و گزارش']];
-  const MENU_GROUPS = [['اجرا', ['points', 'slopes', 'layers', 'newo', 'stake', 'survey']], ['محاسبه و تحویل', ['mat', 'export', 'projects']]];
+  const NAV_ALL = [['home', 'شروع'], ['projects', 'پروژه‌ها و پشتیبان'], ['points', 'محور و لبه‌ها'], ['slopes', 'شیب عرضی'], ['layers', 'لایه‌ها'], ['newo', 'قرائت نیوو'], ['stake', 'پیاده‌سازی'], ['survey', 'برداشت'], ['mat', 'مصالح و تخلیه'], ['export', 'خروجی و گزارش'], ['security', 'کلید، قفل و اثرانگشت']];
+  const MENU_GROUPS = [['اجرا', ['points', 'slopes', 'layers', 'newo', 'stake', 'survey']], ['محاسبه و تحویل', ['mat', 'export', 'projects']], ['امنیت', ['security']]];
   const MENU_NAME = {}; NAV_ALL.forEach(function (n) { MENU_NAME[n[0]] = n[1]; });
   ICONS.home = ICONS.projects;
+  ICONS.security = '<circle cx="8" cy="15" r="4"/><path d="M11 12 20 3M16 7l3 3M14 9l2 2"/>';
   const LOGO_SVG = '<svg viewBox="0 0 512 512" aria-hidden="true"><path d="M70 330Q256 262 442 330" fill="none" stroke="#e8eef3" stroke-width="22" stroke-linecap="round"/><path d="M140 200l12 0-6 122z" fill="#e8eef3"/><circle cx="146" cy="190" r="16" fill="#e8eef3"/><path d="M360 200l12 0-6 122z" fill="#e8eef3"/><circle cx="366" cy="190" r="16" fill="#e8eef3"/><path d="M243 112l26 0-13 188z" fill="#d9a93b"/><circle cx="256" cy="100" r="26" fill="#d9a93b"/></svg>';
 
   function renderNav() {
+    const cur = S.page === 'preport' ? 'home' : S.page;
     const tab = function (n) {
-      return '<a href="#/' + n[0] + '" class="' + (S.page === n[0] ? 'on' : '') + '"' + (S.page === n[0] ? ' aria-current="page"' : '') + '><svg viewBox="0 0 24 24" aria-hidden="true">' + ICONS[n[0]] + '</svg>' + n[1] + '</a>';
+      return '<a href="#/' + n[0] + '" class="' + (cur === n[0] ? 'on' : '') + '"' + (cur === n[0] ? ' aria-current="page"' : '') + '><svg viewBox="0 0 24 24" aria-hidden="true">' + ICONS[n[0]] + '</svg>' + n[1] + '</a>';
     };
-    const inTabs = NAV_L.concat(NAV_R).some(function (n) { return n[0] === S.page; });
+    const inTabs = NAV_L.concat(NAV_R).some(function (n) { return n[0] === cur; });
     $('#nav').innerHTML = NAV_L.map(tab).join('') +
       '<button type="button" class="nav-logo' + (inTabs ? '' : ' on') + '" data-act="menu" aria-label="همه‌ی بخش‌ها">' + LOGO_SVG + '<span>همه‌ی بخش‌ها</span></button>' +
       NAV_R.map(tab).join('');
@@ -3523,7 +3851,7 @@ th { background: #0b2a43; color: #e8eef3; font-weight: 700; border-bottom: 2px s
     let h = '<div class="mn-head"><div><b>همه‌ی بخش‌ها</b><small>' + (pr ? esc(pr.name) : 'پروژه‌ای باز نیست') + '</small></div><button type="button" class="mn-x" data-act="menuClose" aria-label="بستن">✕</button></div>';
     MENU_GROUPS.forEach(function (g) {
       h += '<div class="mn-grp">' + g[0] + '</div><div class="mn-grid">' + g[1].map(function (k) {
-        const dis = !pr && k !== 'projects';
+        const dis = !pr && k !== 'projects' && k !== 'security';
         return '<a href="#/' + k + '" data-act="menuClose" class="mn-it' + (S.page === k ? ' on' : '') + (dis ? ' dis' : '') + '"><svg viewBox="0 0 24 24" aria-hidden="true">' + ICONS[k] + '</svg><span>' + MENU_NAME[k] + '</span></a>';
       }).join('') + '</div>';
     });
@@ -3533,18 +3861,39 @@ th { background: #0b2a43; color: #e8eef3; font-weight: 700; border-bottom: 2px s
   }
   function closeMenu() { const d = document.getElementById('menuSheet'); if (d) d.remove(); }
 
+  const PAGE_TITLE = { home: 'پروژه‌ها', preport: 'گزارش پروژه', projects: 'ساخت پروژه و پشتیبان', points: 'محور و لبه‌ها', slopes: 'شیب عرضی', layers: 'لایه‌ها', mat: 'مصالح و تخلیه', newo: 'بنچ‌مارک و نیوو', stake: 'پیاده‌سازی', survey: 'برداشت', export: 'خروجی و گزارش', security: 'امنیت' };
   function renderTop() {
-    const p = S.project;
-    $('#top').innerHTML = '<div class="title">' + (p ? esc(p.name) : 'RoadStake') + '<small>' +
-      (p ? (S.dirty ? '<span class="dot"></span>تغییرات ذخیره‌نشده' : (S.autoAt && Date.now() - S.autoAt < 4000 ? 'ذخیره‌ی خودکار انجام شد ✓' : 'ذخیره‌شده')) : 'شیب عرضی • قرائت شاخص • خروجی CAD') + '</small></div>' +
+    const p = S.project, ttl = PAGE_TITLE[S.page] || 'RoadStake';
+    let sub;
+    if (S.page === 'home' || S.page === 'projects' || S.page === 'security' || S.page === 'preport') sub = p ? 'پروژه‌ی باز: ' + esc(p.name) : 'RoadStake';
+    else sub = esc(p.name) + (p.streets && p.streets.length > 1 ? ' • ' + esc(activeStreet(p).name) : '');
+    const st = p ? (S.dirty ? '<span class="dot"></span>تغییرات ذخیره‌نشده' : (S.autoAt && Date.now() - S.autoAt < 4000 ? 'ذخیره‌ی خودکار انجام شد ✓' : 'ذخیره‌شده')) : '';
+    $('#top').innerHTML = '<div class="title">' + esc(ttl) + '<small>' + sub + (p && st ? ' • ' + st : '') + '</small></div>' +
       (p && S.dirty ? '<button class="btn primary" data-act="save">ذخیره</button>' : '');
+  }
+
+  /** کم‌کردن شلوغی: توضیح‌های بلند به‌صورت «توضیحات» قابل‌بازشدن */
+  function declutter() {
+    document.querySelectorAll('#view .card p.muted').forEach(function (el) {
+      if (el.closest('details') || el.id || el.querySelector('[id]') || el.textContent.length < 110) return;
+      const d = document.createElement('details'); d.className = 'more';
+      d.innerHTML = '<summary>توضیحات</summary>'; el.parentNode.insertBefore(d, el); d.appendChild(el);
+    });
   }
 
   function route() {
     let h = (location.hash || '#/home').replace(/^#\//, ''); if (h === 'table') h = 'layers';
+    const qi = h.indexOf('?'); let qs = '';
+    if (qi >= 0) { qs = h.slice(qi + 1); h = h.slice(0, qi); }
     S.page = PAGES[h] ? h : 'home';
-    if (!S.project && S.page !== 'projects' && S.page !== 'home') { location.replace('#/home'); return; }
+    if (!S.project && S.page !== 'projects' && S.page !== 'home' && S.page !== 'security' && S.page !== 'preport') { location.replace('#/home'); return; }
     closeMenu();
+    const mid = /(?:^|&)id=([^&]+)/.exec(qs); if (mid && S.page === 'preport') S.rptProj = decodeURIComponent(mid[1]);
+    const mq = /(?:^|&)q=([^&]+)/.exec(qs);
+    if (mq && S.page === 'security') {
+      try { const u = qrUnpack(mq[1]); S.lk.sgvIn = u; S.lk.sgv = null; try { history.replaceState(null, '', location.pathname + location.search + '#/security'); } catch (e0) { /* ignore */ } render(); window.scrollTo(0, 0); sgvRun(u.payload, u.sig, u.key).then(function () { const c = $('#sgvCard'); if (c) c.scrollIntoView(); }); return; }
+      catch (e1) { toast('QR خوانده نشد: ' + (e1.message || ''), 'err'); }
+    }
     render();
     window.scrollTo(0, 0);
   }
@@ -3553,46 +3902,161 @@ th { background: #0b2a43; color: #e8eef3; font-weight: 700; border-bottom: 2px s
     renderTop(); renderNav();
     $('#view').innerHTML = PAGES[S.page].render();
     if (PAGES[S.page].after) PAGES[S.page].after();
+    declutter();
     if (S.tx && S.tx.open) txModal();
   }
 
   function refreshLive() { if (PAGES[S.page].live) PAGES[S.page].live(); }
 
-  /* ============================== صفحه‌ی شروع (طرح مهندسی) ============================== */
+  /* ============================== اطلاعات و گزارش پروژه (برای کارت‌ها) ============================== */
+  const PJI = {};
+  const fmtN = function (v, d) { return fin(v) ? Number(v).toLocaleString('en-US', { maximumFractionDigits: d || 0, minimumFractionDigits: 0 }) : '—'; };
+  function projStreetInfo(p, s) {
+    const st = p.settings, o = { name: s.name, pts: (s.points || []).length, len: 0, area: 0, hasEdges: false, layers: [], mats: [], stkN: 0, stkT: 0, svN: (s.survey || []).length, files: (s.asbuilt || []).filter(function (f) { return f.tab === 'sv'; }).length, locks: (s.locks || []).length, ok: false };
+    const sts = (s.points || []).map(function (q) { return C.toNumber(q.station); }).filter(fin);
+    if (sts.length >= 2) o.len = Math.max.apply(null, sts) - Math.min.apply(null, sts);
+    let layers = []; try { layers = C.normalizeLayers(s.layers || []).layers; } catch (e) { layers = []; }
+    o.layers = layers.map(function (l) { return { name: l.name, offset: l.offset, from: l.from, to: l.to }; });
+    try {
+      if (sts.length >= 2 && C.validateAxis(s.points, st).ok && C.validateSections(s.sections, st).ok) {
+        const secs = C.computeSections(s.points, s.sections, Object.assign({}, st, { sectionMode: 'point' }), s.mids);
+        o.ok = true;
+        for (let i = 1; i < secs.length; i++) {
+          const w0 = (secs[i - 1].left.width || 0) + (secs[i - 1].right.width || 0), w1 = (secs[i].left.width || 0) + (secs[i].right.width || 0);
+          o.area += (w0 + w1) / 2 * (secs[i].station - secs[i - 1].station);
+        }
+        o.hasEdges = secs.some(function (q) { return ((q.left.width || 0) + (q.right.width || 0)) > 1e-9; });
+        (s.mats || []).forEach(function (m) {
+          try { const inf = C.matInfo(m, layers, secs); if (inf.ok) o.mats.push({ name: m.name || '—', vol: C.matVolume(secs, inf.lo, inf.hi, inf.t).total, t: inf.t }); } catch (e) { /* ignore */ }
+        });
+        const list = (s.staked && s.staked._) || [];
+        secs.forEach(function (q) {
+          const sides = C.sideKeys(q), k = String(Math.round(q.station * 1000)), whole = list.indexOf(k) >= 0;
+          o.stkT += sides.length; sides.forEach(function (sd) { if (whole || list.indexOf(k + ':' + sd) >= 0) o.stkN++; });
+        });
+      }
+    } catch (e) { /* ignore */ }
+    return o;
+  }
+  function projCompute(p) {
+    const cs = p.settings, chips = [];
+    if (cs.coordSystem === 'UTM') {
+      chips.push('UTM'); const dt = DATUMS.find(function (x) { return x[0] === cs.datum; }); if (cs.datum) chips.push(dt ? dt[1] : cs.datum);
+      if (cs.utmZone) chips.push('زون ' + cs.utmZone); if (cs.hemisphere) chips.push(cs.hemisphere === 'S' ? 'جنوبی' : 'شمالی');
+    } else if (cs.coordSystem) chips.push('محلی');
+    const streets = p.streets.map(function (s) { return projStreetInfo(p, s); });
+    const withLen = streets.filter(function (x) { return x.len > 0; }), withEdges = streets.filter(function (x) { return x.hasEdges; });
+    return { p: p, chips: chips, streets: streets, n: streets.length, len: withLen.length ? withLen.reduce(function (a, x) { return a + x.len; }, 0) : NaN, area: withEdges.length ? withEdges.reduce(function (a, x) { return a + x.area; }, 0) : NaN };
+  }
+  function projInfo(id, updatedAt) {
+    const open = S.project && S.project.id === id, key = id + '|' + updatedAt + '|' + (open ? S.rev : '');
+    if (PJI[id] && PJI[id].key === key) return PJI[id].v;
+    let v = null;
+    try {
+      let p = open ? S.project : ST.load(id);
+      if (p) { if (!open) { p.settings = C.normalizeSettings(p.settings); linkStreets(p); } v = projCompute(p); }
+    } catch (e) { v = null; }
+    PJI[id] = { key: key, v: v }; return v;
+  }
+  function preportPage() {
+    const e = ST.list().find(function (x) { return x.id === S.rptProj; });
+    if (!e) return '<div class="msg warn">پروژه‌ای انتخاب نشده است.</div><a class="btn" href="#/home">بازگشت به پروژه‌ها</a>';
+    const v = projInfo(e.id, e.updatedAt); if (!v) return '<div class="msg err">خواندن پروژه انجام نشد.</div>';
+    const p = v.p, open = S.project && S.project.id === e.id, sg = (p.signers || []).filter(function (x) { return x.title || x.name; });
+    let h = '<section class="pj-card open pr-head"><div class="pj-top"><h3>' + esc(p.name) + '</h3>' + (open ? '<span class="pj-badge">باز</span>' : '') + '</div><div class="pj-chips">' + v.chips.map(function (c) { return '<span class="hm-chip">' + esc(c) + '</span>'; }).join('') + '</div>' +
+      '<div class="pj-stats"><div><small>خیابان</small><b class="num">' + v.n + '</b></div><div><small>طول محورها</small><b class="num">' + fmtN(v.len) + '<small> m</small></b></div><div><small>مساحت</small><b class="num">' + fmtN(v.area) + '<small> m²</small></b></div></div>' +
+      '<div class="pj-row"><span>آخرین ذخیره: ' + esc(new Date(e.updatedAt).toLocaleString('fa-IR')) + '</span></div>' +
+      '<div class="row" style="margin-top:8px"><button class="btn primary grow" data-act="open" data-id="' + esc(e.id) + '">' + (open ? 'ادامه‌ی کار' : 'باز کردن پروژه') + '</button><button class="btn grow" data-act="projPdf" data-id="' + esc(e.id) + '">گرفتن PDF</button></div></section>';
+    h += '<section class="card"><h3>خیابان‌ها</h3><div class="tbl-wrap"><table><thead><tr><th>خیابان</th><th>نقاط</th><th>طول (m)</th><th>مساحت (m²)</th><th>لایه</th></tr></thead><tbody>' + v.streets.map(function (x) {
+      return '<tr><td>' + esc(x.name) + '</td><td class="n">' + x.pts + '</td><td class="n">' + fmtN(x.len) + '</td><td class="n">' + (x.hasEdges ? fmtN(x.area) : '—') + '</td><td class="n">' + x.layers.length + '</td></tr>';
+    }).join('') + '</tbody></table></div></section>';
+    const lay = []; v.streets.forEach(function (x) { x.layers.forEach(function (l) { lay.push('<tr><td>' + esc(x.name) + '</td><td>' + esc(l.name) + '</td><td class="n" dir="ltr">' + (l.offset > 0 ? '+' : '') + C.fmt(l.offset * 100, 1) + ' cm</td></tr>'); }); });
+    h += '<section class="card"><h3>لایه‌ها</h3>' + (lay.length ? '<div class="tbl-wrap"><table><thead><tr><th>خیابان</th><th>لایه</th><th>فاصله از خط پروژه</th></tr></thead><tbody>' + lay.join('') + '</tbody></table></div>' : '<p class="muted small">لایه‌ای تعریف نشده است.</p>') + '</section>';
+    const mt = []; v.streets.forEach(function (x) { x.mats.forEach(function (m) { mt.push('<tr><td>' + esc(x.name) + '</td><td>' + esc(m.name) + '</td><td class="n">' + C.fmt(m.t * 100, 1) + ' cm</td><td class="n">' + fmtN(m.vol, 1) + '</td></tr>'); }); });
+    h += '<section class="card"><h3>مصالح</h3>' + (mt.length ? '<div class="tbl-wrap"><table><thead><tr><th>خیابان</th><th>ردیف</th><th>ضخامت</th><th>حجم (m³)</th></tr></thead><tbody>' + mt.join('') + '</tbody></table></div>' : '<p class="muted small">ردیف مصالحی نیست.</p>') + '</section>';
+    h += '<section class="card"><h3>پیاده‌سازی و برداشت</h3><div class="tbl-wrap"><table><thead><tr><th>خیابان</th><th>میخ پیاده‌شده</th><th>برداشت</th><th>فایل نقاط</th></tr></thead><tbody>' + v.streets.map(function (x) {
+      return '<tr><td>' + esc(x.name) + '</td><td class="n">' + x.stkN + ' از ' + x.stkT + '</td><td class="n">' + x.svN + '</td><td class="n">' + x.files + '</td></tr>';
+    }).join('') + '</tbody></table></div></section>';
+    h += '<section class="card"><h3>امضاکنندگان</h3>' + (sg.length ? sg.map(function (x) { return '<div class="small">' + esc(x.title || '') + (x.name ? ' — ' + esc(x.name) : '') + '</div>'; }).join('') : '<p class="muted small">تعریف نشده است.</p>') + '</section>';
+    return h;
+  }
+  async function projPdf(id) {
+    const e = ST.list().find(function (x) { return x.id === id; }); if (!e) return;
+    const v = projInfo(e.id, e.updatedAt); if (!v) { toast('خواندن پروژه انجام نشد.', 'err'); return; }
+    if (!(await rptAsk({ preset: true }))) return;
+    const p = v.p, sg = (p.signers || []).filter(function (x) { return x.title || x.name; });
+    const top = rplCover('گزارش پروژه', p, v.n + ' خیابان', rplCs(p)) + rplMeta([['سیستم مختصات', rplL(rplCs(p)), 2], ['تعداد خیابان', rplL(String(v.n))], ['آخرین ذخیره', esc(new Date(e.updatedAt).toLocaleDateString('fa-IR'))], ['طول محورها (m)', rplL(fmtN(v.len))], ['مساحت (m²)', rplL(fmtN(v.area)), 2]]);
+    const head = '<table class="pt-tbl pt-chunk"><tbody><tr class="hd"><th>#</th><th>خیابان</th><th>نقاط</th><th>طول (m)</th><th>مساحت (m²)</th><th>لایه</th><th>میخ پیاده‌شده</th><th>برداشت</th></tr>';
+    const trs = v.streets.map(function (x, k) { return '<tr class="' + (k % 2 ? 'alt' : '') + '"><td dir="ltr">' + (k + 1) + '</td><td>' + esc(x.name) + '</td><td dir="ltr">' + x.pts + '</td><td dir="ltr">' + fmtN(x.len) + '</td><td dir="ltr">' + (x.hasEdges ? fmtN(x.area) : '—') + '</td><td dir="ltr">' + x.layers.length + '</td><td dir="ltr">' + x.stkN + ' / ' + x.stkT + '</td><td dir="ltr">' + x.svN + '</td></tr>'; });
+    const lay = [], mt = [];
+    v.streets.forEach(function (x) { x.layers.forEach(function (l) { lay.push(esc(x.name) + ': ' + esc(l.name) + ' (' + (l.offset > 0 ? '+' : '') + C.fmt(l.offset * 100, 1) + ' cm)'); }); x.mats.forEach(function (m) { mt.push(esc(x.name) + ': ' + esc(m.name) + ' — ' + fmtN(m.vol, 1) + ' m³'); }); });
+    const tail = (lay.length ? '<div class="rpl-note"><b>لایه‌ها</b><br>' + lay.join('<br>') + '</div>' : '') + (mt.length ? '<div class="rpl-note"><b>مصالح</b><br>' + mt.join('<br>') + '</div>' : '') +
+      (sg.length ? '<div class="rpl-note"><b>امضاکنندگان</b><br>' + sg.map(function (x) { return esc(x.title || '') + (x.name ? ' — ' + esc(x.name) : ''); }).join('<br>') + '</div>' : '');
+    const foot = function (k, N) { return rplFoot([esc(p.name), 'گزارش پروژه'], k + 1, N); };
+    rplPrint(await rplFlow({ top: top, head: head, units: trs, tail: tail, foot: foot }), slugFa(p.name) + '_گزارش-پروژه');
+  }
+
+  /* ============================== صفحه‌ی شروع (لیست پروژه‌ها) ============================== */
+  const SVG_GEAR = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg>';
+  const SVG_MORE = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="12" cy="19" r="1.6" fill="currentColor"/></svg>';
+
   function homePage() {
     const list = ST.list().sort(function (a, b) { return String(b.updatedAt).localeCompare(String(a.updatedAt)); });
     const pr = S.project;
     let h = '';
     if (ST.memoryOnly) h += '<div class="msg err"><b>ذخیره‌سازی مرورگر در دسترس نیست.</b> داده‌ها فقط تا بستن این صفحه می‌مانند.</div>';
-    h += '<div class="hm-cards" aria-label="پروژه‌ها">';
-    list.forEach(function (e, i) {
+    if (!list.length) h += '<div class="card muted">هنوز پروژه‌ای ساخته نشده است. با دکمه‌ی «+» یک پروژه بسازید یا از فایل پشتیبان بازیابی کنید.</div>';
+    list.forEach(function (e) {
       const open = pr && pr.id === e.id;
-      let streets = '', locks = '';
-      if (open) {
-        streets = pr.streets.map(function (st) { return '<span class="hm-chip' + (st.id === pr.activeStreetId ? ' on' : '') + '" dir="ltr">' + esc(st.name) + '</span>'; }).join('');
-        const nl = pr.streets.reduce(function (a, st) { return a + (st.locks || []).length; }, 0);
-        locks = '<span class="hm-lock">قفل: ' + (nl ? 'نسخه ' + nl : 'ندارد') + '</span>';
+      const v = projInfo(e.id, e.updatedAt);
+      let lock = '';
+      if (v) {
+        const nl = v.streets.reduce(function (a, x) { return a + x.locks; }, 0);
+        lock = '<div class="pj-row"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg><span>' + (nl ? nl + ' نسخه‌ی قفل‌شده' : 'بدون قفل') + '</span></div>';
       }
-      h += '<article class="hm-card' + (open ? ' open' : '') + '"><div class="hm-top"><span class="hm-idx" dir="ltr">PROJECT ' + String(i + 1).padStart(2, '0') + ' / ' + String(list.length).padStart(2, '0') + '</span>' + locks + '</div>' +
-        '<h3>' + esc(e.name) + '</h3><div class="hm-streets">' + streets + '</div>' +
-        '<div class="hm-stats"><div><small>نقطه‌ی محور</small><b class="num">' + (e.points || 0) + '</b></div><div><small>آخرین ذخیره</small><b style="font-size:.8rem">' + esc(new Date(e.updatedAt).toLocaleDateString('fa-IR')) + '</b></div></div>' +
-        '<button class="btn sm hm-open" data-act="open" data-id="' + esc(e.id) + '">' + (open ? 'ادامه' : 'باز کردن') + '</button></article>';
+      h += '<article class="pj-card' + (open ? ' open' : '') + '" data-act="projReport" data-id="' + esc(e.id) + '" role="button" tabindex="0">' +
+        '<div class="pj-top"><button type="button" class="pj-ic" data-act="projEdit" data-id="' + esc(e.id) + '" aria-label="نام پروژه">' + SVG_GEAR + '</button>' +
+        (open ? '<span class="pj-badge">باز</span>' : '') + '<h3>' + esc(e.name) + '</h3></div>' +
+        (v && v.chips.length ? '<div class="pj-chips">' + v.chips.map(function (c) { return '<span class="hm-chip">' + esc(c) + '</span>'; }).join('') + '</div>' : '') +
+        '<div class="pj-stats"><div><small>خیابان</small><b class="num">' + (v ? v.n : '—') + '</b></div><div><small>طول محورها</small><b class="num">' + (v ? fmtN(v.len) : '—') + '<small> m</small></b></div><div><small>مساحت</small><b class="num">' + (v ? fmtN(v.area) : '—') + '<small> m²</small></b></div></div>' +
+        '<div class="pj-row"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span>آخرین ذخیره: ' + esc(new Date(e.updatedAt).toLocaleString('fa-IR')) + '</span></div>' + lock +
+        '<button type="button" class="pj-ic pj-more" data-act="projMenu" data-id="' + esc(e.id) + '" aria-label="گزینه‌ها">' + SVG_MORE + '</button></article>';
     });
-    h += '<a class="hm-card hm-new" href="#/projects"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><b>پروژه‌ی جدید</b><small>ساخت یا بازیابی از پشتیبان</small></a></div>';
-    h += '<div class="hm-hint">برای دیدن پروژه‌های دیگر، کارت‌ها را به چپ و راست بکشید</div>';
-    if (pr) {
-      const stt = activeStreet(pr);
-      const nPts = (stt.points || []).length, nAb = (stt.asbuilt || []).length, nLk = (stt.locks || []).length;
-      const steps = [['points', 'محور', nPts >= 2 ? 'ok' : ''], ['slopes', 'شیب', ''], ['layers', 'لایه‌ها', ''], ['newo', 'نیوو', ''], ['stake', 'پیاده', ''], ['survey', 'برداشت', nAb ? 'ok' : ''], ['mat', 'برآورد', ''], ['export', 'گزارش', nLk ? 'ok' : '']];
-      h += '<div class="hm-sec"><b>جریان کار</b><span></span><small>' + esc(stt.name) + '</small></div><div class="hm-grid">' +
-        steps.map(function (x, i) {
-          return '<a href="#/' + x[0] + '" class="hm-step"><i class="hm-n" dir="ltr">' + String(i + 1).padStart(2, '0') + '</i>' + (x[2] ? '<i class="hm-dot"></i>' : '') + '<svg viewBox="0 0 24 24" aria-hidden="true">' + ICONS[x[0]] + '</svg><span>' + x[1] + '</span></a>';
-        }).join('') + '</div>';
-      h += '<div class="hm-legend"><span><i class="hm-dot"></i>داده دارد</span></div>';
-    } else {
-      h += '<div class="card muted" style="margin-top:12px">برای شروع یک پروژه باز کنید یا بسازید.</div>';
-    }
+    h += '<a href="#/projects" class="pj-fab" aria-label="پروژه‌ی جدید یا بازیابی"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></a>';
     return h;
+  }
+
+  function modalMenu(html) {
+    const m = $('#modal');
+    m.innerHTML = '<div class="box">' + html + '</div>'; m.classList.add('on');
+    m.onclick = function (e) {
+      if (e.target === m || e.target.closest('[data-act],[data-v]')) { m.classList.remove('on'); m.innerHTML = ''; m.onclick = null; }
+    };
+  }
+  function projMenu(id) {
+    const e = ST.list().find(function (x) { return x.id === id; }); if (!e) return;
+    const sn = ST.hasSnap(id) ? ST.loadSnap(id) : null;
+    modalMenu('<h3>' + esc(e.name) + '</h3><div class="pj-menu">' +
+      '<button class="btn" data-act="backup" data-id="' + esc(id) + '">پشتیبان JSON</button>' +
+      '<button class="btn" data-act="dup" data-id="' + esc(id) + '">تکثیر پروژه</button>' +
+      (sn && String(sn.updatedAt) !== String(e.updatedAt) ? '<button class="btn" data-act="restoreSnap" data-id="' + esc(id) + '">برگشت به نسخه‌ی قبلی</button>' : '') +
+      '<button class="btn danger" data-act="delProject" data-id="' + esc(id) + '">حذف پروژه</button>' +
+      '<button class="btn" data-v="0">بستن</button></div>');
+  }
+  async function projEdit(id) {
+    const p = ST.load(id); if (!p) return;
+    const m = $('#modal');
+    m.innerHTML = '<div class="box"><h3>نام پروژه</h3><input id="pjName" class="inp" autocomplete="off" value="' + esc(p.name) + '"><div class="acts"><button class="btn" data-v="0">انصراف</button><button class="btn primary" data-v="1">ذخیره</button></div></div>';
+    m.classList.add('on');
+    const v = await new Promise(function (res) {
+      m.onclick = function (e) { const b = e.target.closest('[data-v]'); if (b) res(b.dataset.v === '1'); else if (e.target === m) res(false); };
+    });
+    const name = (($('#pjName') || {}).value || '').trim();
+    m.classList.remove('on'); m.innerHTML = ''; m.onclick = null;
+    if (!v || !name || name === p.name) return;
+    if (S.project && S.project.id === id) { S.project.name = name; saveProject(); render(); return; }
+    p.name = name; const r = ST.save(p);
+    if (!r.ok) toast(r.error, 'err'); else { toast('نام پروژه تغییر کرد.'); render(); }
   }
 
   /* ============================== ۱) پروژه‌ها ============================== */
@@ -3621,7 +4085,7 @@ th { background: #0b2a43; color: #e8eef3; font-weight: 700; border-bottom: 2px s
     });
     h += '<section class="card"><h3>بازیابی از فایل پشتیبان</h3><p class="muted small">فایل .json که از «پشتیبان JSON» یا «پشتیبان همه‌ی پروژه‌ها» گرفته‌اید. اگر پروژه‌ای با همان شناسه وجود داشته باشد، قبل از جایگزینی تأیید می‌گیرد.</p>' +
       '<div class="row"><label class="btn">انتخاب فایل پشتیبان<input type="file" id="restoreFile" class="vh"></label>' + (list.length ? '<button class="btn" data-act="backupAll">پشتیبان همه‌ی پروژه‌ها</button>' : '') + '</div></section>';
-    if (S.project) h += settingsCard() + signersCard() + keyCard();
+    if (S.project) h += settingsCard() + signersCard();
     return h + '<div class="credit">By AliGhorbani<br><span class="ver">RoadStake نسخه‌ی <bdi dir="ltr">' + APP_VERSION + '</bdi></span></div>';
   }
 
@@ -5152,8 +5616,16 @@ th { background: #0b2a43; color: #e8eef3; font-weight: 700; border-bottom: 2px s
     if (!layer) S.stakeLayer = '';
     let secs = r.sections, rds = r.readings;
     if (layer && r.sections) { secs = C.applyLayer(r.sections, layer); rds = C.buildReadings(secs, r.setupInfo, p.settings); }
-    return { r: r, ll: ll, layer: layer, secs: secs, rds: rds };
+    const total = secs ? secs.length : 0, stp = stakeStepVal();
+    if (stp > 0 && secs && secs.length > 2) {
+      const keep = secs.map(function (q, i) { return i === 0 || i === secs.length - 1 || stakeIsMult(q.station, stp); });
+      if (Array.isArray(rds)) rds = rds.filter(function (_, i) { return keep[i]; });
+      secs = secs.filter(function (_, i) { return keep[i]; });
+    }
+    return { r: r, ll: ll, layer: layer, secs: secs, rds: rds, step: stp, total: total };
   }
+  function stakeStepVal() { const p = P(), v = p && p.stakeStep ? C.toNumber(p.stakeStep) : NaN; return fin(v) && v > 0 ? v : 0; }
+  function stakeIsMult(st, step) { const q = st / step; return Math.abs(q - Math.round(q)) * step < 0.0005; }
   const layerTag = function (l) { return l ? l.name + ' (\u2066' + (l.offset > 0 ? '+' : '') + C.fmt(l.offset * 100, 1) + ' cm\u2069)' : 'خط پروژه'; };
 
   function stakeLayerChange(id) {
@@ -5172,10 +5644,24 @@ th { background: #0b2a43; color: #e8eef3; font-weight: 700; border-bottom: 2px s
     const k = S.stakeLayer || '_'; if (!Array.isArray(s.staked[k])) s.staked[k] = [];
     return s.staked[k];
   }
+  /* هر میخ: کلید «کیلومتر:سمت»؛ کلید ساده‌ی کیلومتر (داده‌ی قدیمی) یعنی همه‌ی میخ‌های آن مقطع */
+  function sideStaked(st, side) { const l = stkList(); return l.indexOf(stkKey(st)) >= 0 || l.indexOf(stkKey(st) + ':' + side) >= 0; }
+  function secStakeState(sec) {
+    const sides = C.sideKeys(sec), n = sides.filter(function (sd) { return sideStaked(sec.station, sd); }).length;
+    return { n: n, total: sides.length, done: n === sides.length, part: n > 0 && n < sides.length };
+  }
   function isStaked(st) { return stkList().indexOf(stkKey(st)) >= 0; }
-  function stkToggle(st) {
-    const l = stkList(), k = stkKey(st), i = l.indexOf(k);
-    if (i >= 0) l.splice(i, 1); else l.push(k);
+  function stkClear(st) { const l = stkList(), k = stkKey(st); for (let i = l.length - 1; i >= 0; i--) if (l[i] === k || l[i].indexOf(k + ':') === 0) l.splice(i, 1); }
+  function stkSide(sec, side) {
+    const l = stkList(), k = stkKey(sec.station), sides = C.sideKeys(sec);
+    if (l.indexOf(k) >= 0) { stkClear(sec.station); sides.forEach(function (sd) { if (sd !== side) l.push(k + ':' + sd); }); }
+    else { const j = l.indexOf(k + ':' + side); if (j >= 0) l.splice(j, 1); else l.push(k + ':' + side); }
+    markDirty(); render();
+  }
+  function stkToggle(sec) {
+    const st = secStakeState(sec), l = stkList(), k = stkKey(sec.station);
+    stkClear(sec.station);
+    if (!st.done) l.push(k);
     markDirty(); render();
   }
 
@@ -5192,6 +5678,27 @@ th { background: #0b2a43; color: #e8eef3; font-weight: 700; border-bottom: 2px s
     const n = cx.secs.length;
     S.stakeIdx = Math.max(0, Math.min(n - 1, S.stakeIdx));
     const i = S.stakeIdx, sec = cx.secs[i], rd = cx.rds[i];
+    // گام پیاده‌سازی و شمارش
+    let tot = 0, doneStakes = 0, complete = 0, partial = 0;
+    cx.secs.forEach(function (q) { const t = secStakeState(q); tot += t.total; doneStakes += t.n; if (t.done) complete++; else if (t.part) partial++; });
+    h += '<div class="card"><label class="field"><span>گام پیاده‌سازی (متر) — خالی یعنی همه‌ی نقاط</span><input class="inp ltr" id="stStep" dir="ltr" inputmode="decimal" autocomplete="off" value="' + esc(p.stakeStep || '') + '"></label>' +
+      (cx.step ? '<p class="muted small" style="margin:6px 0 0">با گام <b class="num">' + cx.step + '</b> متر، <b class="num">' + n + '</b> مقطع از <b class="num">' + cx.total + '</b> نمایش داده می‌شود (ابتدا و انتها همیشه هست).</p>' : '') + '</div>';
+    h += '<div class="seg"><button class="btn' + (S.stakeView !== 'list' ? ' primary' : '') + '" data-act="stkView" data-v="card">مقطع‌به‌مقطع</button><button class="btn' + (S.stakeView === 'list' ? ' primary' : '') + '" data-act="stkView" data-v="list">فهرست</button></div>';
+    const cnt = '<div class="row stk-cnt"><span class="muted small"><b class="num">' + doneStakes + '</b> از <b class="num">' + tot + '</b> میخ پیاده شده • <b class="num">' + complete + '</b> از <b class="num">' + n + '</b> مقطع کامل' + (partial ? ' • <b class="num">' + partial + '</b> ناقص' : '') + '</span>' +
+      (doneStakes ? '<button class="btn sm danger" data-act="stkReset">بازنشانی همه</button>' : '') + '</div>';
+    if (S.stakeView === 'list') {
+      const flt = S.stakeFilter || 'all';
+      h += '<div class="seg"><button class="btn sm' + (flt === 'all' ? ' primary' : '') + '" data-act="stkFlt" data-v="all">همه</button><button class="btn sm' + (flt === 'none' ? ' primary' : '') + '" data-act="stkFlt" data-v="none">نشده‌ها (' + (n - complete - partial) + ')</button><button class="btn sm' + (flt === 'part' ? ' primary' : '') + '" data-act="stkFlt" data-v="part">ناقص‌ها (' + partial + ')</button></div>' + cnt;
+      let rows = '';
+      cx.secs.forEach(function (q, k) {
+        const t = secStakeState(q);
+        if ((flt === 'none' && (t.n > 0)) || (flt === 'part' && !t.part)) return;
+        rows += '<button class="stk-row' + (t.done ? ' done' : t.part ? ' part' : '') + '" data-act="stkRow" data-i="' + k + '"><span class="num" dir="ltr">' + esc(stn(q.station)) + '</span><span class="stk-bx">' +
+          C.sideKeys(q).map(function (sd) { return '<i class="' + (sideStaked(q.station, sd) ? 'on' : '') + '" title="' + esc(sideFa(q, sd)) + '">' + (sideStaked(q.station, sd) ? '✓' : '') + '</i>'; }).join('') + '</span></button>';
+      });
+      h += rows ? '<div class="stk-list">' + rows + '</div>' : '<p class="muted">موردی با این فیلتر نیست.</p>';
+      return h;
+    }
     if (!p.setups.length) h += '<div class="msg warn">هنوز استقرار نیوو تعریف نشده است؛ قرائت شاخص نمایش داده نمی‌شود. <a href="#/newo"><b>تعریف بنچ‌مارک و استقرار</b></a></div>';
     else {
       h += '<div class="row"><label class="field grow"><span>استقرار فعال</span><select class="inp" id="actSetup">' +
@@ -5200,22 +5707,21 @@ th { background: #0b2a43; color: #e8eef3; font-weight: 700; border-bottom: 2px s
       if (!r.setupInfo.ok) h += msgList(r.setupInfo.errors, 'err');
       else if (r.setup && !C.setupCovers(r.setup, sec.station)) h += '<div class="msg warn">این کیلومتراژ خارج از محدوده‌ی استقرار «' + esc(r.setup.name) + '» است. استقرار مناسب را انتخاب کنید.</div>';
     }
-    const done = isStaked(sec.station), doneN = cx.secs.filter(function (q) { return isStaked(q.station); }).length;
+    const ss = secStakeState(sec), done = ss.done;
     h += '<div class="stake-bar">' +
       '<div class="stn-box' + (done ? ' staked' : '') + '"><input id="stJump" value="' + esc(stn(sec.station)) + '" inputmode="text" aria-label="کیلومتراژ؛ برای پرش تایپ کنید"><span class="muted small num">' + (i + 1) + ' / ' + n + '</span></div></div>';
-    C.sideKeys(sec).forEach(function (side) { h += stakeCard(side, sec, rd, layerTag(cx.layer), !!cx.layer); });
+    C.sideKeys(sec).forEach(function (side) { h += stakeCard(side, sec, rd, layerTag(cx.layer), !!cx.layer, sideStaked(sec.station, side)); });
     if (navigator.wakeLock) h += '<div class="row"><button class="btn sm" data-act="wake">' + (S.wake ? 'روشن ماندن صفحه: فعال ✓' : 'روشن نگه داشتن صفحه') + '</button></div>';
     h += '<div class="stk-box' + (done ? ' on' : '') + '">' +
-      (done ? '<div class="stk-ok">✓ پیاده‌شده</div><button class="btn sm" data-act="stkToggle">برداشتن علامت</button>'
-        : '<button class="btn primary stk-btn" data-act="stkToggle">✓ این مقطع پیاده شد</button>') +
-      '</div><div class="row stk-cnt"><span class="muted small"><b class="num">' + doneN + '</b> از <b class="num">' + n + '</b> مقطع پیاده شده</span>' +
-      (doneN ? '<button class="btn sm danger" data-act="stkReset">بازنشانی همه</button>' : '') + '</div>';
+      (done ? '<div class="stk-ok">✓ همه‌ی میخ‌های این مقطع پیاده شد</div><button class="btn sm" data-act="stkToggle">برداشتن همه‌ی علامت‌ها</button>'
+        : '<button class="btn primary stk-btn" data-act="stkToggle">✓ همه‌ی میخ‌های این مقطع پیاده شد (' + ss.n + ' از ' + ss.total + ')</button>') +
+      '</div>' + cnt;
     h += '<div class="stake-pad"></div>';
     h += '<div class="nav-big"><button class="btn" data-act="stGo" data-d="-1"' + (i <= 0 ? ' disabled' : '') + '>‹ مقطع قبلی</button><button class="btn primary" data-act="stGo" data-d="1"' + (i >= n - 1 ? ' disabled' : '') + '>مقطع بعدی ›</button></div>';
     return h;
   }
 
-  function stakeCard(side, sec, rd, tag, isLayer) {
+  function stakeCard(side, sec, rd, tag, isLayer, on) {
     const q = sec[side], r = rd[side], ok = r && r.valid;
     const sub = '<span class="layer-tag' + (isLayer ? ' on' : '') + '">' + esc(tag) + '</span><br>Z هدف <span class="num">' + fx(q.z) + '</span>' + (side === 'axis' ? '' : '<br>ΔZ <span class="num">' + sgn(q.dz) + '</span> • عرض <span class="num">' + fx(q.width) + '</span>');
     const none = !r || r.status === 'invalid';
@@ -5226,7 +5732,7 @@ th { background: #0b2a43; color: #e8eef3; font-weight: 700; border-bottom: 2px s
       val = '<div class="rd-v">⚠ ' + SHORT[r.status] + '</div>';
       warn = '<div class="warn-t">' + esc(r.message) + ' (مقدار محاسبه‌شده <span class="num strike">' + fx(r.value) + '</span> اجرایی نیست)</div>';
     }
-    return '<div class="rd-card ' + sideCls(side) + (ok || none ? '' : ' bad') + '"><div><div class="lbl">' + esc(sideFa(sec, side)) + ' <span class="chip ' + sideCls(side) + '">' + esc(q.name) + '</span></div><div class="sub">' + sub + '</div>' + warn + '</div>' + val + '</div>';
+    return '<div class="rd-card ' + sideCls(side) + (ok || none ? '' : ' bad') + (on ? ' staked' : '') + '" data-act="stkSide" data-side="' + esc(side) + '" role="button" tabindex="0" aria-pressed="' + (on ? 'true' : 'false') + '"><div><div class="lbl">' + esc(sideFa(sec, side)) + ' <span class="chip ' + sideCls(side) + '">' + esc(q.name) + '</span>' + (on ? ' <span class="stk-tick">✓ پیاده شد</span>' : '') + '</div><div class="sub">' + sub + '</div>' + warn + '</div>' + val + '</div>';
   }
 
   /* ============================== ۷) خروجی و گزارش ============================== */
@@ -5650,7 +6156,7 @@ th { background: #0b2a43; color: #e8eef3; font-weight: 700; border-bottom: 2px s
     const p = P(), cx = svCtx(), r = cx.r;
     if (!r.sections) return streetBar(false) + svSrcBar() + '<div class="msg err"><b>محاسبه انجام نشد.</b> ابتدا خطاهای زیر را رفع کنید.</div>' + blockedBanner(r);
     let h = streetBar(false) + svSrcBar();
-    if (!p.benchmarks.length) return h + '<div class="msg warn">برای برداشت دست‌کم یک بنچ‌مارک با ارتفاع معلوم لازم است. <a href="#/newo"><b>تعریف بنچ‌مارک در تب نیوو</b></a></div>';
+    if (!p.benchmarks.length) return h + '<div class="msg warn">برای برداشت دست‌کم یک بنچ‌مارک با ارتفاع معلوم لازم است. <a href="#/newo"><b>تعریف بنچ‌مارک در تب بنچ‌مارک</b></a></div>';
     svSync();
     h += '<section class="card"><label class="field"><span>لایه‌ای که با آن مقایسه می‌شود</span><select class="inp" id="svLayer"><option value="">خط پروژه</option>' +
       cx.ll.map(function (l) { return '<option value="' + esc(l.id) + '"' + (cx.layer && cx.layer.id === l.id ? ' selected' : '') + '>' + esc(layerTag(l)) + '</option>'; }).join('') + '</select></label>' +
@@ -5804,7 +6310,9 @@ th { background: #0b2a43; color: #e8eef3; font-weight: 700; border-bottom: 2px s
   /* ============================== جدول صفحات ============================== */
   const PAGES = {
     home: { render: homePage },
+    preport: { render: preportPage },
     projects: { render: projectsPage },
+    security: { render: securityPage },
     points: { render: pointsPage, live: pointsLive, after: pointsLive },
     slopes: { render: slopesPage, live: slopesLive, after: slopesLive },
     layers: { render: layersPage, live: layersLive, after: layersLive },
@@ -6401,14 +6909,12 @@ th { background: #0b2a43; color: #e8eef3; font-weight: 700; border-bottom: 2px s
         '<td style="white-space:nowrap">' + (x.id === f.id ? '' : '<button class="btn sm" data-act="sfSel" data-id="' + esc(x.id) + '">نمایش</button> ') + '<button class="btn icon danger sm" data-act="sfDel" data-i="' + i + '" aria-label="حذف فایل">×</button></td></tr>';
     });
     h += '</tbody></table></div></section>';
-    h += lkCard(d);
-
-    // مشخصات فایل انتخاب‌شده + SHA-256
+    // مشخصات فایل انتخاب‌شده (اثرانگشت و قفل در بخش «امنیت»)
     const info = sfLayerInfo(d, f), det = info.det, out = sfOutside(d, f), hasRaw = !!F.raw[f.id];
     h += '<section class="card"><h3>' + esc(f.name) + '</h3>';
-    h += '<div class="hashbox"><span>اثرانگشت دیجیتال (SHA-256) — فایل' + (f.sha256 ? '' : ' (در دسترس نیست؛ این فایل با نسخه‌ی قدیمی بارگذاری شده است)') + '</span><code>' + esc(f.sha256 || '—') + '</code></div>' +
-      '<div class="hashbox"><span>اثرانگشت دیجیتال (SHA-256) — نقاط (متن ستون‌ها به ترتیب فایل)</span><code>' + esc(sfContentHash(f)) + '</code></div>' +
-      '<p class="small">کد کنترل: <b class="num" dir="ltr">' + esc(sfCode(f)) + '</b> • ' + f.pts.length + ' نقطه' + (f.size ? ' • ' + esc(sfSize(f.size)) : '') + '</p>';
+    const lkNo = lkLocked(d.st)[f.id];
+    h += '<p class="small">کد کنترل: <b class="num" dir="ltr">' + esc(sfCode(f)) + '</b> • ' + f.pts.length + ' نقطه' + (f.size ? ' • ' + esc(sfSize(f.size)) : '') +
+      (lkNo ? ' • <span class="chip C">قفل‌شده — نسخه‌ی ' + lkNo + '</span>' : '') + ' • <a href="#/security"><b>اثرانگشت و قفل در «امنیت»</b></a></p>';
     if (out && out.outside) h += '<div class="msg warn small">' + out.outside + ' نقطه‌ی این فایل بیرون از محدوده‌ی خیابان «' + esc(d.st.name) + '» است (عرض راه + ' + SF_MARGIN + ' متر از هر لبه، ' + SF_MARGIN + ' متر از ابتدا و انتها). شاید فایل خیابان دیگری انتخاب شده است. هیچ نقطه‌ای تغییر نکرده است.</div>';
     if ((f.skipped || []).length) h += '<div class="msg warn small">' + f.skipped.length + ' ردیف فایل خوانده نشد (پایین همین کارت).</div>';
     // لایه
@@ -6596,7 +7102,7 @@ th { background: #0b2a43; color: #e8eef3; font-weight: 700; border-bottom: 2px s
     return { ok: ok, load: load, create: create, sign: sign, verify: verify, exportBackup: exportBackup, importBackup: importBackup, keyIdOf: keyIdOf };
   })();
   S.rpo = { client: false, boxes: false }; S.rpoCur = { client: false, boxes: false }; S.ky = { info: undefined };
-  async function keyRefresh() { try { S.ky.info = SIGK.ok() ? await SIGK.load() : null; } catch (e) { S.ky.info = null; } if (S.view === 'projects' || /projects/.test(location.hash) || !location.hash) render(); }
+  async function keyRefresh() { try { S.ky.info = SIGK.ok() ? await SIGK.load() : null; } catch (e) { S.ky.info = null; } if (S.page === 'projects' || S.page === 'security') render(); }
 
   /** متن گزارش (برای اثرانگشت): فقط متن صفحه‌ها، بدون کادرهای افزوده */
   const rptTextOf = function (pages) { return Array.prototype.map.call(pages, function (pg) { return pg.textContent.replace(/\s+/g, ' ').trim(); }).join('\n'); };
@@ -6614,15 +7120,46 @@ th { background: #0b2a43; color: #e8eef3; font-weight: 700; border-bottom: 2px s
     } catch (e) { /* ثبت PDF اختیاری است */ }
     return { docHash: docHash, payload: payload, iso: iso, sig: sig, key: key };
   }
+  /* ---------- QR بررسی امضا: لینک برنامه + (متن امضاشده، امضا، کلید) فشرده در بخش # ---------- */
+  const SPKI_PRE = '3059301306072a8648ce3d020106082a8648ce3d030107034200';
+  const qrU8 = function (b64s) { const x = atob(String(b64s).replace(/\s+/g, '')), u = new Uint8Array(x.length); for (let i = 0; i < x.length; i++) u[i] = x.charCodeAt(i); return u; };
+  const qrB64 = function (u) { let t = ''; for (let i = 0; i < u.length; i++) t += String.fromCharCode(u[i]); return btoa(t); };
+  const qrHex = function (h) { const u = new Uint8Array(h.length / 2); for (let i = 0; i < u.length; i++) u[i] = parseInt(h.substr(i * 2, 2), 16); return u; };
+  function qrPack(s) {
+    const key = qrU8(s.key.spki), sig = qrU8(s.sig), pay = new TextEncoder().encode(s.payload), pre = qrHex(SPKI_PRE);
+    let kb = key, fl = 2;
+    if (key.length === pre.length + 65 && pre.every(function (v, i) { return key[i] === v; })) { kb = key.slice(pre.length); fl = 1; }
+    const out = new Uint8Array(4 + kb.length + sig.length + pay.length);
+    out[0] = 1; out[1] = fl; out[2] = sig.length; out[3] = kb.length; out.set(kb, 4); out.set(sig, 4 + kb.length); out.set(pay, 4 + kb.length + sig.length);
+    return qrB64(out).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+  function qrUnpack(q) {
+    const t = String(q).replace(/-/g, '+').replace(/_/g, '/'), u = qrU8(t + '='.repeat((4 - t.length % 4) % 4));
+    if (u[0] !== 1) throw new Error('نسخه‌ی QR ناشناخته است.');
+    const fl = u[1], sl = u[2], kl = u[3], kb = u.slice(4, 4 + kl), sig = u.slice(4 + kl, 4 + kl + sl), pay = u.slice(4 + kl + sl);
+    let key = kb; if (fl === 1) { key = new Uint8Array(kb.length + 26); key.set(qrHex(SPKI_PRE), 0); key.set(kb, 26); }
+    return { payload: new TextDecoder().decode(pay), sig: qrB64(sig), key: qrB64(key) };
+  }
+  function qrLink(s) {
+    if (!/^https?:$/.test(location.protocol)) return '';
+    return location.origin + location.pathname + '#/security?q=' + qrPack(s);
+  }
+  function qrBlock(s) {
+    try {
+      const link = qrLink(s); if (!link || !window.RoadQR) return '';
+      const q = RoadQR.encodeText(link, 'L');
+      return '<div class="rpl-dsq">' + RoadQR.toSvg(q, '38mm') + '<span>برای بررسی امضا اسکن کنید</span></div>';
+    } catch (e) { return ''; }
+  }
   const rptShort = function (s, N, k) {
     return '<div class="rpl-dsl"><span>امضای دیجیتال • شناسه‌ی گزارش <bdi dir="ltr">' + esc(C.controlCode(s.docHash)) + '</bdi> • کلید <bdi dir="ltr">' + esc(s.key.keyId) + '</bdi> (' + esc(s.key.name) + ')</span><span>صفحه <bdi dir="ltr">' + k + '</bdi> از <bdi dir="ltr">' + N + '</bdi></span></div>';
   };
   const rptFull = function (s, N) {
-    return '<div class="rpl-dsf"><b>امضای دیجیتال گزارش — ' + esc(lkDate(s.iso)) + ' • ' + N + ' صفحه • ECDSA P-256 / SHA-256</b>' +
+    return '<div class="rpl-dsf"><div class="rpl-dsf-t"><b>امضای دیجیتال گزارش — ' + esc(lkDate(s.iso)) + ' • ' + N + ' صفحه • ECDSA P-256 / SHA-256</b>' +
       '<span>اثرانگشت دیجیتال (SHA-256) — کل گزارش</span><code dir="ltr">' + esc(s.docHash) + '</code>' +
       '<span>متن امضاشده</span><code dir="ltr">' + esc(s.payload) + '</code>' +
       '<span>امضا (Base64)</span><code dir="ltr">' + esc(s.sig) + '</code>' +
-      '<span>کلید عمومی (SPKI، Base64) — صاحب کلید: ' + esc(s.key.name) + ' • شناسه‌ی کلید <bdi dir="ltr">' + esc(s.key.keyId) + '</bdi></span><code dir="ltr">' + esc(s.key.spki) + '</code></div>';
+      '<span>کلید عمومی (SPKI، Base64) — صاحب کلید: ' + esc(s.key.name) + ' • شناسه‌ی کلید <bdi dir="ltr">' + esc(s.key.keyId) + '</bdi></span><code dir="ltr">' + esc(s.key.spki) + '</code></div>' + qrBlock(s) + '</div>';
   };
   /** کادر امضای فشرده برای پایین هر صفحه */
   function sigCompact() {
@@ -6705,6 +7242,29 @@ th { background: #0b2a43; color: #e8eef3; font-weight: 700; border-bottom: 2px s
     catch (e) { toast(e.message || 'بازیابی انجام نشد.', 'err'); }
   }
 
+  /* ============================== امنیت: کلید، اثرانگشت فایل‌ها، قفل و رسید، بررسی امضا ============================== */
+  function securityPage() {
+    if (!S.project) return keyCard() + sgvSection() + '<div class="msg info small" style="margin-top:8px">برای دیدن اثرانگشت فایل‌ها، قفل و رسید، یک پروژه باز کنید.</div>';
+    const d = sfData();
+    return streetBar(false) + keyCard() + fpCard(d) + lkCard(d) + sgvSection();
+  }
+  function sgvSection() { return '<section class="card" id="sgvCard">' + sgvCard() + '</section>'; }
+  function fpCard(d) {
+    const locked = lkLocked(d.st);
+    let h = '<section class="card" id="fpCard"><h3>اثرانگشت فایل‌ها — خیابان «' + esc(d.st.name) + '»</h3>';
+    if (!d.files.length) return h + '<p class="muted small">برای این خیابان فایل نقاطی بارگذاری نشده است (تب «برداشت» ← فایل نقاط).</p></section>';
+    d.files.forEach(function (f) {
+      const ch = sfContentHash(f);
+      h += '<details class="card-d"><summary><b>' + esc(f.name) + '</b> • کد کنترل <span dir="ltr">' + esc(sfCode(f)) + '</span> • ' + (locked[f.id] ? '<span class="chip C">قفل‌شده — نسخه‌ی ' + locked[f.id] + '</span>' : '<span class="chip M">بدون قفل</span>') + '</summary>' +
+        '<div class="hashbox"><span>SHA-256 فایل' + (f.sha256 ? '' : ' (در دسترس نیست؛ فایل با نسخه‌ی قدیمی بارگذاری شده)') + '</span><code>' + esc(f.sha256 || '—') + '</code></div>' +
+        (f.sha256 ? '<button class="btn sm" data-act="copyTxt" data-t="' + esc(f.sha256) + '">کپی SHA-256 فایل</button> ' : '') +
+        '<div class="hashbox"><span>SHA-256 نقاط (متن ستون‌ها به ترتیب فایل)</span><code>' + esc(ch) + '</code></div>' +
+        '<button class="btn sm" data-act="copyTxt" data-t="' + esc(ch) + '">کپی SHA-256 نقاط</button>' +
+        '<p class="small muted">' + f.pts.length + ' نقطه' + (f.size ? ' • ' + esc(sfSize(f.size)) : '') + ' • ' + esc(new Date(f.date).toLocaleDateString('fa-IR')) + '</p></details>';
+    });
+    return h + '</section>';
+  }
+
   /* ---------- بررسی امضای گزارش ---------- */
   function sgvCard() {
     const v = S.lk.sgv, I = S.lk.sgvIn || {};
@@ -6721,6 +7281,9 @@ th { background: #0b2a43; color: #e8eef3; font-weight: 700; border-bottom: 2px s
   async function sgVerifyAct() {
     const g = function (id) { return ($('#' + id).value || '').trim(); };
     const payload = g('sgvPayload'), sig = g('sgvSig'); let key = g('sgvKey');
+    await sgvRun(payload, sig, key);
+  }
+  async function sgvRun(payload, sig, key) {
     S.lk.sgvIn = { payload: payload, sig: sig, key: key };
     const loc = SIGK.ok() ? await SIGK.load() : null;
     if (!key && loc) key = loc.spki;
@@ -6831,7 +7394,6 @@ th { background: #0b2a43; color: #e8eef3; font-weight: 700; border-bottom: 2px s
       else h += '<div style="color:#c62828"><b>نامطابق ✗</b> — این فایل با هیچ فایل قفل‌شده‌ی این پروژه یکی نیست.' + (vf.nameHits.length ? ' فایلی با همین نام در نسخه‌ی ' + vf.nameHits.map(function (x) { return x.no; }).join('، ') + ' هست ولی محتوایش فرق دارد (علت را با «مقایسه با فایل کارفرما» ببینید).' : '') + '</div>';
       h += '</div>';
     }
-    h += sgvCard();
     return h + '</section>';
   }
 
@@ -6915,14 +7477,29 @@ th { background: #0b2a43; color: #e8eef3; font-weight: 700; border-bottom: 2px s
     return list.find(function (x) { return x.id === pick; }) || list.slice().reverse().find(function (x) { return x.lock === r.no; }) || list[list.length - 1] || null;
   }
   const lkWhat = function (o) { return RO_ITEMS.filter(function (x) { return o[x[0]]; }).map(function (x) { return x[1]; }).join('، '); };
+  const lkWhoList = function () { return (P().signers || []).filter(function (x) { return x.title || x.name; }).map(function (x) { return x.name ? (x.title ? x.title + ' — ' + x.name : x.name) : x.title; }); };
+  function lkToVal(i) { const el = $('#lkTo_' + i); if (!el) return ''; if (el.value === '__other') { const x = $('#lkToX_' + i); return x ? x.value.trim() : ''; } return el.value.trim(); }
+  function lkToField(i, cur) {
+    const list = lkWhoList(), other = (cur && list.indexOf(cur) < 0) || (S.lk.toOther || {})[i];
+    return field('گیرنده', '<select class="inp" id="lkTo_' + i + '" data-lkto="' + i + '"><option value="">انتخاب کنید…</option>' + list.map(function (n) { return '<option value="' + esc(n) + '"' + (!other && n === cur ? ' selected' : '') + '>' + esc(n) + '</option>'; }).join('') + '<option value="__other"' + (other ? ' selected' : '') + '>دیگر…</option></select>' +
+      (other ? '<input class="inp" id="lkToX_' + i + '" style="margin-top:4px" placeholder="نام گیرنده" autocomplete="off" value="' + esc(list.indexOf(cur) < 0 ? cur : '') + '">' : ''));
+  }
   function lkRcptUI(r, i) {
     const o = lkRO(), rin = (S.lk.rin || {})[i] || {}, sg = (P().signers || []).filter(function (x) { return x.title || x.name; });
     if (S.ky.info === undefined) setTimeout(keyRefresh, 0);
     const pdfs = (activeStreet().pdfs || []), pdf = lkPdfOf(r, i), hasKey = pdfs.length > 0;
     let h = '';
-    if (r.receipts && r.receipts.length) {
-      h += '<div class="small" style="margin-top:8px"><b>رسیدهای ارسال</b></div><div class="tbl-wrap"><table><thead><tr><th>تاریخ</th><th>گیرنده</th><th>تأیید گیرنده</th></tr></thead><tbody>' + r.receipts.map(function (x, j) {
-        return '<tr><td class="n">' + esc(lkDate(x.date)) + '</td><td>' + esc(x.to) + (x.note ? '<div class="muted small">' + esc(x.note) + '</div>' : '') + (x.what ? '<div class="muted small">موارد: ' + esc(x.what) + '</div>' : '') + '</td><td>' + (x.ack ? '<span style="color:#1b7a3d">✓ ' + esc(lkDate(x.ack)) + '</span>' : '<button class="btn sm" data-act="lkAck" data-i="' + i + '" data-j="' + j + '">تأیید شد</button>') + '</td></tr>';
+    const rcAll = (r.receipts || []).map(function (x, j) { return { x: x, j: j }; }), rcAct = rcAll.filter(function (o) { return !o.x.del; }), rcHist = rcAll.filter(function (o) { return o.x.del; });
+    const rt = (S.lk.rtab || {})[i] === 'hist' ? 'hist' : 'act';
+    if (rcAll.length) {
+      h += '<div class="seg" style="margin-top:8px"><button class="btn sm' + (rt === 'act' ? ' primary' : '') + '" data-act="lkRTab" data-i="' + i + '" data-v="act">رسیدهای ارسالی (' + rcAct.length + ')</button><button class="btn sm' + (rt === 'hist' ? ' primary' : '') + '" data-act="lkRTab" data-i="' + i + '" data-v="hist">تاریخچه‌ی رسید (' + rcHist.length + ')</button></div>';
+      const list = rt === 'hist' ? rcHist : rcAct;
+      if (!list.length) h += '<p class="muted small">' + (rt === 'hist' ? 'رسید حذف‌شده‌ای نیست.' : 'رسید فعالی نیست.') + '</p>';
+      else h += '<div class="tbl-wrap"><table><thead><tr><th>تاریخ</th><th>گیرنده</th><th>' + (rt === 'hist' ? 'وضعیت' : 'تأیید گیرنده') + '</th><th></th></tr></thead><tbody>' + list.map(function (o) {
+        const x = o.x, j = o.j;
+        return '<tr><td class="n">' + esc(lkDate(x.date)) + '</td><td>' + esc(x.to) + (x.note ? '<div class="muted small">' + esc(x.note) + '</div>' : '') + (x.what ? '<div class="muted small">موارد: ' + esc(x.what) + '</div>' : '') + '</td>' +
+          (rt === 'hist' ? '<td><span class="chip M">حذف‌شده</span><div class="muted small">' + esc(lkDate(x.del)) + '</div></td><td><button class="btn sm" data-act="lkRRes" data-i="' + i + '" data-j="' + j + '">بازگردانی</button></td>'
+            : '<td>' + (x.ack ? '<span style="color:#1b7a3d">✓ ' + esc(lkDate(x.ack)) + '</span>' : '<button class="btn sm" data-act="lkAck" data-i="' + i + '" data-j="' + j + '">تأیید گیرنده</button>') + '</td><td><button class="btn icon danger sm" data-act="lkRDel" data-i="' + i + '" data-j="' + j + '" aria-label="حذف رسید">×</button></td>') + '</tr>';
       }).join('') + '</tbody></table></div>';
     }
     h += '<div class="small" style="margin-top:8px"><b>رسید متنی تحویل نقاط برداشت</b> — موارد داخل رسید:</div><div class="rc-opts">' +
@@ -6931,8 +7508,7 @@ th { background: #0b2a43; color: #e8eef3; font-weight: 700; border-bottom: 2px s
         return '<label class="chk"><input type="checkbox" data-lkro="' + x[0] + '" data-i="' + i + '"' + (o[x[0]] && !dis ? ' checked' : '') + (dis ? ' disabled' : '') + '> ' + esc(x[1]) + (dis ? ' <span class="muted small">(ابتدا یک گزارش PDF امضادار بگیرید)</span>' : '') + '</label>';
       }).join('') + '</div>' +
       (pdfs.length ? field('PDF مربوط به رسید', '<select class="inp" data-lkpdf="' + i + '">' + pdfs.slice().reverse().map(function (x) { return '<option value="' + esc(x.id) + '"' + (pdf && x.id === pdf.id ? ' selected' : '') + '>' + esc((x.title || 'گزارش') + ' • ' + x.n + ' صفحه • ' + lkDate(x.date) + ' • ' + C.controlCode(x.hash)) + '</option>'; }).join('') + '</select>') : '<div class="msg info small">هنوز PDF امضادار ثبت نشده است؛ بعد از گرفتن گزارش PDF با امضای دیجیتال، مشخصات و امضای همان در رسید قرار می‌گیرد.</div>') +
-      '<div class="grid2">' + field('گیرنده', '<input class="inp" id="lkTo_' + i + '" list="lkWho" autocomplete="off" placeholder="مثلاً ناظر / کارفرما" value="' + esc(rin.to || '') + '">') + field('توضیح (اختیاری)', '<input class="inp" id="lkRn_' + i + '" autocomplete="off" placeholder="مثلاً ارسال با پیام‌رسان" value="' + esc(rin.note || '') + '">') + '</div>' +
-      '<datalist id="lkWho">' + sg.map(function (x) { return '<option value="' + esc((x.title ? x.title + ' ' : '') + x.name) + '">'; }).join('') + '</datalist>' +
+      '<div class="grid2">' + lkToField(i, rin.to || '') + field('توضیح (اختیاری)', '<input class="inp" id="lkRn_' + i + '" autocomplete="off" placeholder="مثلاً ارسال با پیام‌رسان" value="' + esc(rin.note || '') + '">') + '</div>' +
       '<textarea class="inp" rows="8" readonly dir="auto" style="margin-top:4px;font-size:12px">' + esc(lkRcptText(r, o, pdf) + (o.sign && pdf ? lkPdfSigText(pdf) : '')) + '</textarea>' +
       '<div class="row" style="margin-top:6px"><button class="btn primary grow" data-act="lkRShare" data-i="' + i + '">اشتراک‌گذاری رسید</button><button class="btn grow" data-act="lkRCopy" data-i="' + i + '">کپی رسید</button></div>' +
       '<div class="row" style="margin-top:6px"><button class="btn grow" data-act="lkRcpt" data-i="' + i + '">فقط ثبت ارسال (بدون متن)</button></div>';
@@ -6946,7 +7522,7 @@ th { background: #0b2a43; color: #e8eef3; font-weight: 700; border-bottom: 2px s
   async function lkRcptSend(i, how) {
     const r = activeStreet().locks[i]; if (!r) return;
     const g = function (id) { const el = $('#' + id); return el ? el.value.trim() : ''; };
-    const to = g('lkTo_' + i), note = g('lkRn_' + i), o = Object.assign({}, lkRO());
+    const to = lkToVal(i), note = g('lkRn_' + i), o = Object.assign({}, lkRO());
     if (!to) { toast('گیرنده را بنویسید.', 'err'); return; }
     if (!Object.keys(o).some(function (k) { return o[k]; })) { toast('دست‌کم یک مورد را تیک بزنید.', 'err'); return; }
     const pdf = lkPdfOf(r, i);
@@ -6957,14 +7533,14 @@ th { background: #0b2a43; color: #e8eef3; font-weight: 700; border-bottom: 2px s
     if (!done) done = await lkCopyText(text);
     if (!done) { await ask('متن رسید را کپی کنید:<br><textarea class="inp" rows="9" readonly dir="auto" style="width:100%;font-size:12px">' + esc(text) + '</textarea>', { ok: 'بستن', noCancel: true }); }
     (r.receipts || (r.receipts = [])).push({ date: new Date().toISOString(), to: to, note: note, what: (lkWhat(o) + (pdf && (o.doc || o.sign) ? ' • PDF: ' + C.controlCode(pdf.hash) : '')).slice(0, 200), ack: '' });
-    S.lk.rin = S.lk.rin || {}; S.lk.rin[i] = {};
+    S.lk.rin = S.lk.rin || {}; S.lk.rin[i] = { to: to };
     markDirty(); render(); toast(how === 'share' && navigator.share ? 'رسید ارسال و ثبت شد.' : 'رسید کپی و ثبت شد.');
   }
 
   function lkRcpt(i) {
     const st = activeStreet(), r = st.locks[i]; if (!r) return;
     const g = function (id) { const el = $('#' + id); return el ? el.value.trim() : ''; };
-    const to = g('lkTo_' + i); if (!to) { toast('گیرنده را بنویسید.', 'err'); return; }
+    const to = lkToVal(i); if (!to) { toast('گیرنده را بنویسید.', 'err'); return; }
     (r.receipts || (r.receipts = [])).push({ date: new Date().toISOString(), to: to, note: g('lkRn_' + i), what: '', ack: '' });
     markDirty(); render(); toast('رسید ارسال ثبت شد.');
   }
@@ -6983,7 +7559,7 @@ th { background: #0b2a43; color: #e8eef3; font-weight: 700; border-bottom: 2px s
     const trs = r.files.map(function (f, k) {
       return '<tr class="' + (k % 2 ? 'alt' : '') + '"><td dir="ltr">' + (k + 1) + '</td><td>' + rplL(f.name) + '</td><td>' + esc(f.layer || '') + '</td><td dir="ltr">' + f.n + '</td><td dir="ltr">' + (f.size ? esc(sfSize(f.size)) : '—') + '</td><td dir="ltr">' + esc(C.controlCode(f.sha256)) + '</td><td style="' + lkHexStyle + '">' + esc(f.sha256) + '</td></tr>';
     });
-    const rc = r.receipts || [];
+    const rc = (r.receipts || []).filter(function (x) { return !x.del; });
     const tail = (rc.length ? '<div class="rpl-note"><b>رسیدهای ارسال</b><br>' + rc.map(function (x) { return esc(lkDate(x.date)) + ' • ' + esc(x.to) + (x.note ? ' • ' + esc(x.note) : '') + (x.ack ? ' • تأیید گیرنده: ' + esc(lkDate(x.ack)) : ''); }).join('<br>') + '</div>' : '') + '';
     const foot = function (k, N) { return rplFoot(['کد کنترل نسخه ' + rplL(code), esc(r.street), 'نسخه‌ی ' + rplL(String(r.no))], k + 1, N); };
     rplPrint(await rplFlow({ top: top, head: head, units: trs, tail: tail, foot: foot }), slugFa(r.project) + '_' + slugFa(r.street) + '_صورت‌جلسه-نسخه' + r.no);
@@ -7117,14 +7693,20 @@ th { background: #0b2a43; color: #e8eef3; font-weight: 700; border-bottom: 2px s
     if (el.id === 'sfLayerMan') { const d0 = sfData(); if (d0.file) { d0.file.layerMan = el.value; markDirty(); render(); } return; }
     if (el.id === 'sfSort') { S.sf.sort = el.value; S.sf.page = 0; render(); return; }
     if (el.id === 'sfCols') { S.sf.cols = el.checked; render(); return; }
+    if (el.dataset.lkto !== undefined) {
+      const i = el.dataset.lkto, g = function (id) { const e2 = $('#' + id); return e2 ? e2.value.trim() : ''; };
+      (S.lk.toOther || (S.lk.toOther = {}))[i] = el.value === '__other';
+      (S.lk.rin || (S.lk.rin = {}))[i] = { to: el.value === '__other' ? '' : el.value, note: g('lkRn_' + i) };
+      render(); return;
+    }
     if (el.dataset.lkpdf !== undefined) {
       const i = el.dataset.lkpdf, g = function (id) { const e2 = $('#' + id); return e2 ? e2.value.trim() : ''; };
-      (S.lk.rin || (S.lk.rin = {}))[i] = { to: g('lkTo_' + i), note: g('lkRn_' + i) };
+      (S.lk.rin || (S.lk.rin = {}))[i] = { to: lkToVal(i), note: g('lkRn_' + i) };
       (S.lk.pdf || (S.lk.pdf = {}))[i] = el.value; render(); return;
     }
     if (el.dataset.lkro !== undefined) {
       const i = el.dataset.i, g = function (id) { const e2 = $('#' + id); return e2 ? e2.value.trim() : ''; }, o = lkRO(), k = el.dataset.lkro;
-      (S.lk.rin || (S.lk.rin = {}))[i] = { to: g('lkTo_' + i), note: g('lkRn_' + i) };
+      (S.lk.rin || (S.lk.rin = {}))[i] = { to: lkToVal(i), note: g('lkRn_' + i) };
       o[k] = el.checked; if (k === 'files' && !el.checked) o.fileHash = false; if (k === 'fileHash' && el.checked) o.files = true;
       try { localStorage.setItem('roadstakeui:rcptOpts', JSON.stringify(o)); } catch (e2) { /* ignore */ }
       render(); return;
@@ -7207,6 +7789,14 @@ th { background: #0b2a43; color: #e8eef3; font-weight: 700; border-bottom: 2px s
     if (el.id === 'lySel') { S.lySel = el.value; S.lyPage = 0; layersLive(); return; }
     if (el.id === 'pvSt') { S.pvSt = el.value; slopesLive(); return; }
     if (el.id === 'stJump') { jumpStake(el.value); return; }
+    if (el.id === 'stStep') {
+      const before = stakeCtx(), cur = before.secs && before.secs[S.stakeIdx] ? before.secs[S.stakeIdx].station : null, v = C.toNumber(el.value);
+      P().stakeStep = el.value.trim() && fin(v) && v > 0 ? String(el.value.trim()) : '';
+      if (el.value.trim() && !P().stakeStep) toast('گام باید عدد مثبت باشد.', 'err');
+      const after = stakeCtx(); let idx = 0;
+      if (cur !== null && after.secs && after.secs.length) { idx = after.secs.findIndex(function (q) { return q.station >= cur - 1e-9; }); if (idx < 0) idx = after.secs.length - 1; }
+      S.stakeIdx = idx; markDirty(); render(); return;
+    }
     if (el.id === 'expDelim') { S.exp.delim = el.value; return; }
     if (el.id === 'expLayer') { S.exp.layer = el.value; return; }
     if (el.id === 'expShare') { S.exp.share = el.checked; return; }
@@ -7362,6 +7952,18 @@ th { background: #0b2a43; color: #e8eef3; font-weight: 700; border-bottom: 2px s
     if (!b || b.disabled) return;
     const act = b.dataset.act, p = S.project;
     switch (act) {
+      case 'projReport': location.hash = '#/preport?id=' + encodeURIComponent(b.dataset.id); break;
+      case 'projPdf': projPdf(b.dataset.id); break;
+      case 'projMenu': projMenu(b.dataset.id); break;
+      case 'projEdit': projEdit(b.dataset.id); break;
+      case 'copyTxt': toast((await lkCopyText(b.dataset.t || '')) ? 'کپی شد.' : 'کپی انجام نشد.'); break;
+      case 'lkRTab': (S.lk.rtab || (S.lk.rtab = {}))[b.dataset.i] = b.dataset.v; render(); break;
+      case 'lkRDel': {
+        const r = activeStreet().locks[parseInt(b.dataset.i, 10)], x = r && r.receipts[parseInt(b.dataset.j, 10)];
+        if (x && await ask('این رسید حذف شود؟<br>ردّ آن با برچسب «حذف‌شده» در «تاریخچه‌ی رسید» می‌ماند و بازگردانی می‌شود.', { danger: true, ok: 'حذف رسید' })) { x.del = new Date().toISOString(); markDirty(); render(); toast('رسید به تاریخچه رفت.'); }
+        break;
+      }
+      case 'lkRRes': { const r = activeStreet().locks[parseInt(b.dataset.i, 10)], x = r && r.receipts[parseInt(b.dataset.j, 10)]; if (x) { x.del = ''; markDirty(); render(); toast('رسید بازگردانی شد.'); } break; }
       case 'menu': openMenu(); break;
       case 'menuClose': closeMenu(); break;
       case 'save': saveProject(); break;
@@ -7716,7 +8318,11 @@ th { background: #0b2a43; color: #e8eef3; font-weight: 700; border-bottom: 2px s
         }
         break;
       }
-      case 'stkToggle': { const cx = stakeCtx(); if (cx.secs && cx.secs[S.stakeIdx]) stkToggle(cx.secs[S.stakeIdx].station); break; }
+      case 'stkToggle': { const cx = stakeCtx(); if (cx.secs && cx.secs[S.stakeIdx]) stkToggle(cx.secs[S.stakeIdx]); break; }
+      case 'stkSide': { const cx = stakeCtx(); if (cx.secs && cx.secs[S.stakeIdx]) stkSide(cx.secs[S.stakeIdx], b.dataset.side); break; }
+      case 'stkView': S.stakeView = b.dataset.v === 'list' ? 'list' : 'card'; render(); break;
+      case 'stkFlt': S.stakeFilter = b.dataset.v; render(); break;
+      case 'stkRow': S.stakeIdx = parseInt(b.dataset.i, 10) || 0; S.stakeView = 'card'; render(); window.scrollTo(0, 0); break;
       case 'stkReset': {
         if (await ask('علامت «پیاده‌شده» همه‌ی مقاطع ' + esc(layerTag(stakeCtx().layer)) + ' برداشته شود؟ (فقط علامت‌ها پاک می‌شوند، داده‌ها نه)', { danger: true, ok: 'بازنشانی' })) { stkList().length = 0; markDirty(); render(); }
         break;
