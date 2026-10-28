@@ -735,6 +735,23 @@ select.inp, .inp, .cell { background: var(--card); }
   .msg.warn { color: var(--warn); }
   .msg.info { background: var(--axis-soft); }
 }
+
+/* ===== پیاده: ردیف وضعیت ثابت، گام میانی ===== */
+.rd-card .rd-col { flex: none; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.rd-card .lbl .chip { white-space: nowrap; }
+.stk-st { min-height: 24px; padding: 1px 10px; border-radius: 99px; font-size: .78rem; font-weight: 700; line-height: 22px; color: var(--muted); border: 1px dashed var(--line); white-space: nowrap; }
+.stk-st.on { background: var(--ok); border: 1px solid var(--ok); color: #fff; }
+.rd-card.staked .stk-tick { display: none; }
+.stk-edge { font-weight: 700; }
+.stk-mid { align-items: flex-end; margin-top: 8px; gap: 8px; }
+.stk-midbtn { background: var(--card); border: 1.5px solid var(--line); color: var(--muted); font-weight: 700; white-space: nowrap; }
+.stk-midbtn.on { background: var(--ok-soft); border-color: var(--ok); color: var(--ink); }
+
+/* ===== برداشت: کارت‌ها و امضای PDF ===== */
+.rd-col .sv-in { max-width: 150px; }
+#printArea .rpl-dsf { border: 1pt solid #0b2a40; background: #e8eef3; }
+#printArea .rpl-dsq { background: #fff; border: .6pt solid #0b2a40; padding: 2pt; margin-top: 2pt; }
+#printArea .rpl-dsq-na { width: 38mm; font-size: 6pt; color: #a82020; }
 </style>
 </head>
 <body>
@@ -3171,6 +3188,12 @@ select.inp, .inp, .cell { background: var(--card); }
     if (Array.isArray(p.signers)) base.signers = p.signers.slice(0, 6).map(function (x) { return { title: str(x && x.title), name: str(x && x.name) }; });
     base.signOn = p.signOn !== false;
     base.stakeStep = typeof p.stakeStep === 'string' ? p.stakeStep.slice(0, 12) : '';
+    base.stakeMidStep = typeof p.stakeMidStep === 'string' ? p.stakeMidStep.slice(0, 12) : '';
+    base.stakeMidOff = p.stakeMidOff === true;
+    base.svInit = p.svInit === true;
+    base.svStep = typeof p.svStep === 'string' ? p.svStep.slice(0, 12) : '';
+    base.svMidStep = typeof p.svMidStep === 'string' ? p.svMidStep.slice(0, 12) : '';
+    base.svMidOff = p.svMidOff === true;
     if (Array.isArray(p.machines)) base.machines = p.machines.filter(function (m) { return m && num(m.cap) !== null && num(m.cap) > 0; }).map(function (m) { return { id: String(m.id || C.uid('mc')), name: str(m.name), label: str(m.label), cap: num(m.cap), icon: str(m.icon) || 'generic' }; });
     if (Array.isArray(p.vehicleTypes)) base.vehicleTypes = p.vehicleTypes.map(function (n) { return String(n).trim(); }).filter(function (n, i, a) { return n && a.indexOf(n) === i; });
     base.exportTemplates = { points: normTpl(p.exportTemplates && p.exportTemplates.points, 'points').filter(function (t) { return t.cols; }), survey: normTpl(p.exportTemplates && p.exportTemplates.survey, 'survey').filter(function (t) { return t.cols; }) };
@@ -3524,7 +3547,7 @@ select.inp, .inp, .cell { background: var(--card); }
   const PAGE_SIZE = 50;       // ردیف در هر صفحه‌ی جدول نقاط
   const TABLE_STATIONS = 30;  // مقطع در هر صفحه‌ی جدول سه‌نقطه‌ای
 
-  const APP_VERSION = 'UI-2.0.0 (بر پایه‌ی 1.22.1)';
+  const APP_VERSION = 'UI-2.2.1 (بر پایه‌ی 1.22.1)';
   const S = {
     project: null, dirty: false, rev: 0, calc: null, calcRev: -1,
     page: 'home', imp: null, ptPage: 0, tPage: 0, stakeIdx: 0, rawBad: {},
@@ -3931,7 +3954,7 @@ select.inp, .inp, .cell { background: var(--card); }
         });
         const list = (s.staked && s.staked._) || [];
         secs.forEach(function (q) {
-          const sides = C.sideKeys(q), k = String(Math.round(q.station * 1000)), whole = list.indexOf(k) >= 0;
+          const sides = stakeSides(q, s, secs), k = String(Math.round(q.station * 1000)), whole = list.indexOf(k) >= 0;
           o.stkT += sides.length; sides.forEach(function (sd) { if (whole || list.indexOf(k + ':' + sd) >= 0) o.stkN++; });
         });
       }
@@ -5624,6 +5647,19 @@ select.inp, .inp, .cell { background: var(--card); }
     }
     return { r: r, ll: ll, layer: layer, secs: secs, rds: rds, step: stp, total: total };
   }
+  function stakeMidStepVal(p) { p = p || P(); const v = p && p.stakeMidStep ? C.toNumber(p.stakeMidStep) : NaN; return fin(v) && v > 0 ? v : 0; }
+  /** نقاط قابل‌پیاده‌سازی یک مقطع: میانی‌ها فقط وقتی که روشن باشند و در گام میانی بیفتند (ابتدا و انتها همیشه) */
+  function midSides(sec, off, ms, secs) {
+    const all = C.sideKeys(sec);
+    if (!all.some(function (k) { return sec[k].kind === 'mid'; })) return all;
+    const noMid = function () { return all.filter(function (k) { return sec[k].kind !== 'mid'; }); };
+    if (off) return noMid();
+    if (!ms) return all;
+    secs = secs || (calc().sections) || [];
+    const ends = secs.length && (sec.station === secs[0].station || sec.station === secs[secs.length - 1].station);
+    return ends || stakeIsMult(sec.station, ms) ? all : noMid();
+  }
+  function stakeSides(sec, p, secs) { p = p || P(); return midSides(sec, p.stakeMidOff, stakeMidStepVal(p), secs); }
   function stakeStepVal() { const p = P(), v = p && p.stakeStep ? C.toNumber(p.stakeStep) : NaN; return fin(v) && v > 0 ? v : 0; }
   function stakeIsMult(st, step) { const q = st / step; return Math.abs(q - Math.round(q)) * step < 0.0005; }
   const layerTag = function (l) { return l ? l.name + ' (\u2066' + (l.offset > 0 ? '+' : '') + C.fmt(l.offset * 100, 1) + ' cm\u2069)' : 'خط پروژه'; };
@@ -5647,13 +5683,13 @@ select.inp, .inp, .cell { background: var(--card); }
   /* هر میخ: کلید «کیلومتر:سمت»؛ کلید ساده‌ی کیلومتر (داده‌ی قدیمی) یعنی همه‌ی میخ‌های آن مقطع */
   function sideStaked(st, side) { const l = stkList(); return l.indexOf(stkKey(st)) >= 0 || l.indexOf(stkKey(st) + ':' + side) >= 0; }
   function secStakeState(sec) {
-    const sides = C.sideKeys(sec), n = sides.filter(function (sd) { return sideStaked(sec.station, sd); }).length;
+    const sides = stakeSides(sec), n = sides.filter(function (sd) { return sideStaked(sec.station, sd); }).length;
     return { n: n, total: sides.length, done: n === sides.length, part: n > 0 && n < sides.length };
   }
   function isStaked(st) { return stkList().indexOf(stkKey(st)) >= 0; }
   function stkClear(st) { const l = stkList(), k = stkKey(st); for (let i = l.length - 1; i >= 0; i--) if (l[i] === k || l[i].indexOf(k + ':') === 0) l.splice(i, 1); }
   function stkSide(sec, side) {
-    const l = stkList(), k = stkKey(sec.station), sides = C.sideKeys(sec);
+    const l = stkList(), k = stkKey(sec.station), sides = stakeSides(sec);
     if (l.indexOf(k) >= 0) { stkClear(sec.station); sides.forEach(function (sd) { if (sd !== side) l.push(k + ':' + sd); }); }
     else { const j = l.indexOf(k + ':' + side); if (j >= 0) l.splice(j, 1); else l.push(k + ':' + side); }
     markDirty(); render();
@@ -5681,7 +5717,9 @@ select.inp, .inp, .cell { background: var(--card); }
     // گام پیاده‌سازی و شمارش
     let tot = 0, doneStakes = 0, complete = 0, partial = 0;
     cx.secs.forEach(function (q) { const t = secStakeState(q); tot += t.total; doneStakes += t.n; if (t.done) complete++; else if (t.part) partial++; });
-    h += '<div class="card"><label class="field"><span>گام پیاده‌سازی (متر) — خالی یعنی همه‌ی نقاط</span><input class="inp ltr" id="stStep" dir="ltr" inputmode="decimal" autocomplete="off" value="' + esc(p.stakeStep || '') + '"></label>' +
+    h += '<div class="card"><div class="grid2"><label class="field"><span>گام کیلومتراژ (m)</span><input class="inp ltr" id="stStep" dir="ltr" inputmode="decimal" autocomplete="off" placeholder="همه" value="' + esc(p.stakeStep || '') + '"></label>' +
+      '<label class="field"' + (p.stakeMidOff ? ' style="opacity:.45"' : '') + '><span>گام میخ‌های میانی (m)</span><input class="inp ltr" id="stMidStep" dir="ltr" inputmode="decimal" autocomplete="off" placeholder="همه"' + (p.stakeMidOff ? ' disabled' : '') + ' value="' + esc(p.stakeMidStep || '') + '"></label></div>' +
+      '<div class="row stk-mid"><button class="btn sm stk-midbtn grow' + (p.stakeMidOff ? '' : ' on') + '" data-act="stkMids" aria-pressed="' + (p.stakeMidOff ? 'false' : 'true') + '">میخ‌های میانی: ' + (p.stakeMidOff ? 'غیرفعال' : 'فعال ✓') + '</button></div>' +
       (cx.step ? '<p class="muted small" style="margin:6px 0 0">با گام <b class="num">' + cx.step + '</b> متر، <b class="num">' + n + '</b> مقطع از <b class="num">' + cx.total + '</b> نمایش داده می‌شود (ابتدا و انتها همیشه هست).</p>' : '') + '</div>';
     h += '<div class="seg"><button class="btn' + (S.stakeView !== 'list' ? ' primary' : '') + '" data-act="stkView" data-v="card">مقطع‌به‌مقطع</button><button class="btn' + (S.stakeView === 'list' ? ' primary' : '') + '" data-act="stkView" data-v="list">فهرست</button></div>';
     const cnt = '<div class="row stk-cnt"><span class="muted small"><b class="num">' + doneStakes + '</b> از <b class="num">' + tot + '</b> میخ پیاده شده • <b class="num">' + complete + '</b> از <b class="num">' + n + '</b> مقطع کامل' + (partial ? ' • <b class="num">' + partial + '</b> ناقص' : '') + '</span>' +
@@ -5694,7 +5732,7 @@ select.inp, .inp, .cell { background: var(--card); }
         const t = secStakeState(q);
         if ((flt === 'none' && (t.n > 0)) || (flt === 'part' && !t.part)) return;
         rows += '<button class="stk-row' + (t.done ? ' done' : t.part ? ' part' : '') + '" data-act="stkRow" data-i="' + k + '"><span class="num" dir="ltr">' + esc(stn(q.station)) + '</span><span class="stk-bx">' +
-          C.sideKeys(q).map(function (sd) { return '<i class="' + (sideStaked(q.station, sd) ? 'on' : '') + '" title="' + esc(sideFa(q, sd)) + '">' + (sideStaked(q.station, sd) ? '✓' : '') + '</i>'; }).join('') + '</span></button>';
+          stakeSides(q).map(function (sd) { return '<i class="' + (sideStaked(q.station, sd) ? 'on' : '') + '" title="' + esc(sideFa(q, sd)) + '">' + (sideStaked(q.station, sd) ? '✓' : '') + '</i>'; }).join('') + '</span></button>';
       });
       h += rows ? '<div class="stk-list">' + rows + '</div>' : '<p class="muted">موردی با این فیلتر نیست.</p>';
       return h;
@@ -5710,7 +5748,7 @@ select.inp, .inp, .cell { background: var(--card); }
     const ss = secStakeState(sec), done = ss.done;
     h += '<div class="stake-bar">' +
       '<div class="stn-box' + (done ? ' staked' : '') + '"><input id="stJump" value="' + esc(stn(sec.station)) + '" inputmode="text" aria-label="کیلومتراژ؛ برای پرش تایپ کنید"><span class="muted small num">' + (i + 1) + ' / ' + n + '</span></div></div>';
-    C.sideKeys(sec).forEach(function (side) { h += stakeCard(side, sec, rd, layerTag(cx.layer), !!cx.layer, sideStaked(sec.station, side)); });
+    stakeSides(sec).forEach(function (side) { h += stakeCard(side, sec, rd, layerTag(cx.layer), !!cx.layer, sideStaked(sec.station, side)); });
     if (navigator.wakeLock) h += '<div class="row"><button class="btn sm" data-act="wake">' + (S.wake ? 'روشن ماندن صفحه: فعال ✓' : 'روشن نگه داشتن صفحه') + '</button></div>';
     h += '<div class="stk-box' + (done ? ' on' : '') + '">' +
       (done ? '<div class="stk-ok">✓ همه‌ی میخ‌های این مقطع پیاده شد</div><button class="btn sm" data-act="stkToggle">برداشتن همه‌ی علامت‌ها</button>'
@@ -5722,8 +5760,10 @@ select.inp, .inp, .cell { background: var(--card); }
   }
 
   function stakeCard(side, sec, rd, tag, isLayer, on) {
-    const q = sec[side], r = rd[side], ok = r && r.valid;
-    const sub = '<span class="layer-tag' + (isLayer ? ' on' : '') + '">' + esc(tag) + '</span><br>Z هدف <span class="num">' + fx(q.z) + '</span>' + (side === 'axis' ? '' : '<br>ΔZ <span class="num">' + sgn(q.dz) + '</span> • عرض <span class="num">' + fx(q.width) + '</span>');
+    const q = sec[side], r = rd[side], ok = r && r.valid, mid = q.kind === 'mid';
+    const nm = mid ? (q.midName || q.tag || 'نقطه میانی') : sideFa(sec, side);
+    const edge = mid ? '<span class="stk-edge">' + (q.edge === 'left' ? 'چپ' : 'راست') + '</span> • ' : '';
+    const sub = '<span class="layer-tag' + (isLayer ? ' on' : '') + '">' + esc(tag) + '</span><br>Z هدف <span class="num">' + fx(q.z) + '</span>' + (side === 'axis' ? '' : '<br>' + edge + 'ΔZ <span class="num">' + sgn(q.dz) + '</span> • عرض <span class="num">' + fx(q.width) + '</span>');
     const none = !r || r.status === 'invalid';
     let val, warn = '';
     if (ok) val = '<div class="rd-v">' + fx(r.value) + '</div>';
@@ -5732,7 +5772,8 @@ select.inp, .inp, .cell { background: var(--card); }
       val = '<div class="rd-v">⚠ ' + SHORT[r.status] + '</div>';
       warn = '<div class="warn-t">' + esc(r.message) + ' (مقدار محاسبه‌شده <span class="num strike">' + fx(r.value) + '</span> اجرایی نیست)</div>';
     }
-    return '<div class="rd-card ' + sideCls(side) + (ok || none ? '' : ' bad') + (on ? ' staked' : '') + '" data-act="stkSide" data-side="' + esc(side) + '" role="button" tabindex="0" aria-pressed="' + (on ? 'true' : 'false') + '"><div><div class="lbl">' + esc(sideFa(sec, side)) + ' <span class="chip ' + sideCls(side) + '">' + esc(q.name) + '</span>' + (on ? ' <span class="stk-tick">✓ پیاده شد</span>' : '') + '</div><div class="sub">' + sub + '</div>' + warn + '</div>' + val + '</div>';
+    const st = '<div class="stk-st' + (on ? ' on' : '') + '">' + (on ? '✓ پیاده شد' : 'پیاده نشده') + '</div>';
+    return '<div class="rd-card ' + sideCls(side) + (ok || none ? '' : ' bad') + (on ? ' staked' : '') + '" data-act="stkSide" data-side="' + esc(side) + '" role="button" tabindex="0" aria-pressed="' + (on ? 'true' : 'false') + '"><div><div class="lbl">' + esc(nm) + ' <span class="chip ' + sideCls(side) + '">' + esc(q.name) + '</span></div><div class="sub">' + sub + '</div>' + warn + '</div><div class="rd-col">' + st + val + '</div></div>';
   }
 
   /* ============================== ۷) خروجی و گزارش ============================== */
@@ -6047,7 +6088,13 @@ select.inp, .inp, .cell { background: var(--card); }
   const SIDE_ORDER = { left: 0, axis: 1, right: 2 };
   const SIDE_EN = { axis: 'Axis', left: 'Left', right: 'Right' };
   /** ترتیب نقاط برداشت یک مقطع: چپ، میانی‌های چپ، محور، میانی‌های راست، راست */
-  const svKeys = function (sec) { return C.sideKeys(sec); };
+  function svInitSet() {
+    const p = P(); if (!p || p.svInit) return;
+    p.svInit = true; p.svStep = p.stakeStep || ''; p.svMidStep = p.stakeMidStep || ''; p.svMidOff = !!p.stakeMidOff;
+  }
+  function svStepVal() { const p = P(), v = p && p.svStep ? C.toNumber(p.svStep) : NaN; return fin(v) && v > 0 ? v : 0; }
+  function svMidStepVal() { const p = P(), v = p && p.svMidStep ? C.toNumber(p.svMidStep) : NaN; return fin(v) && v > 0 ? v : 0; }
+  const svKeys = function (sec) { return midSides(sec, P().svMidOff, svMidStepVal(), calc().sections); };
   /** برای مرتب‌سازی ردیف‌های برداشت یک کیلومتر: میانی‌ها بر اساس سمت و فاصله (فاصله در ردیف ذخیره می‌شود) */
   const svOrder = function (r) {
     if (r.side === 'left') return 0; if (r.side === 'axis') return 1000; if (r.side === 'right') return 2000;
@@ -6068,7 +6115,11 @@ select.inp, .inp, .cell { background: var(--card); }
     const r = calc(), ll = C.normalizeLayers(P().layers).layers;
     const layer = ll.find(function (l) { return l.id === S.sv.layer; }) || null;
     if (!layer) S.sv.layer = '';
-    return { r: r, ll: ll, layer: layer, secs: r.sections ? (layer ? C.applyLayer(r.sections, layer) : r.sections) : [] };
+    svInitSet();
+    let secs = r.sections ? (layer ? C.applyLayer(r.sections, layer) : r.sections) : [];
+    const stp = svStepVal(), total = secs.length;
+    if (stp > 0 && secs.length > 2) secs = secs.filter(function (q, i) { return i === 0 || i === secs.length - 1 || stakeIsMult(q.station, stp); });
+    return { r: r, ll: ll, layer: layer, secs: secs, total: total, step: stp };
   }
   const stKey = function (v) { return Math.round(v * 1000); };
 
@@ -6145,10 +6196,38 @@ select.inp, .inp, .cell { background: var(--card); }
   }
 
   function svCard(side, sec) {
-    const q = sec[side], none = side !== 'axis' && sec.section && sec.section.none;
-    return '<div class="rd-card ' + sideCls(side) + '"><div><div class="lbl">' + esc(sideFa(sec, side)) + ' <span class="chip ' + sideCls(side) + '">' + esc(q.name) + '</span></div>' +
-      '<div class="sub">Z طرح <span class="num">' + (none ? '—' : fx(q.z)) + '</span><br>X <span class="num">' + fx(q.x) + '</span> • Y <span class="num">' + fx(q.y) + '</span></div><div class="sv-res" id="svRes_' + side + '"></div></div>' +
-      '<input class="sv-in" id="svRd_' + side + '" inputmode="decimal" dir="ltr" autocomplete="off" placeholder="قرائت" value="' + esc(S.sv.reads[side] || '') + '"' + (none ? ' disabled' : '') + ' aria-label="قرائت شاخص ' + esc(sideFa(sec, side)) + '"></div>';
+    const q = sec[side], none = side !== 'axis' && sec.section && sec.section.none, on = !none && String(S.sv.reads[side] || '').trim() !== '';
+    const mid = q.kind === 'mid', nm = mid ? (q.midName || q.tag || 'نقطه میانی') : sideFa(sec, side);
+    const edge = mid ? '<span class="stk-edge">' + (q.edge === 'left' ? 'چپ' : 'راست') + '</span><br>' : '';
+    return '<div class="rd-card ' + sideCls(side) + (on ? ' staked' : '') + '" id="svCard_' + side + '"><div><div class="lbl">' + esc(nm) + ' <span class="chip ' + sideCls(side) + '">' + esc(q.name) + '</span></div>' +
+      '<div class="sub">' + edge + 'Z طرح <span class="num">' + (none ? '—' : fx(q.z)) + '</span><br>X <span class="num">' + fx(q.x) + '</span> • Y <span class="num">' + fx(q.y) + '</span></div><div class="sv-res" id="svRes_' + side + '"></div></div>' +
+      '<div class="rd-col"><div class="stk-st' + (on ? ' on' : '') + '">' + (on ? '✓ برداشت شد' : 'برداشت نشده') + '</div>' +
+      '<input class="sv-in" id="svRd_' + side + '" inputmode="decimal" dir="ltr" autocomplete="off" placeholder="قرائت" value="' + esc(S.sv.reads[side] || '') + '"' + (none ? ' disabled' : '') + ' aria-label="قرائت شاخص ' + esc(nm) + '"></div></div>';
+  }
+  function svMark(side) {
+    const cd = $('#svCard_' + side); if (!cd) return;
+    const on = !$('#svRd_' + side).disabled && String(S.sv.reads[side] || '').trim() !== '';
+    cd.classList.toggle('staked', on);
+    const t = cd.querySelector('.stk-st'); if (t) { t.classList.toggle('on', on); t.textContent = on ? '✓ برداشت شد' : 'برداشت نشده'; }
+  }
+  /** شمارش برداشت‌های ذخیره‌شده‌ی لایه‌ی جاری روی مقاطع نمایش‌داده‌شده */
+  function svSideSaved(saved, q, k) { return saved[stKey(q.station) + '|' + k] === 1; }
+  function svCounts(cx) {
+    const saved = {}; svRows().forEach(function (r) { if ((r.layerId || '') === S.sv.layer && fin(r.reading)) saved[stKey(r.station) + '|' + r.side] = 1; });
+    const o = { saved: saved, tot: 0, done: 0, comp: 0, part: 0 };
+    cx.secs.forEach(function (q) {
+      const ks = svKeys(q).filter(function (k) { return !(k !== 'axis' && q.section && q.section.none); });
+      const n = ks.filter(function (k) { return svSideSaved(saved, q, k); }).length;
+      o.tot += ks.length; o.done += n; if (ks.length && n === ks.length) o.comp++; else if (n > 0) o.part++;
+    });
+    return o;
+  }
+  function svSetCard(p, cx) {
+    return '<div class="card"><div class="grid2">' +
+      '<label class="field"><span>گام کیلومتراژ (m)</span><input class="inp ltr" id="svStep" dir="ltr" inputmode="decimal" autocomplete="off" placeholder="همه" value="' + esc(p.svStep || '') + '"></label>' +
+      '<label class="field"' + (p.svMidOff ? ' style="opacity:.45"' : '') + '><span>گام نقاط میانی (m)</span><input class="inp ltr" id="svMidStep" dir="ltr" inputmode="decimal" autocomplete="off" placeholder="همه"' + (p.svMidOff ? ' disabled' : '') + ' value="' + esc(p.svMidStep || '') + '"></label></div>' +
+      '<div class="row stk-mid"><button class="btn sm stk-midbtn grow' + (p.svMidOff ? '' : ' on') + '" data-act="svMids" aria-pressed="' + (p.svMidOff ? 'false' : 'true') + '">نقاط میانی: ' + (p.svMidOff ? 'غیرفعال' : 'فعال ✓') + '</button></div>' +
+      (cx.step ? '<p class="muted small" style="margin:6px 0 0">با گام <b class="num">' + cx.step + '</b> متر، <b class="num">' + cx.secs.length + '</b> مقطع از <b class="num">' + cx.total + '</b> نمایش داده می‌شود (ابتدا و انتها همیشه هست).</p>' : '') + '</div>';
   }
 
   function surveyPage() {
@@ -6166,14 +6245,30 @@ select.inp, .inp, .cell { background: var(--card); }
       '<div class="field"><span>ارتفاع خط دید HI = Z بنچ‌مارک + BS</span><b class="num" id="svHi" style="font-size:1.3rem">—</b></div>' +
       field('حد انطباق (± mm)', inp('settings.surveyTolMm', p.settings.surveyTolMm, { t: 'raw', cls: 'inp', re: true })) + '</div><div id="svBmInfo"></div></section>';
     h += '<div class="stake-layer' + (cx.layer ? ' on' : '') + '">برداشت و مقایسه با: <b>' + esc(layerTag(cx.layer)) + '</b></div>';
-    if (!cx.secs.length) return h + '<div class="msg warn">هیچ مقطعی در محدوده‌ی این لایه نیست. بازه‌ی لایه را در تب «لایه‌ها» بررسی کنید.</div>' + surveyTable(cx);
-    const n = cx.secs.length, i = S.sv.idx, sec = cx.secs[i];
+    if (!cx.secs.length) return h + svSetCard(p, cx) + '<div class="msg warn">هیچ مقطعی در محدوده‌ی این لایه نیست. بازه‌ی لایه را در تب «لایه‌ها» بررسی کنید.</div>' + surveyTable(cx);
+    const n = cx.secs.length, i = S.sv.idx, sec = cx.secs[i], cn = svCounts(cx);
+    h += svSetCard(p, cx);
+    h += '<div class="seg"><button class="btn' + (S.svView !== 'list' ? ' primary' : '') + '" data-act="svView" data-v="card">مقطع‌به‌مقطع</button><button class="btn' + (S.svView === 'list' ? ' primary' : '') + '" data-act="svView" data-v="list">فهرست</button></div>';
+    const cnt = '<div class="row stk-cnt"><span class="muted small"><b class="num">' + cn.done + '</b> از <b class="num">' + cn.tot + '</b> نقطه برداشت شده • <b class="num">' + cn.comp + '</b> از <b class="num">' + n + '</b> مقطع کامل' + (cn.part ? ' • <b class="num">' + cn.part + '</b> ناقص' : '') + '</span></div>';
+    if (S.svView === 'list') {
+      const flt = S.svFlt || 'all';
+      h += '<div class="seg"><button class="btn sm' + (flt === 'all' ? ' primary' : '') + '" data-act="svFlt" data-v="all">همه</button><button class="btn sm' + (flt === 'none' ? ' primary' : '') + '" data-act="svFlt" data-v="none">نشده‌ها (' + (n - cn.comp - cn.part) + ')</button><button class="btn sm' + (flt === 'part' ? ' primary' : '') + '" data-act="svFlt" data-v="part">ناقص‌ها (' + cn.part + ')</button></div>' + cnt;
+      let rows = '';
+      cx.secs.forEach(function (q, k) {
+        const ks = svKeys(q).filter(function (kk) { return !(kk !== 'axis' && q.section && q.section.none); }), got = ks.filter(function (kk) { return svSideSaved(cn.saved, q, kk); }).length;
+        if ((flt === 'none' && got > 0) || (flt === 'part' && !(got > 0 && got < ks.length))) return;
+        rows += '<button class="stk-row' + (ks.length && got === ks.length ? ' done' : got > 0 ? ' part' : '') + '" data-act="svRow" data-i="' + k + '"><span class="num" dir="ltr">' + esc(stn(q.station)) + '</span><span class="stk-bx">' +
+          ks.map(function (kk) { const on = svSideSaved(cn.saved, q, kk); return '<i class="' + (on ? 'on' : '') + '" title="' + esc(sideFa(q, kk)) + '">' + (on ? '✓' : '') + '</i>'; }).join('') + '</span></button>';
+      });
+      h += rows ? '<div class="stk-list">' + rows + '</div>' : '<p class="muted">موردی با این فیلتر نیست.</p>';
+      return h + surveyTable(cx);
+    }
     h += '<div class="stake-bar"><button class="btn sm" data-act="svGo" data-d="-1"' + (i <= 0 ? ' disabled' : '') + '>‹ قبلی</button>' +
       '<div class="stn-box"><input id="svJump" value="' + esc(stn(sec.station)) + '" inputmode="text" aria-label="کیلومتراژ؛ برای پرش تایپ کنید"><span class="muted small num">' + (i + 1) + ' / ' + n + '</span>' +
       (svExisting(sec) ? ' <span class="chip C">برداشت شده</span>' : '') + '</div>' +
       '<button class="btn sm" data-act="svGo" data-d="1"' + (i >= n - 1 ? ' disabled' : '') + '>بعدی ›</button></div>';
     svKeys(sec).forEach(function (side) { h += svCard(side, sec); });
-    h += '<p class="muted small">قرائت‌ها اختیاری‌اند؛ هر سمتی را که خواندید پر کنید. مختصات X و Y از هندسه‌ی طرح همین کیلومتر و سمت می‌آید (شاخص روی میخ طرح ایستاده است). خطا = Z برداشت − Z طرح لایه؛ مثبت یعنی بالاتر از طرح (خاک‌برداری لازم).</p>';
+    h += cnt + '<p class="muted small">قرائت‌ها اختیاری‌اند؛ هر سمتی را که خواندید پر کنید. مختصات X و Y از هندسه‌ی طرح همین کیلومتر و سمت می‌آید (شاخص روی میخ طرح ایستاده است). خطا = Z برداشت − Z طرح لایه؛ مثبت یعنی بالاتر از طرح (خاک‌برداری لازم).</p>';
     h += surveyTable(cx);
     h += '<div class="stake-pad"></div><div class="nav-big"><button class="btn" data-act="svGo" data-d="-1"' + (i <= 0 ? ' disabled' : '') + '>‹ مقطع قبلی</button><button class="btn primary wide" id="svSave" data-act="svSave">برداشت</button></div>';
     return h;
@@ -6185,6 +6280,7 @@ select.inp, .inp, .cell { background: var(--card); }
     const vis = [];
     rows.forEach(function (rec, i) { if (all || (rec.layerId || '') === S.sv.layer) vis.push({ rec: rec, i: i, ev: svEval(rec, ix) }); });
     let h = '<section class="card"><h2>برداشت‌های ثبت‌شده (' + vis.length + ')</h2>' +
+      '<div class="row" style="margin:4px 0 8px"><button class="btn primary grow" data-act="svReport">گزارش</button></div>' +
       '<label class="row" style="margin:4px 0"><input type="checkbox" id="svAll"' + (all ? ' checked' : '') + '> نمایش برداشت همه‌ی لایه‌ها (وگرنه فقط «' + esc(layerTag(cx.layer)) + '»)</label>';
     if (!vis.length) return h + '<p class="muted">هنوز برداشتی ثبت نشده است. قرائت را وارد کنید و «برداشت» را بزنید؛ ردیف‌ها اینجا ذخیره می‌شوند.</p></section>';
     const groups = {};
@@ -6199,20 +6295,44 @@ select.inp, .inp, .cell { background: var(--card); }
     const size = 40, pages = Math.max(1, Math.ceil(vis.length / size));
     if (S.svPage >= pages) S.svPage = pages - 1;
     const part = vis.slice(S.svPage * size, S.svPage * size + size);
-    h += pager('svPage', vis.length, size) + '<div class="tbl-wrap"><table><thead><tr><th>کیلومتراژ</th><th>نقطه</th>' + (all ? '<th>لایه</th>' : '') + '<th>قرائت</th><th>BS</th><th>Z برداشت</th><th>X</th><th>Y</th><th>Z طرح</th><th>خطا (mm)</th><th>وضعیت</th><th></th></tr></thead><tbody>';
+    h += pager('svPage', vis.length, size) + '<div class="tbl-wrap"><table><thead><tr><th>کیلومتراژ</th><th>وضعیت</th><th>خطا (mm)</th><th>نقطه</th>' + (all ? '<th>لایه</th>' : '') + '<th>قرائت</th><th>BS</th><th>Z برداشت</th><th>Z طرح</th><th>X</th><th>Y</th><th></th></tr></thead><tbody>';
     part.forEach(function (x) {
       const rec = x.rec, sp = x.ev.sp, path = 'streets.' + si + '.survey.' + x.i;
-      h += '<tr class="s-' + (SIDE_CLS[rec.side] ? rec.side : 'mid') + '"><td class="n"><button class="btn sm" data-act="svGoto" data-i="' + x.i + '">' + esc(stn(rec.station)) + '</button></td><td><span class="chip ' + sideCls(rec.side) + '">' + esc(rec.point) + '</span></td>' + (all ? '<td>' + esc(rec.layerName || 'خط پروژه') + '</td>' : '') +
+      h += '<tr class="s-' + (SIDE_CLS[rec.side] ? rec.side : 'mid') + '"><td class="n"><button class="btn sm" data-act="svGoto" data-i="' + x.i + '">' + esc(stn(rec.station)) + '</button></td>' +
+        '<td><span class="sv-st ' + sp.status + '">' + SV_STATUS[sp.status] + '</span></td><td class="n sv-err ' + (sp.status) + '">' + svErrText(sp.errMm) + '</td>' +
+        '<td><span class="chip ' + sideCls(rec.side) + '">' + esc(rec.point) + '</span></td>' + (all ? '<td>' + esc(rec.layerName || 'خط پروژه') + '</td>' : '') +
         '<td>' + inp(path + '.reading', rec.reading, { t: 'raw', im: 'decimal', re: true, aria: 'قرائت' }) + '</td><td>' + inp(path + '.bs', rec.bs, { t: 'raw', im: 'decimal', re: true, aria: 'قرائت عقب' }) + '</td>' +
-        '<td class="n">' + (fin(sp.zMeas) ? fx(sp.zMeas) : '—') + '</td><td class="n">' + (fin(rec.x) ? fx(rec.x) : '') + '</td><td class="n">' + (fin(rec.y) ? fx(rec.y) : '') + '</td>' +
+        '<td class="n">' + (fin(sp.zMeas) ? fx(sp.zMeas) : '—') + '</td>' +
         '<td class="n">' + (fin(x.ev.zDesign) ? fx(x.ev.zDesign) : '—') + (x.ev.changed ? ' <span title="طرح این نقطه بعد از برداشت تغییر کرده یا لایه‌اش دیگر نیست" class="bdg warn">⚠</span>' : '') + '</td>' +
-        '<td class="n sv-err ' + (sp.status) + '">' + svErrText(sp.errMm) + '</td><td><span class="sv-st ' + sp.status + '">' + SV_STATUS[sp.status] + '</span></td>' +
+        '<td class="n">' + (fin(rec.x) ? fx(rec.x) : '') + '</td><td class="n">' + (fin(rec.y) ? fx(rec.y) : '') + '</td>' +
         '<td><button class="btn icon danger sm" data-act="svDel" data-i="' + x.i + '" aria-label="حذف این برداشت">×</button></td></tr>';
     });
     h += '</tbody></table></div>' + pager('svPage', vis.length, size) +
       '<div class="row" style="margin-top:8px"><button class="btn sm danger" data-act="svClear">حذف برداشت‌های نمایش‌داده‌شده (' + vis.length + ')</button></div>' +
-      '<p class="muted small">قرائت و BS هر ردیف قابل ویرایش است؛ Z برداشت و خطا خودکار به‌روز می‌شود. با زدن کیلومتر ردیف، همان مقطع و لایه برای برداشت دوباره باز می‌شود. خروجی فایل در تب «خروجی».</p></section>';
+      '<p class="muted small">قرائت و BS هر ردیف قابل ویرایش است؛ Z برداشت و خطا خودکار به‌روز می‌شود. با زدن کیلومتر ردیف، همان مقطع و لایه برای برداشت دوباره باز می‌شود. خروجی PDF و متن با دکمه‌ی «گزارش».</p></section>';
     return h;
+  }
+
+  async function printSurveyRows() {
+    const p = P(), st = activeStreet(), cx = svCtx(), ix = svDesignIndex(), tol = p.settings.surveyTolMm, all = S.sv.all, vis = [];
+    svRows().forEach(function (rec) { if (all || (rec.layerId || '') === S.sv.layer) vis.push({ rec: rec, ev: svEval(rec, ix) }); });
+    if (!vis.length) { toast('برداشتی برای گزارش وجود ندارد.', 'err'); return; }
+    if (!(await rptAsk())) return;
+    const groups = {}; vis.forEach(function (x) { const k = x.rec.layerName || 'خط پروژه'; (groups[k] = groups[k] || []).push(x.ev.sp.err); });
+    const meta = [['پروژه', esc(p.name)], ['خیابان', esc(st.name)], ['لایه', esc(all ? 'همه‌ی لایه‌ها' : layerTag(cx.layer)), 2], ['تعداد برداشت', rplL(String(vis.length))], ['حد انطباق', rplL('±' + C.fmt(tol, 1) + ' mm')]];
+    let top = rplCover('گزارش برداشت‌ها', p, st.name, rplCs(p)) + rplMeta(meta);
+    Object.keys(groups).forEach(function (k) {
+      const sx = C.surveyStats(groups[k], tol);
+      top += '<div class="rpl-note"><b>' + esc(k) + '</b>' + (sx.n ? ' — مقایسه‌شده ' + rplL(String(sx.n)) + ' • منطبق ' + rplL(String(sx.nOk)) + ' • غیرمنطبق ' + rplL(String(sx.nOut)) + ' • بیشترین |خطا| ' + rplL(C.fmt(sx.maxAbs * 1000, 1) + ' mm') + ' • میانگین ' + rplL(svErrText(sx.mean * 1000) + ' mm') + ' • انحراف معیار ' + rplL(C.fmt(sx.std * 1000, 1) + ' mm') : ' — نقطه‌ی قابل مقایسه‌ای نیست') + '</div>';
+    });
+    const head = '<table class="pt-tbl pt-chunk"><tbody><tr class="hd"><th>کیلومتراژ</th><th>وضعیت</th><th>خطا (mm)</th><th>نقطه</th>' + (all ? '<th>لایه</th>' : '') + '<th>قرائت</th><th>Z برداشت</th><th>Z طرح</th></tr>';
+    const trs = vis.map(function (x, k) {
+      const rec = x.rec, sp = x.ev.sp;
+      return '<tr class="' + (k % 2 ? 'alt' : '') + '"><td dir="ltr">' + esc(stn(rec.station)) + '</td><td>' + SV_STATUS[sp.status] + '</td><td dir="ltr"><b>' + svErrText(sp.errMm) + '</b></td><td>' + esc(rec.point) + '</td>' + (all ? '<td>' + esc(rec.layerName || 'خط پروژه') + '</td>' : '') +
+        '<td dir="ltr">' + (fin(rec.reading) ? fx(rec.reading) : '—') + '</td><td dir="ltr">' + (fin(sp.zMeas) ? fx(sp.zMeas) : '—') + '</td><td dir="ltr">' + (fin(x.ev.zDesign) ? fx(x.ev.zDesign) : '—') + '</td></tr>';
+    });
+    const foot = function (k, N) { return rplFoot([esc(p.name), esc(st.name), 'گزارش برداشت‌ها'], k + 1, N); };
+    rplPrint(await rplFlow({ top: top, head: head, units: trs, tail: '', foot: foot }), slugFa(p.name) + '_' + slugFa(st.name) + '_گزارش-برداشت');
   }
 
   /** به‌روزرسانی زنده‌ی نتیجه‌ی هر سمت و دکمه‌ی «برداشت» هنگام تایپ (بدون ساخت دوباره‌ی صفحه) */
@@ -6226,6 +6346,7 @@ select.inp, .inp, .cell { background: var(--card); }
     let any = false, bad = false;
     svKeys(sec).forEach(function (side) {
       const el = $('#svRes_' + side); if (!el) return;
+      svMark(side);
       if (side !== 'axis' && sec.section && sec.section.none) { el.innerHTML = '<span class="muted">برای این کیلومتر شیب تعریف نشده؛ لبه روی محور است و برداشتی ثبت نمی‌شود.</span>'; return; }
       const raw = String(S.sv.reads[side] || '').trim();
       if (raw === '') { el.innerHTML = ''; return; }
@@ -7146,10 +7267,10 @@ select.inp, .inp, .cell { background: var(--card); }
   }
   function qrBlock(s) {
     try {
-      const link = qrLink(s); if (!link || !window.RoadQR) return '';
+      const link = qrLink(s); if (!link || !window.RoadQR) return '<div class="rpl-dsq rpl-dsq-na"><span>QR ساخته نشد: برای داشتن QR، اپ باید از آدرس http یا https باز باشد (نه از فایل ذخیره‌شده روی گوشی).</span></div>';
       const q = RoadQR.encodeText(link, 'L');
       return '<div class="rpl-dsq">' + RoadQR.toSvg(q, '38mm') + '<span>برای بررسی امضا اسکن کنید</span></div>';
-    } catch (e) { return ''; }
+    } catch (e) { return '<div class="rpl-dsq rpl-dsq-na"><span>QR ساخته نشد (حجم داده‌ی امضا برای QR زیاد است).</span></div>'; }
   }
   const rptShort = function (s, N, k) {
     return '<div class="rpl-dsl"><span>امضای دیجیتال • شناسه‌ی گزارش <bdi dir="ltr">' + esc(C.controlCode(s.docHash)) + '</bdi> • کلید <bdi dir="ltr">' + esc(s.key.keyId) + '</bdi> (' + esc(s.key.name) + ')</span><span>صفحه <bdi dir="ltr">' + k + '</bdi> از <bdi dir="ltr">' + N + '</bdi></span></div>';
@@ -7797,6 +7918,26 @@ select.inp, .inp, .cell { background: var(--card); }
       if (cur !== null && after.secs && after.secs.length) { idx = after.secs.findIndex(function (q) { return q.station >= cur - 1e-9; }); if (idx < 0) idx = after.secs.length - 1; }
       S.stakeIdx = idx; markDirty(); render(); return;
     }
+    if (el.id === 'svStep') {
+      const before = svCtx(), cur = before.secs[S.sv.idx] ? before.secs[S.sv.idx].station : null, v = C.toNumber(el.value);
+      P().svStep = el.value.trim() && fin(v) && v > 0 ? String(el.value.trim()) : '';
+      if (el.value.trim() && !P().svStep) toast('گام باید عدد مثبت باشد.', 'err');
+      const after = svCtx(); let idx = 0;
+      if (cur !== null && after.secs.length) { idx = after.secs.findIndex(function (q) { return q.station >= cur - 1e-9; }); if (idx < 0) idx = after.secs.length - 1; }
+      S.sv.idx = idx; S.sv.key = null; markDirty(); render(); return;
+    }
+    if (el.id === 'svMidStep') {
+      const v = C.toNumber(el.value);
+      P().svMidStep = el.value.trim() && fin(v) && v > 0 ? String(el.value.trim()) : '';
+      if (el.value.trim() && !P().svMidStep) toast('گام باید عدد مثبت باشد.', 'err');
+      markDirty(); render(); return;
+    }
+    if (el.id === 'stMidStep') {
+      const v = C.toNumber(el.value);
+      P().stakeMidStep = el.value.trim() && fin(v) && v > 0 ? String(el.value.trim()) : '';
+      if (el.value.trim() && !P().stakeMidStep) toast('گام باید عدد مثبت باشد.', 'err');
+      markDirty(); render(); return;
+    }
     if (el.id === 'expDelim') { S.exp.delim = el.value; return; }
     if (el.id === 'expLayer') { S.exp.layer = el.value; return; }
     if (el.id === 'expShare') { S.exp.share = el.checked; return; }
@@ -8320,6 +8461,15 @@ select.inp, .inp, .cell { background: var(--card); }
       }
       case 'stkToggle': { const cx = stakeCtx(); if (cx.secs && cx.secs[S.stakeIdx]) stkToggle(cx.secs[S.stakeIdx]); break; }
       case 'stkSide': { const cx = stakeCtx(); if (cx.secs && cx.secs[S.stakeIdx]) stkSide(cx.secs[S.stakeIdx], b.dataset.side); break; }
+      case 'svMids': svInitSet(); P().svMidOff = !P().svMidOff; markDirty(); render(); break;
+      case 'svView': S.svView = b.dataset.v === 'list' ? 'list' : 'card'; render(); break;
+      case 'svFlt': S.svFlt = b.dataset.v; render(); break;
+      case 'svRow': { const k = parseInt(b.dataset.i, 10); svNavigate(function () { S.sv.idx = k; S.sv.key = null; S.svView = 'card'; }); break; }
+      case 'svReport': modalMenu('<h3>گزارش برداشت‌ها</h3><div class="pj-menu"><button class="btn" data-act="svPdf">PDF</button><button class="btn" data-act="svCsv">متن (CSV)</button><button class="btn" data-act="svMore">Excel، TXT و تنظیم قالب…</button><button class="btn" data-v="0">بستن</button></div>'); break;
+      case 'svPdf': printSurveyRows(); break;
+      case 'svCsv': S.exp.svLayer = S.sv.all ? 'all' : (S.sv.layer || 'project'); doSurveyExport('csv'); break;
+      case 'svMore': S.exp.svLayer = S.sv.all ? 'all' : (S.sv.layer || 'project'); location.hash = '#/export'; break;
+      case 'stkMids': P().stakeMidOff = !P().stakeMidOff; markDirty(); render(); break;
       case 'stkView': S.stakeView = b.dataset.v === 'list' ? 'list' : 'card'; render(); break;
       case 'stkFlt': S.stakeFilter = b.dataset.v; render(); break;
       case 'stkRow': S.stakeIdx = parseInt(b.dataset.i, 10) || 0; S.stakeView = 'card'; render(); window.scrollTo(0, 0); break;
