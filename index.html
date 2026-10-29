@@ -2684,7 +2684,8 @@ select.inp, .inp, .cell { background: var(--card); }
       { id: 'b_pxyzd', name: 'PXYZD: Point, X, Y, Z, Description (بدون عنوان)', header: false, stationFormat: 'numeric', cols: ['point', 'x', 'y', 'z', 'code'] },
       { id: 'b_xyz', name: 'XYZ: فقط مختصات (بدون عنوان)', header: false, stationFormat: 'numeric', cols: ['x', 'y', 'z'] },
       { id: 'b_full', name: 'کامل: Point, Station, Side, X, Y, Z, Code, Width, Slope, Description', header: true, stationFormat: 'numeric', cols: ['point', 'station', 'side', 'kind', 'offset', 'x', 'y', 'z', 'code', 'width', 'slope', 'desc'] },
-      { id: 'b_table', name: 'مثل جدول: Point, Station, X, Y, Z, Offset, Notes', header: true, stationFormat: 'numeric', cols: ['point', 'station', 'x', 'y', 'z', 'offset', 'note'] }
+      { id: 'b_table', name: 'مثل جدول: Point, Station, X, Y, Z, Offset, Notes', header: true, stationFormat: 'numeric', cols: ['point', 'station', 'x', 'y', 'z', 'offset', 'note'] },
+      { id: 'b_gps', name: 'GPS: نام, E, N, Z, توضیح (بدون عنوان)', header: false, stationFormat: 'numeric', cols: ['gpsName', 'x', 'y', 'z', 'gpsDesc'] }
     ],
     survey: [
       { id: 's_default', name: 'پیش‌فرض: Point, Station, Side, X, Y, Z, DesignZ, Error_mm, Status, Layer', header: true, stationFormat: 'numeric', cols: ['point', 'station', 'side', 'x', 'y', 'zMeas', 'zDesign', 'errMm', 'status', 'layer'] },
@@ -3557,7 +3558,7 @@ select.inp, .inp, .cell { background: var(--card); }
   const PAGE_SIZE = 50;       // ردیف در هر صفحه‌ی جدول نقاط
   const TABLE_STATIONS = 30;  // مقطع در هر صفحه‌ی جدول سه‌نقطه‌ای
 
-  const APP_VERSION = 'UI-2.3.0 (بر پایه‌ی 1.22.1)';
+  const APP_VERSION = 'UI-2.4.0 (بر پایه‌ی 1.22.1)';
   const S = {
     project: null, dirty: false, rev: 0, calc: null, calcRev: -1,
     page: 'home', imp: null, ptPage: 0, tPage: 0, stakeIdx: 0, rawBad: {},
@@ -5857,12 +5858,14 @@ select.inp, .inp, .cell { background: var(--card); }
     return S.exp.layer && S.exp.layer !== 'all' ? ll.filter(function (l) { return l.id === S.exp.layer; }) : ll;
   }
 
-  function pointsExportTable(layerMode) {
-    const r = calc(), st = P().settings;
+  function pointsExportTable(layerMode, tplId) {
+    const r = calc(), st = P().settings, as = activeStreet(), ai = P().streets.indexOf(as);
     let rows = [];
-    if (layerMode) selectedLayers().forEach(function (l) { rows = rows.concat(C.buildPointRows(C.applyLayer(r.sections, l), st, l.name)); });
-    else rows = C.buildPointRows(r.sections, st);
-    return { table: IO.customTable('points', rows, fmtGet('points'), { stationFormat: st.stationExport }), skipped: [] };
+    if (layerMode) selectedLayers().forEach(function (l) { rows = rows.concat(gpsDecorate(C.buildPointRows(C.applyLayer(r.sections, l), st, l.name), as, ai)); });
+    else rows = gpsDecorate(C.buildPointRows(r.sections, st), as, ai);
+    let tpl = fmtGet('points');
+    if (tplId) { const t = fmtTemplates('points').find(function (x) { return x.id === tplId; }); if (t) { const x = IO.expandTemplate('points', t); tpl = { header: x.header !== false, stationFormat: x.stationFormat === 'chainage' ? 'chainage' : 'numeric', cols: x.cols.map(function (c) { return { key: c.key, label: c.label === undefined ? '' : c.label, text: c.text || '' }; }) }; } }
+    return { table: IO.customTable('points', rows, tpl, { stationFormat: st.stationExport }), rows: rows, tpl: tpl, skipped: [] };
   }
 
   /** استقرارهای انتخاب‌شده برای خروجی نیوو، به ترتیب کیلومتر (null = همه) */
@@ -5915,6 +5918,25 @@ select.inp, .inp, .cell { background: var(--card); }
     return h;
   }
 
+  /** فهرست قالب‌های نقاط با «GPS» در صدر */
+  function gpsTplOpts() {
+    const cur = S.exp.layTpl || 'b_gps', ts = fmtTemplates('points').slice().sort(function (a, b) { return (b.id === 'b_gps') - (a.id === 'b_gps'); });
+    return ts.map(function (t) { return '<option value="' + esc(t.id) + '"' + (t.id === cur ? ' selected' : '') + '>' + esc(t.name) + '</option>'; }).join('');
+  }
+  async function printLayerPoints() {
+    if (!calc().sections) { toast('ابتدا خطاها را رفع کنید.', 'err'); return; }
+    const ls = selectedLayers(); if (!ls.length) { toast('لایه‌ای برای خروجی وجود ندارد.', 'err'); return; }
+    const ex = pointsExportTable(true, S.exp.layTpl || 'b_gps'), rows = ex.rows, p = P(), st = activeStreet(), multi = ls.length > 1;
+    if (!rows.length) { toast('نقطه‌ای برای گزارش نیست.', 'err'); return; }
+    if (!(await rptAsk())) return;
+    const top = rplCover('گزارش نقاط لایه‌ها', p, st.name, rplCs(p)) + rplMeta([['پروژه', esc(p.name)], ['خیابان', esc(st.name)], ['لایه‌ها', esc(multi ? ls.map(function (l) { return l.name; }).join('، ') : ls[0].name), 2], ['تعداد نقاط', rplL(String(rows.length))]]);
+    const head = '<table class="pt-tbl pt-chunk"><tbody><tr class="hd"><th>#</th><th>نام</th><th>E</th><th>N</th><th>Z</th><th>توضیح</th>' + (multi ? '<th>لایه</th>' : '') + '</tr>';
+    const trs = rows.map(function (r, k) {
+      return '<tr class="' + (k % 2 ? 'alt' : '') + '"><td dir="ltr">' + (k + 1) + '</td><td dir="ltr">' + esc(r.gpsName) + '</td><td dir="ltr">' + fx(r.x) + '</td><td dir="ltr">' + fx(r.y) + '</td><td dir="ltr"><b>' + fx(r.z) + '</b></td><td dir="ltr">' + esc(r.gpsDesc) + '</td>' + (multi ? '<td>' + esc(r.layer || '') + '</td>' : '') + '</tr>';
+    });
+    const foot = function (k, N) { return rplFoot([esc(p.name), esc(st.name), 'نقاط لایه‌ها'], k + 1, N); };
+    rplPrint(await rplFlow({ top: top, head: head, units: trs, tail: '', foot: foot }), slugFa(p.name) + '_' + slugFa(st.name) + '_نقاط-لایه');
+  }
   function layerExportCard() {
     const p = P(), ll = C.normalizeLayers(p.layers).layers;
     let h = '<section class="card"><h2>لایه‌ها (بستر، خاکریزی و …)</h2>';
@@ -5922,7 +5944,8 @@ select.inp, .inp, .cell { background: var(--card); }
     h += '<label class="field"><span>کدام لایه</span><select class="inp" id="expLayer"><option value="all"' + (S.exp.layer === 'all' || !S.exp.layer ? ' selected' : '') + '>همه‌ی لایه‌ها</option>' +
       ll.map(function (l) { return '<option value="' + esc(l.id) + '"' + (S.exp.layer === l.id ? ' selected' : '') + '>' + esc(l.name) + '</option>'; }).join('') + '</select></label>' +
       '<p class="muted small">نقاط: با «قالب خروجی نقاط» بالا؛ Z هر نقطه با جابه‌جایی لایه تغییر می‌کند و نام لایه به انتهای Code اضافه می‌شود (مثل CL-بستر) و ستون «نام لایه» هم قابل انتخاب است. نیوو: ستون Layer در انتها اضافه می‌شود و استقرارها طبق انتخاب بالا هستند.</p>' +
-      '<div class="row"><b class="small">نقاط:</b><button class="btn grow" data-act="expL" data-k="points" data-f="csv">CSV</button><button class="btn grow" data-act="expL" data-k="points" data-f="xlsx">Excel</button><button class="btn grow" data-act="expL" data-k="points" data-f="txt">TXT</button></div>' +
+      '<label class="field"><span>قالب فایل نقاط (TXT، CSV، Excel)</span><select class="inp" id="expLTpl">' + gpsTplOpts() + '</select></label>' +
+      '<div class="row" style="margin-top:6px"><b class="small">نقاط:</b><button class="btn primary grow" data-act="expLPdf">PDF</button><button class="btn primary grow" data-act="expL" data-k="points" data-f="txt">TXT</button><button class="btn grow" data-act="expL" data-k="points" data-f="csv">CSV</button><button class="btn grow" data-act="expL" data-k="points" data-f="xlsx">Excel</button></div>' +
       '<div class="row" style="margin-top:8px"><b class="small">نیوو:</b><button class="btn grow" data-act="expL" data-k="newo" data-f="csv">CSV</button><button class="btn grow" data-act="expL" data-k="newo" data-f="xlsx">Excel</button><button class="btn grow" data-act="expL" data-k="newo" data-f="txt">TXT</button></div></section>';
     return h;
   }
@@ -6038,17 +6061,21 @@ select.inp, .inp, .cell { background: var(--card); }
   }
   const GPS_TPL = { header: false, stationFormat: 'numeric', cols: [{ key: 'gpsName', label: 'Name' }, { key: 'x', label: 'E' }, { key: 'y', label: 'N' }, { key: 'z', label: 'Z' }, { key: 'gpsDesc', label: 'Description' }] };
   /** ردیف‌های GPS یک خیابان: محور = پیشوند-کیلومتر، چپ/راست = پیشوند-L/R-کیلومتر، میانی = پیشوند-L/R+برچسب-کیلومتر */
-  function gpsRows(s, idx, secs) {
-    const st = P().settings, sh = streetShort(s, idx);
-    return C.buildPointRows(secs, st).map(function (r) {
-      const km = String(+Number(r.station).toFixed(3)), L = r.side === 'Left' ? 'L' : 'R';
+  function gpsDecorate(rows, s, idx) {
+    const sh = streetShort(s, idx);
+    return rows.map(function (r) {
+      const L = r.side === 'Left' ? 'L' : 'R';
       let nm, ds;
-      if (r.kind === 'Axis') { nm = sh + '-' + km; ds = sh + ' Axis'; }
-      else if (r.kind === 'Edge') { nm = sh + '-' + L + '-' + km; ds = sh + ' ' + r.side; }
-      else { nm = sh + '-' + L + r.code + '-' + km; ds = sh + ' ' + r.side + ' Mid ' + r.code; }
+      if (r.kind === 'Axis') { nm = sh + '-' + C.formatStation(r.station, 3); ds = C.formatStation(r.station, 3); }
+      else if (r.kind === 'Edge') { nm = sh + '-' + L; ds = L; }
+      else {
+        let tg = String(r.code); if (r.layer && tg.slice(-(r.layer.length + 1)) === '-' + r.layer) tg = tg.slice(0, -(r.layer.length + 1));
+        nm = sh + '-' + L + tg; ds = L + tg;
+      }
       return Object.assign({}, r, { gpsName: nm, gpsDesc: ds, street: sh });
     });
   }
+  function gpsRows(s, idx, secs) { return gpsDecorate(C.buildPointRows(secs, P().settings), s, idx); }
   function gpsData(all) {
     const p = P(), st = p.settings, list = all ? p.streets : [activeStreet()], skipped = [];
     let rows = [];
@@ -6059,16 +6086,16 @@ select.inp, .inp, .cell { background: var(--card); }
       if (!secs) { skipped.push(s.name); return; }
       rows = rows.concat(gpsRows(s, p.streets.indexOf(s), secs));
     });
-    const seen = {}; let dup = 0, maxLen = 0;
-    rows.forEach(function (r) { if (seen[r.gpsName]) dup++; seen[r.gpsName] = 1; if (r.gpsName.length > maxLen) maxLen = r.gpsName.length; });
+    let maxLen = 0, dup = 0;
+    rows.forEach(function (r) { if (r.gpsName.length > maxLen) maxLen = r.gpsName.length; });
     return { rows: rows, skipped: skipped, dup: dup, maxLen: maxLen, table: IO.customTable('points', rows, GPS_TPL, { stationFormat: 'numeric' }) };
   }
   function gpsCard() {
     const all = !!S.exp.gpsAll, d = gpsData(all), ex = d.rows.slice(0, 5).map(function (r) { return r.gpsName + ', ' + C.fmt(r.x, 3) + ', ' + C.fmt(r.y, 3) + ', ' + C.fmt(r.z, 3) + ', ' + r.gpsDesc; }).join('\n');
     return '<section class="card"><h2>فایل GPS (نام نقطه با پیشوند خیابان)</h2>' +
-      '<p class="muted small">ستون‌ها: نام، E، N، Z، توضیح (بدون عنوان). محور: <b dir="ltr">WE7-120</b> • چپ/راست: <b dir="ltr">WE7-L-120</b> / <b dir="ltr">WE7-R-120</b> • میانی: <b dir="ltr">WE7-LM1-120</b>. پیشوند از «نام کوتاه لاتین خیابان» (تب «محور و لبه‌ها» ← بالای صفحه) می‌آید.</p>' +
+      '<p class="muted small">ستون‌ها: نام، E، N، Z، توضیح (بدون عنوان). محور: نام <b dir="ltr">WE7-0+120.000</b> و توضیح <b dir="ltr">0+120.000</b> • چپ/راست: نام <b dir="ltr">WE7-L</b> / <b dir="ltr">WE7-R</b> و توضیح <b dir="ltr">L</b> / <b dir="ltr">R</b> • میانی: <b dir="ltr">WE7-LM1</b>. پیشوند از «نام کوتاه لاتین خیابان» (تب «محور و لبه‌ها» ← بالای صفحه) می‌آید.</p>' +
       '<label class="row" style="margin:6px 0"><input type="checkbox" id="expGpsAll"' + (all ? ' checked' : '') + '> نقاط همه‌ی خیابان‌ها در یک فایل (وگرنه فقط خیابان فعال)</label>' +
-      '<div class="small muted">' + d.rows.length + ' نقطه • بلندترین نام ' + d.maxLen + ' نویسه' + (d.dup ? ' • <b style="color:var(--err)">' + d.dup + ' نام تکراری</b> (نام کوتاه خیابان‌ها را متفاوت کنید)' : '') + (d.skipped.length ? ' • خیابان‌های ردشده (خطای داده): ' + esc(d.skipped.join('، ')) : '') + '</div>' +
+      '<div class="small muted">' + d.rows.length + ' نقطه • بلندترین نام ' + d.maxLen + ' نویسه' + (d.skipped.length ? ' • خیابان‌های ردشده (خطای داده): ' + esc(d.skipped.join('، ')) : '') + '</div>' +
       (ex ? '<pre class="code" dir="ltr">' + esc(ex) + '</pre>' : '') + exportBtns('expG', 'gps', true) + '</section>';
   }
   function doGpsExport(fmt) {
@@ -6081,8 +6108,9 @@ select.inp, .inp, .cell { background: var(--card); }
     if (!calc().sections) { toast('ابتدا خطاها را رفع کنید.', 'err'); return; }
     if (layerMode && !selectedLayers().length) { toast('لایه‌ای برای خروجی وجود ندارد.', 'err'); return; }
     if (kind === 'newo') { doNewoExport(fmt, layerMode); return; }
-    if (!fmtGet('points').cols.length) { toast('در قالب خروجی دست‌کم یک ستون لازم است.', 'err'); return; }
-    deliverTable(fileName('points', layerMode), fmt, pointsExportTable(layerMode).table, 'Points');
+    const ex = pointsExportTable(layerMode, layerMode ? (S.exp.layTpl || 'b_gps') : null);
+    if (!ex.tpl.cols.length) { toast('در قالب خروجی دست‌کم یک ستون لازم است.', 'err'); return; }
+    deliverTable(fileName('points', layerMode), fmt, ex.table, 'Points');
   }
 
   function problems() {
@@ -7999,6 +8027,7 @@ select.inp, .inp, .cell { background: var(--card); }
       S.stakeIdx = idx; markDirty(); render(); return;
     }
     if (el.id === 'stShort') { activeStreet().short = el.value.trim().replace(/[^A-Za-z0-9_\-]+/g, '').slice(0, 16); el.value = activeStreet().short; markDirty(); return; }
+    if (el.id === 'expLTpl') { S.exp.layTpl = el.value; return; }
     if (el.id === 'expGpsAll') { S.exp.gpsAll = el.checked; render(); return; }
     if (el.id === 'svStep') {
       const before = svCtx(), cur = before.secs[S.sv.idx] ? before.secs[S.sv.idx].station : null, v = C.toNumber(el.value);
@@ -8613,6 +8642,7 @@ select.inp, .inp, .cell { background: var(--card); }
       case 'wake': toggleWake(); break;
       case 'exp': doExport(b.dataset.k, b.dataset.f); break;
       case 'expG': doGpsExport(b.dataset.f); break;
+      case 'expLPdf': printLayerPoints(); break;
       case 'expL': doExport(b.dataset.k, b.dataset.f, true); break;
       case 'expS': doSurveyExport(b.dataset.f); break;
       case 'print': printReport(); break;
