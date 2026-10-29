@@ -752,6 +752,12 @@ select.inp, .inp, .cell { background: var(--card); }
 #printArea .rpl-dsf { border: 1pt solid #0b2a40; background: #e8eef3; }
 #printArea .rpl-dsq { background: #fff; border: .6pt solid #0b2a40; padding: 2pt; margin-top: 2pt; }
 #printArea .rpl-dsq-na { width: 38mm; font-size: 6pt; color: #a82020; }
+
+/* ===== برداشت: واردشده / برداشت‌شده ===== */
+.rd-card.typed { background: color-mix(in srgb, var(--ok-soft) 45%, var(--card)); border-style: solid; }
+.rd-card.staked { border-color: var(--ok); }
+.stk-st.mid { border: 1px solid var(--ok); color: var(--ok); background: transparent; }
+.rd-card[data-act=svTap] { cursor: pointer; }
 </style>
 </head>
 <body>
@@ -2639,6 +2645,9 @@ select.inp, .inp, .cell { background: var(--card); }
     layer: { label: 'Layer', fa: 'نام لایه', get: function (r) { return r.layer; } },
     slope: { label: 'Slope', fa: 'شیب عرضی (٪)', get: function (r) { return r.slope; } },
     width: { label: 'Width', fa: 'عرض از محور', get: function (r) { return r.width; } },
+    gpsName: { label: 'Name', fa: 'نام GPS (پیشوند خیابان + کیلومتر)', get: function (r) { return r.gpsName == null ? r.point : r.gpsName; } },
+    gpsDesc: { label: 'Description', fa: 'توضیح GPS (خیابان + سمت)', get: function (r) { return r.gpsDesc == null ? r.code : r.gpsDesc; } },
+    street: { label: 'Street', fa: 'نام کوتاه خیابان', get: function (r) { return r.street == null ? '' : r.street; } },
     desc: { label: 'Description', fa: 'توضیح نقطه‌ی محور', get: function (r) { return r.desc; } },
     note: { label: 'Notes', fa: 'توضیحات (مثل جدول)', get: function (r) { return r.note == null ? '' : r.note; } },
     text: { label: 'Text', fa: 'متن ثابت', get: function (r, o, c) { return c.text == null ? '' : c.text; } }
@@ -3140,6 +3149,7 @@ select.inp, .inp, .cell { background: var(--card); }
     if (Array.isArray(p.streets) && p.streets.length) {
       base.streets = p.streets.map(function (s) {
         const o = { id: String(s.id || C.uid('st')), name: String(s.name || 'خیابان'), points: normPts(s.points) };
+        if (typeof s.short === 'string' && s.short) o.short = s.short.slice(0, 16);
         if (Array.isArray(s.sections)) o.sections = normSecs(s.sections);
         if (s.slopeMode === 'point') o.slopeMode = 'point';
         if (Array.isArray(s.layers)) o.layers = normLayers(s.layers);
@@ -3547,7 +3557,7 @@ select.inp, .inp, .cell { background: var(--card); }
   const PAGE_SIZE = 50;       // ردیف در هر صفحه‌ی جدول نقاط
   const TABLE_STATIONS = 30;  // مقطع در هر صفحه‌ی جدول سه‌نقطه‌ای
 
-  const APP_VERSION = 'UI-2.2.1 (بر پایه‌ی 1.22.1)';
+  const APP_VERSION = 'UI-2.3.0 (بر پایه‌ی 1.22.1)';
   const S = {
     project: null, dirty: false, rev: 0, calc: null, calcRev: -1,
     page: 'home', imp: null, ptPage: 0, tPage: 0, stakeIdx: 0, rawBad: {},
@@ -3620,7 +3630,8 @@ select.inp, .inp, .cell { background: var(--card); }
   }
   function streetBar(manage) {
     let h = '<div class="' + (manage ? 'card' : 'row') + '" style="' + (manage ? '' : 'margin-bottom:8px') + '"><label class="field grow"><span>خیابان فعال' + (manage ? ' — نقاط هر خیابان جدا ذخیره می‌شود' : '') + '</span><select class="inp" id="actStreet">' + streetOptions() + '</select></label>';
-    if (manage) h += '<div class="row" style="margin-top:8px"><input class="inp grow" id="stName" placeholder="نام خیابان" autocomplete="off"><button class="btn sm primary" data-act="addStreet">افزودن خیابان</button><button class="btn sm" data-act="renStreet">تغییر نام</button><button class="btn sm danger" data-act="delStreet">حذف خیابان</button></div>';
+    if (manage) h += '<div class="row" style="margin-top:8px"><input class="inp grow" id="stName" placeholder="نام خیابان" autocomplete="off"><button class="btn sm primary" data-act="addStreet">افزودن خیابان</button><button class="btn sm" data-act="renStreet">تغییر نام</button><button class="btn sm danger" data-act="delStreet">حذف خیابان</button></div>' +
+      '<label class="field" style="margin-top:8px"><span>نام کوتاه لاتین خیابان (پیشوند نام نقاط فایل GPS؛ خالی = از حروف و ارقام لاتین نام خیابان)</span><input class="inp ltr" id="stShort" dir="ltr" autocomplete="off" maxlength="16" placeholder="مثلاً WE7" value="' + esc(activeStreet().short || '') + '"></label>';
     return h + '</div>';
   }
   function switchStreet(id) {
@@ -3850,7 +3861,7 @@ select.inp, .inp, .cell { background: var(--card); }
   };
   const NAV_L = [['home', 'پروژه‌ها'], ['newo', 'بنچ‌مارک']];
   const NAV_R = [['stake', 'پیاده'], ['survey', 'برداشت']];
-  const NAV_ALL = [['home', 'شروع'], ['projects', 'پروژه‌ها و پشتیبان'], ['points', 'محور و لبه‌ها'], ['slopes', 'شیب عرضی'], ['layers', 'لایه‌ها'], ['newo', 'قرائت نیوو'], ['stake', 'پیاده‌سازی'], ['survey', 'برداشت'], ['mat', 'مصالح و تخلیه'], ['export', 'خروجی و گزارش'], ['security', 'کلید، قفل و اثرانگشت']];
+  const NAV_ALL = [['home', 'شروع'], ['projects', 'پروژه‌ها و پشتیبان'], ['points', 'محور و لبه‌ها'], ['slopes', 'شیب عرضی'], ['layers', 'لایه‌ها'], ['newo', 'بنچ‌مارک'], ['stake', 'پیاده‌سازی'], ['survey', 'برداشت'], ['mat', 'مصالح و تخلیه'], ['export', 'خروجی و گزارش'], ['security', 'کلید، قفل و اثرانگشت']];
   const MENU_GROUPS = [['اجرا', ['points', 'slopes', 'layers', 'newo', 'stake', 'survey']], ['محاسبه و تحویل', ['mat', 'export', 'projects']], ['امنیت', ['security']]];
   const MENU_NAME = {}; NAV_ALL.forEach(function (n) { MENU_NAME[n[0]] = n[1]; });
   ICONS.home = ICONS.projects;
@@ -3884,7 +3895,7 @@ select.inp, .inp, .cell { background: var(--card); }
   }
   function closeMenu() { const d = document.getElementById('menuSheet'); if (d) d.remove(); }
 
-  const PAGE_TITLE = { home: 'پروژه‌ها', preport: 'گزارش پروژه', projects: 'ساخت پروژه و پشتیبان', points: 'محور و لبه‌ها', slopes: 'شیب عرضی', layers: 'لایه‌ها', mat: 'مصالح و تخلیه', newo: 'بنچ‌مارک و نیوو', stake: 'پیاده‌سازی', survey: 'برداشت', export: 'خروجی و گزارش', security: 'امنیت' };
+  const PAGE_TITLE = { home: 'پروژه‌ها', preport: 'گزارش پروژه', projects: 'ساخت پروژه و پشتیبان', points: 'محور و لبه‌ها', slopes: 'شیب عرضی', layers: 'لایه‌ها', mat: 'مصالح و تخلیه', newo: 'بنچ‌مارک', stake: 'پیاده‌سازی', survey: 'برداشت', export: 'خروجی و گزارش', security: 'امنیت' };
   function renderTop() {
     const p = S.project, ttl = PAGE_TITLE[S.page] || 'RoadStake';
     let sub;
@@ -5931,6 +5942,7 @@ select.inp, .inp, .cell { background: var(--card); }
       (navigator.canShare ? '<label class="row"><input type="checkbox" id="expShare"' + (S.exp.share ? ' checked' : '') + '> اشتراک‌گذاری فایل به‌جای دانلود</label>' : '') + '</section>';
     h += fmtCard('points', 'نقاط (محور + لبه چپ + لبه راست) — قالب خروجی',
       '<p class="muted small">قالب آماده انتخاب کنید یا ستون‌ها را خودتان بچینید (مثلاً PENZD برای دستگاه توتال‌استیشن).</p>', exportBtns('exp', 'points', true));
+    h += gpsCard();
     h += '<section class="card"><h2>محاسبات نیوو (به تفکیک استقرار)</h2><code>Station,Point,Side,X,Y,Z,HI,StaffReading,Setup</code>' + setupPickCard() +
       '<p class="muted small">قرائت‌های غیرقابل اجرا (منفی، صفر، خارج از شاخص) در ستون StaffReading خالی خروجی داده می‌شوند.</p>' + exportBtns('exp', 'newo', true) +
       '<div id="newoSkipped"></div><pre class="code" id="pvNewo"></pre></section>';
@@ -6015,6 +6027,54 @@ select.inp, .inp, .cell { background: var(--card); }
     }
     deliver(base + '.' + fmt, (fmt === 'csv' ? '\ufeff' : '') + text(d.table), MIME[fmt]);
     toast('فایل ' + base + '.' + fmt + ' آماده شد.');
+  }
+
+  /* ---------- فایل GPS: نام نقطه با پیشوند کوتاه خیابان ---------- */
+  function streetShort(s, idx) {
+    const t = String(s.short || '').trim().replace(/[^A-Za-z0-9_\-]+/g, '').replace(/^[-_]+|[-_]+$/g, '');
+    if (t) return t;
+    const d = String(s.name || '').replace(/[^A-Za-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+    return d || ('ST' + (idx + 1));
+  }
+  const GPS_TPL = { header: false, stationFormat: 'numeric', cols: [{ key: 'gpsName', label: 'Name' }, { key: 'x', label: 'E' }, { key: 'y', label: 'N' }, { key: 'z', label: 'Z' }, { key: 'gpsDesc', label: 'Description' }] };
+  /** ردیف‌های GPS یک خیابان: محور = پیشوند-کیلومتر، چپ/راست = پیشوند-L/R-کیلومتر، میانی = پیشوند-L/R+برچسب-کیلومتر */
+  function gpsRows(s, idx, secs) {
+    const st = P().settings, sh = streetShort(s, idx);
+    return C.buildPointRows(secs, st).map(function (r) {
+      const km = String(+Number(r.station).toFixed(3)), L = r.side === 'Left' ? 'L' : 'R';
+      let nm, ds;
+      if (r.kind === 'Axis') { nm = sh + '-' + km; ds = sh + ' Axis'; }
+      else if (r.kind === 'Edge') { nm = sh + '-' + L + '-' + km; ds = sh + ' ' + r.side; }
+      else { nm = sh + '-' + L + r.code + '-' + km; ds = sh + ' ' + r.side + ' Mid ' + r.code; }
+      return Object.assign({}, r, { gpsName: nm, gpsDesc: ds, street: sh });
+    });
+  }
+  function gpsData(all) {
+    const p = P(), st = p.settings, list = all ? p.streets : [activeStreet()], skipped = [];
+    let rows = [];
+    list.forEach(function (s) {
+      let secs = null;
+      if (s === activeStreet()) secs = calc().sections;
+      else { try { secs = C.computeSections(s.points, s.sections, Object.assign({}, st, { sectionMode: 'point' }), s.mids); } catch (e) { secs = null; } }
+      if (!secs) { skipped.push(s.name); return; }
+      rows = rows.concat(gpsRows(s, p.streets.indexOf(s), secs));
+    });
+    const seen = {}; let dup = 0, maxLen = 0;
+    rows.forEach(function (r) { if (seen[r.gpsName]) dup++; seen[r.gpsName] = 1; if (r.gpsName.length > maxLen) maxLen = r.gpsName.length; });
+    return { rows: rows, skipped: skipped, dup: dup, maxLen: maxLen, table: IO.customTable('points', rows, GPS_TPL, { stationFormat: 'numeric' }) };
+  }
+  function gpsCard() {
+    const all = !!S.exp.gpsAll, d = gpsData(all), ex = d.rows.slice(0, 5).map(function (r) { return r.gpsName + ', ' + C.fmt(r.x, 3) + ', ' + C.fmt(r.y, 3) + ', ' + C.fmt(r.z, 3) + ', ' + r.gpsDesc; }).join('\n');
+    return '<section class="card"><h2>فایل GPS (نام نقطه با پیشوند خیابان)</h2>' +
+      '<p class="muted small">ستون‌ها: نام، E، N، Z، توضیح (بدون عنوان). محور: <b dir="ltr">WE7-120</b> • چپ/راست: <b dir="ltr">WE7-L-120</b> / <b dir="ltr">WE7-R-120</b> • میانی: <b dir="ltr">WE7-LM1-120</b>. پیشوند از «نام کوتاه لاتین خیابان» (تب «محور و لبه‌ها» ← بالای صفحه) می‌آید.</p>' +
+      '<label class="row" style="margin:6px 0"><input type="checkbox" id="expGpsAll"' + (all ? ' checked' : '') + '> نقاط همه‌ی خیابان‌ها در یک فایل (وگرنه فقط خیابان فعال)</label>' +
+      '<div class="small muted">' + d.rows.length + ' نقطه • بلندترین نام ' + d.maxLen + ' نویسه' + (d.dup ? ' • <b style="color:var(--err)">' + d.dup + ' نام تکراری</b> (نام کوتاه خیابان‌ها را متفاوت کنید)' : '') + (d.skipped.length ? ' • خیابان‌های ردشده (خطای داده): ' + esc(d.skipped.join('، ')) : '') + '</div>' +
+      (ex ? '<pre class="code" dir="ltr">' + esc(ex) + '</pre>' : '') + exportBtns('expG', 'gps', true) + '</section>';
+  }
+  function doGpsExport(fmt) {
+    const d = gpsData(!!S.exp.gpsAll);
+    if (!d.rows.length) { toast('نقطه‌ای برای فایل GPS نیست؛ ابتدا خطاها را رفع کنید.', 'err'); return; }
+    deliverTable(slug(P().name) + (S.exp.gpsAll ? '_all-streets' : '_' + slug(activeStreet().name)) + '_gps', fmt, d.table, 'GPS');
   }
 
   function doExport(kind, fmt, layerMode) {
@@ -6184,7 +6244,7 @@ select.inp, .inp, .cell { background: var(--card); }
   }
   async function svNavigate(fn) {
     if (svDirty() && !(await ask('قرائت‌هایی که وارد کرده‌اید هنوز با «برداشت» ثبت نشده‌اند. بدون ثبت ادامه می‌دهید؟ (قرائت‌های واردشده کنار گذاشته می‌شود.)', { danger: true, ok: 'بدون ثبت ادامه بده', cancel: 'برگرد' }))) { render(); return; }
-    fn(); render();
+    S.sv.dir = 0; fn(); render();
   }
   function svSetLayer(id) {
     const before = svCtx(), cur = before.secs[S.sv.idx] ? before.secs[S.sv.idx].station : null;
@@ -6195,20 +6255,28 @@ select.inp, .inp, .cell { background: var(--card); }
     S.sv.idx = idx;
   }
 
+  /** 0 = خالی، 1 = واردشده (ثبت‌نشده)، 2 = برداشت‌شده (ثبت و برابر با کادر) */
+  function svCardState(sec, side) {
+    const raw = String(S.sv.reads[side] || '').trim(); if (raw === '') return 0;
+    const rec = svRows().find(function (r) { return svSame(r, sec.station, side, S.sv.layer); }), n = C.toNumber(raw);
+    return rec && fin(rec.reading) && fin(n) && Math.abs(n - rec.reading) < 1e-9 ? 2 : 1;
+  }
+  const SV_TXT = ['برداشت نشده', 'واردشده', '✓ برداشت شد'];
   function svCard(side, sec) {
-    const q = sec[side], none = side !== 'axis' && sec.section && sec.section.none, on = !none && String(S.sv.reads[side] || '').trim() !== '';
+    const q = sec[side], none = side !== 'axis' && sec.section && sec.section.none, stt = none ? 0 : svCardState(sec, side);
     const mid = q.kind === 'mid', nm = mid ? (q.midName || q.tag || 'نقطه میانی') : sideFa(sec, side);
     const edge = mid ? '<span class="stk-edge">' + (q.edge === 'left' ? 'چپ' : 'راست') + '</span><br>' : '';
-    return '<div class="rd-card ' + sideCls(side) + (on ? ' staked' : '') + '" id="svCard_' + side + '"><div><div class="lbl">' + esc(nm) + ' <span class="chip ' + sideCls(side) + '">' + esc(q.name) + '</span></div>' +
+    return '<div class="rd-card ' + sideCls(side) + (stt === 2 ? ' staked' : stt === 1 ? ' typed' : '') + '" id="svCard_' + side + '" data-act="svTap" data-side="' + esc(side) + '" role="button" tabindex="-1"><div><div class="lbl">' + esc(nm) + ' <span class="chip ' + sideCls(side) + '">' + esc(q.name) + '</span></div>' +
       '<div class="sub">' + edge + 'Z طرح <span class="num">' + (none ? '—' : fx(q.z)) + '</span><br>X <span class="num">' + fx(q.x) + '</span> • Y <span class="num">' + fx(q.y) + '</span></div><div class="sv-res" id="svRes_' + side + '"></div></div>' +
-      '<div class="rd-col"><div class="stk-st' + (on ? ' on' : '') + '">' + (on ? '✓ برداشت شد' : 'برداشت نشده') + '</div>' +
+      '<div class="rd-col"><div class="stk-st' + (stt === 2 ? ' on' : stt === 1 ? ' mid' : '') + '">' + SV_TXT[stt] + '</div>' +
       '<input class="sv-in" id="svRd_' + side + '" inputmode="decimal" dir="ltr" autocomplete="off" placeholder="قرائت" value="' + esc(S.sv.reads[side] || '') + '"' + (none ? ' disabled' : '') + ' aria-label="قرائت شاخص ' + esc(nm) + '"></div></div>';
   }
   function svMark(side) {
     const cd = $('#svCard_' + side); if (!cd) return;
-    const on = !$('#svRd_' + side).disabled && String(S.sv.reads[side] || '').trim() !== '';
-    cd.classList.toggle('staked', on);
-    const t = cd.querySelector('.stk-st'); if (t) { t.classList.toggle('on', on); t.textContent = on ? '✓ برداشت شد' : 'برداشت نشده'; }
+    const sec = svCtx().secs[S.sv.idx], inp = $('#svRd_' + side); if (!sec || !inp) return;
+    const stt = inp.disabled ? 0 : svCardState(sec, side);
+    cd.classList.toggle('staked', stt === 2); cd.classList.toggle('typed', stt === 1);
+    const t = cd.querySelector('.stk-st'); if (t) { t.classList.toggle('on', stt === 2); t.classList.toggle('mid', stt === 1); t.textContent = SV_TXT[stt]; }
   }
   /** شمارش برداشت‌های ذخیره‌شده‌ی لایه‌ی جاری روی مقاطع نمایش‌داده‌شده */
   function svSideSaved(saved, q, k) { return saved[stKey(q.station) + '|' + k] === 1; }
@@ -6268,9 +6336,9 @@ select.inp, .inp, .cell { background: var(--card); }
       (svExisting(sec) ? ' <span class="chip C">برداشت شده</span>' : '') + '</div>' +
       '<button class="btn sm" data-act="svGo" data-d="1"' + (i >= n - 1 ? ' disabled' : '') + '>بعدی ›</button></div>';
     svKeys(sec).forEach(function (side) { h += svCard(side, sec); });
-    h += cnt + '<p class="muted small">قرائت‌ها اختیاری‌اند؛ هر سمتی را که خواندید پر کنید. مختصات X و Y از هندسه‌ی طرح همین کیلومتر و سمت می‌آید (شاخص روی میخ طرح ایستاده است). خطا = Z برداشت − Z طرح لایه؛ مثبت یعنی بالاتر از طرح (خاک‌برداری لازم).</p>';
+    h += cnt + '<p class="muted small">قرائت را وارد کنید (کارت سبز کمرنگ می‌شود) و برای ثبت، کارت را لمس کنید (سبز پررنگ ← «برداشت شد»)؛ مکان‌نما خودکار به نقطه‌ی بعدی می‌رود. قرائت‌ها اختیاری‌اند؛ هر سمتی را که خواندید پر کنید. مختصات X و Y از هندسه‌ی طرح همین کیلومتر و سمت می‌آید (شاخص روی میخ طرح ایستاده است). خطا = Z برداشت − Z طرح لایه؛ مثبت یعنی بالاتر از طرح (خاک‌برداری لازم).</p>';
     h += surveyTable(cx);
-    h += '<div class="stake-pad"></div><div class="nav-big"><button class="btn" data-act="svGo" data-d="-1"' + (i <= 0 ? ' disabled' : '') + '>‹ مقطع قبلی</button><button class="btn primary wide" id="svSave" data-act="svSave">برداشت</button></div>';
+    h += '<div class="stake-pad"></div><div class="nav-big"><button class="btn" data-act="svGo" data-d="-1"' + (i <= 0 ? ' disabled' : '') + '>‹ مقطع قبلی</button><button class="btn primary" data-act="svGo" data-d="1"' + (i >= n - 1 ? ' disabled' : '') + '>مقطع بعدی ›</button></div>';
     return h;
   }
 
@@ -6341,8 +6409,8 @@ select.inp, .inp, .cell { background: var(--card); }
     const p = P(), st = p.settings, info = C.computeSetup({ bmId: S.sv.bmId, bs: S.sv.bs }, p.benchmarks);
     const hiEl = $('#svHi'); if (hiEl) hiEl.textContent = info.ok ? fx(info.hi) : '—';
     const bi = $('#svBmInfo'); if (bi) bi.innerHTML = bmInfo({ bs: S.sv.bs }, info) + (info.ok ? '' : msgList(info.errors, 'err'));
-    const cx = svCtx(), sec = cx.secs[S.sv.idx], btn = $('#svSave');
-    if (!sec || !btn) return;
+    const cx = svCtx(), sec = cx.secs[S.sv.idx];
+    if (!sec) return;
     let any = false, bad = false;
     svKeys(sec).forEach(function (side) {
       const el = $('#svRes_' + side); if (!el) return;
@@ -6355,42 +6423,54 @@ select.inp, .inp, .cell { background: var(--card); }
       if (!e.ok) { bad = true; el.innerHTML = '<span class="sv-st ' + e.status + '">' + SV_STATUS[e.status] + '</span> ' + esc(e.message); return; }
       el.innerHTML = 'Z برداشت <span class="num"><b>' + fx(e.zMeas) + '</b></span> • خطا <span class="num sv-err ' + e.status + '">' + svErrText(e.errMm) + '</span> mm <span class="sv-st ' + e.status + '">' + SV_STATUS[e.status] + '</span>';
     });
-    btn.disabled = !(info.ok && any && !bad);
-    btn.textContent = svExisting(sec) ? 'برداشت (به‌روزرسانی)' : 'برداشت';
   }
 
-  /** ثبت قرائت‌های مقطع جاری به‌صورت ردیف و رفتن به مقطع بعدی */
-  function svSave() {
-    const p = P(), st = p.settings, cx = svCtx(), sec = cx.secs[S.sv.idx]; if (!sec) return;
+  /** نقطه‌ای که لمس‌شدنش برداشت را ثبت می‌کند؛ غیرفعال یا بدون شیب ثبت نمی‌شود */
+  function svUsable(sec, side) { return !(side !== 'axis' && sec.section && sec.section.none); }
+  /** لمس کارت: ثبت قرائت همان نقطه، یا (روی کارتِ برداشت‌شده) برداشتن ثبت */
+  async function svTap(side) {
+    const p = P(), st = p.settings, cx = svCtx(), sec = cx.secs[S.sv.idx]; if (!sec || !svUsable(sec, side)) return;
+    const stt = svCardState(sec, side);
+    if (stt === 2) {
+      if (!(await ask('برداشت ثبت‌شده‌ی «' + esc(sideFa(sec, side)) + '» در کیلومتر ' + esc(stn(sec.station)) + ' حذف شود؟ (قرائت در کادر می‌ماند.)', { danger: true, ok: 'حذف برداشت' }))) return;
+      const rows = svRows(), i = rows.findIndex(function (r) { return svSame(r, sec.station, side, S.sv.layer); });
+      if (i >= 0) rows.splice(i, 1);
+      S.sv.dir = 0; structural(); return;
+    }
+    const raw = String(S.sv.reads[side] || '').trim();
+    if (raw === '') { toast('ابتدا قرائت را وارد کنید.', 'err'); const el = $('#svRd_' + side); if (el) el.focus(); return; }
     const info = C.computeSetup({ bmId: S.sv.bmId, bs: S.sv.bs }, p.benchmarks);
     if (!info.ok) { toast(info.errors[0], 'err'); return; }
-    const entries = [];
-    const keys = svKeys(sec);
-    for (let k = 0; k < keys.length; k++) {
-      const side = keys[k], raw = String(S.sv.reads[side] || '').trim();
-      if (raw === '' || (side !== 'axis' && sec.section && sec.section.none)) continue;
-      const e = C.surveyPoint({ hi: info.hi, reading: raw, designZ: sec[side].z, staffLength: st.staffLength, tolMm: st.surveyTolMm, decimals: st.decimals });
-      if (!e.ok) { toast('قرائت ' + sideFa(sec, side) + ': ' + e.message, 'err'); return; }
-      entries.push({ side: side, e: e });
-    }
-    if (!entries.length) { toast('هیچ قرائتی وارد نشده است.', 'err'); return; }
-    const rows = svRows(), bs = C.toNumber(S.sv.bs), time = svNow();
-    entries.forEach(function (x) {
-      const q = sec[x.side];
-      const si = svInfo(q, x.side);
-      const rec = { id: C.uid('sv'), station: sec.station, side: x.side, kind: si.kind, offset: si.offset, sideLabel: si.sideLabel, point: q.name, reading: x.e.reading, bs: bs, hi: info.hi, bmId: info.bm.id, bmName: info.bm.name, bmZ: C.toNumber(info.bm.z),
-        zMeas: x.e.zMeas, x: q.x, y: q.y, layerId: S.sv.layer, layerName: cx.layer ? cx.layer.name : '', zDesign: fin(q.z) && !(x.side !== 'axis' && sec.section && sec.section.none) ? q.z : null, time: time };
-      const i = rows.findIndex(function (r) { return svSame(r, sec.station, x.side, S.sv.layer); });
-      if (i >= 0) { rec.id = rows[i].id; rows[i] = rec; } else rows.push(rec);
-    });
+    const e = C.surveyPoint({ hi: info.hi, reading: raw, designZ: sec[side].z, staffLength: st.staffLength, tolMm: st.surveyTolMm, decimals: st.decimals });
+    if (!e.ok) { toast('قرائت ' + sideFa(sec, side) + ': ' + e.message, 'err'); return; }
+    const rows = svRows(), q = sec[side], si = svInfo(q, side);
+    const rec = { id: C.uid('sv'), station: sec.station, side: side, kind: si.kind, offset: si.offset, sideLabel: si.sideLabel, point: q.name, reading: e.reading, bs: C.toNumber(S.sv.bs), hi: info.hi, bmId: info.bm.id, bmName: info.bm.name, bmZ: C.toNumber(info.bm.z),
+      zMeas: e.zMeas, x: q.x, y: q.y, layerId: S.sv.layer, layerName: cx.layer ? cx.layer.name : '', zDesign: fin(q.z) ? q.z : null, time: svNow() };
+    const i = rows.findIndex(function (r) { return svSame(r, sec.station, side, S.sv.layer); });
+    if (i >= 0) { rec.id = rows[i].id; rows[i] = rec; } else rows.push(rec);
     rows.sort(function (a, b) { return (a.station - b.station) || (svOrder(a) - svOrder(b)) || String(a.layerName).localeCompare(String(b.layerName)); });
-    const last = S.sv.idx >= cx.secs.length - 1;
-    if (!last) S.sv.idx++;
-    S.sv.key = null;
+    // چرخه‌ی خودکار: جهت از اولین ثبت مقطع تعیین می‌شود (از راست شروع شد ← به چپ)
+    const order = svKeys(sec), at = order.indexOf(side);
+    if (!S.sv.dir) S.sv.dir = at === order.length - 1 && order.length > 1 ? -1 : 1;
+    let target = null, dir = S.sv.dir, k = at + dir;
+    for (; k >= 0 && k < order.length; k += dir) { const sd = order[k]; if (svUsable(sec, sd) && svCardState(sec, sd) !== 2) { target = sd; break; } }
+    let msg = '';
+    if (!target) {
+      // پایان مقطع ← مقطع بعدی با جهت برعکس (رفت‌وبرگشتی) که از همان سمتِ پایان شروع می‌شود
+      let ni = S.sv.idx + 1; dir = -dir;
+      while (ni < cx.secs.length) {
+        const nsec = cx.secs[ni], nord = svKeys(nsec), seq = dir > 0 ? nord : nord.slice().reverse();
+        const sd = seq.find(function (x) { return svUsable(nsec, x) && !svSideSavedNow(nsec, x); });
+        if (sd) { target = sd; break; }
+        ni++;
+      }
+      if (target) { S.sv.idx = ni; S.sv.key = null; S.sv.dir = dir; } else { S.sv.dir = 0; msg = 'پایان مسیر؛ همه‌ی نقاط برداشت شد.'; }
+    }
     structural();
-    toast(entries.length + ' قرائت در کیلومتر ' + stn(sec.station) + ' ثبت شد' + (last ? ' (پایان مسیر)' : '؛ مقطع بعدی') + '.');
-    const el = $('#svRd_left') && !$('#svRd_left').disabled ? $('#svRd_left') : $('#svRd_axis'); if (el && !last) el.focus();
+    if (msg) toast(msg);
+    if (target) { const el = $('#svRd_' + target); if (el && !el.disabled) el.focus(); }
   }
+  const svSideSavedNow = function (sec, side) { return svRows().some(function (r) { return svSame(r, sec.station, side, S.sv.layer) && fin(r.reading); }); };
 
   function jumpSurvey(text) {
     const cx = svCtx(); if (!cx.secs.length) return;
@@ -7918,6 +7998,8 @@ select.inp, .inp, .cell { background: var(--card); }
       if (cur !== null && after.secs && after.secs.length) { idx = after.secs.findIndex(function (q) { return q.station >= cur - 1e-9; }); if (idx < 0) idx = after.secs.length - 1; }
       S.stakeIdx = idx; markDirty(); render(); return;
     }
+    if (el.id === 'stShort') { activeStreet().short = el.value.trim().replace(/[^A-Za-z0-9_\-]+/g, '').slice(0, 16); el.value = activeStreet().short; markDirty(); return; }
+    if (el.id === 'expGpsAll') { S.exp.gpsAll = el.checked; render(); return; }
     if (el.id === 'svStep') {
       const before = svCtx(), cur = before.secs[S.sv.idx] ? before.secs[S.sv.idx].station : null, v = C.toNumber(el.value);
       P().svStep = el.value.trim() && fin(v) && v > 0 ? String(el.value.trim()) : '';
@@ -8479,7 +8561,7 @@ select.inp, .inp, .cell { background: var(--card); }
       }
       case 'stGo': S.stakeIdx += parseInt(b.dataset.d, 10); render(); break;
       case 'svGo': { const d = parseInt(b.dataset.d, 10); svNavigate(function () { S.sv.idx += d; }); break; }
-      case 'svSave': svSave(); break;
+      case 'svTap': if (e.target.closest('input')) break; svTap(b.dataset.side); break;
       case 'svGoto': {
         const rec = svRows()[parseInt(b.dataset.i, 10)]; if (!rec) break;
         svNavigate(function () {
@@ -8530,6 +8612,7 @@ select.inp, .inp, .cell { background: var(--card); }
       }
       case 'wake': toggleWake(); break;
       case 'exp': doExport(b.dataset.k, b.dataset.f); break;
+      case 'expG': doGpsExport(b.dataset.f); break;
       case 'expL': doExport(b.dataset.k, b.dataset.f, true); break;
       case 'expS': doSurveyExport(b.dataset.f); break;
       case 'print': printReport(); break;
@@ -8700,11 +8783,7 @@ select.inp, .inp, .cell { background: var(--card); }
     const el = e.target;
     if (e.key !== 'Enter' || !el || !el.id || el.id.indexOf('svRd_') !== 0) return;
     e.preventDefault();
-    const cxk = svCtx(), seck = cxk.secs[S.sv.idx];
-    const order = (seck ? svKeys(seck) : []).map(function (sd) { return $('#svRd_' + sd); }).filter(function (x) { return x && !x.disabled; });
-    const i = order.indexOf(el);
-    if (i >= 0 && i < order.length - 1) order[i + 1].focus();
-    else { const b = $('#svSave'); if (b && !b.disabled) svSave(); }
+    svTap(el.id.slice(5));
   });
   window.addEventListener('hashchange', route);
   window.addEventListener('beforeunload', function (e) {
