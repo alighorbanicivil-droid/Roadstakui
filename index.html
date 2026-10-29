@@ -2685,7 +2685,7 @@ select.inp, .inp, .cell { background: var(--card); }
       { id: 'b_xyz', name: 'XYZ: فقط مختصات (بدون عنوان)', header: false, stationFormat: 'numeric', cols: ['x', 'y', 'z'] },
       { id: 'b_full', name: 'کامل: Point, Station, Side, X, Y, Z, Code, Width, Slope, Description', header: true, stationFormat: 'numeric', cols: ['point', 'station', 'side', 'kind', 'offset', 'x', 'y', 'z', 'code', 'width', 'slope', 'desc'] },
       { id: 'b_table', name: 'مثل جدول: Point, Station, X, Y, Z, Offset, Notes', header: true, stationFormat: 'numeric', cols: ['point', 'station', 'x', 'y', 'z', 'offset', 'note'] },
-      { id: 'b_gps', name: 'GPS: نام, E, N, Z, توضیح (بدون عنوان)', header: false, stationFormat: 'numeric', cols: ['gpsName', 'x', 'y', 'z', 'gpsDesc'] }
+      { id: 'b_gps', name: 'GPS: نام, E, N, Z (بدون عنوان؛ نام محور = کیلومتراژ)', header: false, stationFormat: 'numeric', cols: ['gpsName', 'x', 'y', 'z'] }
     ],
     survey: [
       { id: 's_default', name: 'پیش‌فرض: Point, Station, Side, X, Y, Z, DesignZ, Error_mm, Status, Layer', header: true, stationFormat: 'numeric', cols: ['point', 'station', 'side', 'x', 'y', 'zMeas', 'zDesign', 'errMm', 'status', 'layer'] },
@@ -3558,7 +3558,7 @@ select.inp, .inp, .cell { background: var(--card); }
   const PAGE_SIZE = 50;       // ردیف در هر صفحه‌ی جدول نقاط
   const TABLE_STATIONS = 30;  // مقطع در هر صفحه‌ی جدول سه‌نقطه‌ای
 
-  const APP_VERSION = 'UI-2.4.0 (بر پایه‌ی 1.22.1)';
+  const APP_VERSION = 'UI-2.5.0 (بر پایه‌ی 1.22.1)';
   const S = {
     project: null, dirty: false, rev: 0, calc: null, calcRev: -1,
     page: 'home', imp: null, ptPage: 0, tPage: 0, stakeIdx: 0, rawBad: {},
@@ -5930,9 +5930,9 @@ select.inp, .inp, .cell { background: var(--card); }
     if (!rows.length) { toast('نقطه‌ای برای گزارش نیست.', 'err'); return; }
     if (!(await rptAsk())) return;
     const top = rplCover('گزارش نقاط لایه‌ها', p, st.name, rplCs(p)) + rplMeta([['پروژه', esc(p.name)], ['خیابان', esc(st.name)], ['لایه‌ها', esc(multi ? ls.map(function (l) { return l.name; }).join('، ') : ls[0].name), 2], ['تعداد نقاط', rplL(String(rows.length))]]);
-    const head = '<table class="pt-tbl pt-chunk"><tbody><tr class="hd"><th>#</th><th>نام</th><th>E</th><th>N</th><th>Z</th><th>توضیح</th>' + (multi ? '<th>لایه</th>' : '') + '</tr>';
+    const head = '<table class="pt-tbl pt-chunk"><tbody><tr class="hd"><th>#</th><th>نام</th><th>E</th><th>N</th><th>Z</th>' + (multi ? '<th>لایه</th>' : '') + '</tr>';
     const trs = rows.map(function (r, k) {
-      return '<tr class="' + (k % 2 ? 'alt' : '') + '"><td dir="ltr">' + (k + 1) + '</td><td dir="ltr">' + esc(r.gpsName) + '</td><td dir="ltr">' + fx(r.x) + '</td><td dir="ltr">' + fx(r.y) + '</td><td dir="ltr"><b>' + fx(r.z) + '</b></td><td dir="ltr">' + esc(r.gpsDesc) + '</td>' + (multi ? '<td>' + esc(r.layer || '') + '</td>' : '') + '</tr>';
+      return '<tr class="' + (k % 2 ? 'alt' : '') + '"><td dir="ltr">' + (k + 1) + '</td><td dir="ltr">' + esc(r.gpsName) + '</td><td dir="ltr">' + fx(r.x) + '</td><td dir="ltr">' + fx(r.y) + '</td><td dir="ltr"><b>' + fx(r.z) + '</b></td>' + (multi ? '<td>' + esc(r.layer || '') + '</td>' : '') + '</tr>';
     });
     const foot = function (k, N) { return rplFoot([esc(p.name), esc(st.name), 'نقاط لایه‌ها'], k + 1, N); };
     rplPrint(await rplFlow({ top: top, head: head, units: trs, tail: '', foot: foot }), slugFa(p.name) + '_' + slugFa(st.name) + '_نقاط-لایه');
@@ -6059,14 +6059,14 @@ select.inp, .inp, .cell { background: var(--card); }
     const d = String(s.name || '').replace(/[^A-Za-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
     return d || ('ST' + (idx + 1));
   }
-  const GPS_TPL = { header: false, stationFormat: 'numeric', cols: [{ key: 'gpsName', label: 'Name' }, { key: 'x', label: 'E' }, { key: 'y', label: 'N' }, { key: 'z', label: 'Z' }, { key: 'gpsDesc', label: 'Description' }] };
+  const GPS_TPL = { header: false, stationFormat: 'numeric', cols: [{ key: 'gpsName', label: 'Name' }, { key: 'x', label: 'E' }, { key: 'y', label: 'N' }, { key: 'z', label: 'Z' }] };
   /** ردیف‌های GPS یک خیابان: محور = پیشوند-کیلومتر، چپ/راست = پیشوند-L/R-کیلومتر، میانی = پیشوند-L/R+برچسب-کیلومتر */
   function gpsDecorate(rows, s, idx) {
     const sh = streetShort(s, idx);
     return rows.map(function (r) {
       const L = r.side === 'Left' ? 'L' : 'R';
       let nm, ds;
-      if (r.kind === 'Axis') { nm = sh + '-' + C.formatStation(r.station, 3); ds = C.formatStation(r.station, 3); }
+      if (r.kind === 'Axis') { nm = C.formatStation(r.station, 3); ds = nm; }
       else if (r.kind === 'Edge') { nm = sh + '-' + L; ds = L; }
       else {
         let tg = String(r.code); if (r.layer && tg.slice(-(r.layer.length + 1)) === '-' + r.layer) tg = tg.slice(0, -(r.layer.length + 1));
@@ -6091,9 +6091,9 @@ select.inp, .inp, .cell { background: var(--card); }
     return { rows: rows, skipped: skipped, dup: dup, maxLen: maxLen, table: IO.customTable('points', rows, GPS_TPL, { stationFormat: 'numeric' }) };
   }
   function gpsCard() {
-    const all = !!S.exp.gpsAll, d = gpsData(all), ex = d.rows.slice(0, 5).map(function (r) { return r.gpsName + ', ' + C.fmt(r.x, 3) + ', ' + C.fmt(r.y, 3) + ', ' + C.fmt(r.z, 3) + ', ' + r.gpsDesc; }).join('\n');
+    const all = !!S.exp.gpsAll, d = gpsData(all), ex = d.rows.slice(0, 5).map(function (r) { return r.gpsName + ', ' + C.fmt(r.x, 3) + ', ' + C.fmt(r.y, 3) + ', ' + C.fmt(r.z, 3); }).join('\n');
     return '<section class="card"><h2>فایل GPS (نام نقطه با پیشوند خیابان)</h2>' +
-      '<p class="muted small">ستون‌ها: نام، E، N، Z، توضیح (بدون عنوان). محور: نام <b dir="ltr">WE7-0+120.000</b> و توضیح <b dir="ltr">0+120.000</b> • چپ/راست: نام <b dir="ltr">WE7-L</b> / <b dir="ltr">WE7-R</b> و توضیح <b dir="ltr">L</b> / <b dir="ltr">R</b> • میانی: <b dir="ltr">WE7-LM1</b>. پیشوند از «نام کوتاه لاتین خیابان» (تب «محور و لبه‌ها» ← بالای صفحه) می‌آید.</p>' +
+      '<p class="muted small">ستون‌ها: نام، E، N، Z (بدون عنوان). محور: نام = کیلومتراژ، مثل <b dir="ltr">0+120.000</b> • چپ/راست: نام کوتاه خیابان + حرف، مثل <b dir="ltr">WE7-L</b> و <b dir="ltr">WE7-R</b> • میانی: <b dir="ltr">WE7-LM1</b>. نام کوتاه از «نام کوتاه لاتین خیابان» (تب «محور و لبه‌ها» ← بالای صفحه) می‌آید.</p>' +
       '<label class="row" style="margin:6px 0"><input type="checkbox" id="expGpsAll"' + (all ? ' checked' : '') + '> نقاط همه‌ی خیابان‌ها در یک فایل (وگرنه فقط خیابان فعال)</label>' +
       '<div class="small muted">' + d.rows.length + ' نقطه • بلندترین نام ' + d.maxLen + ' نویسه' + (d.skipped.length ? ' • خیابان‌های ردشده (خطای داده): ' + esc(d.skipped.join('، ')) : '') + '</div>' +
       (ex ? '<pre class="code" dir="ltr">' + esc(ex) + '</pre>' : '') + exportBtns('expG', 'gps', true) + '</section>';
