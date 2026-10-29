@@ -3558,7 +3558,7 @@ select.inp, .inp, .cell { background: var(--card); }
   const PAGE_SIZE = 50;       // ردیف در هر صفحه‌ی جدول نقاط
   const TABLE_STATIONS = 30;  // مقطع در هر صفحه‌ی جدول سه‌نقطه‌ای
 
-  const APP_VERSION = 'UI-2.5.0 (بر پایه‌ی 1.22.1)';
+  const APP_VERSION = 'UI-2.6.0 (بر پایه‌ی 1.22.1)';
   const S = {
     project: null, dirty: false, rev: 0, calc: null, calcRev: -1,
     page: 'home', imp: null, ptPage: 0, tPage: 0, stakeIdx: 0, rawBad: {},
@@ -4930,7 +4930,7 @@ select.inp, .inp, .cell { background: var(--card); }
       h += '</tbody></table></div>';
     }
     h += '</section>';
-    h += '<div id="lyOut"></div>' + tableCard();
+    h += '<div id="lyOut"></div>' + tableCard() + layerPointsCard();
     return h;
   }
 
@@ -5937,6 +5937,17 @@ select.inp, .inp, .cell { background: var(--card); }
     const foot = function (k, N) { return rplFoot([esc(p.name), esc(st.name), 'نقاط لایه‌ها'], k + 1, N); };
     rplPrint(await rplFlow({ top: top, head: head, units: trs, tail: '', foot: foot }), slugFa(p.name) + '_' + slugFa(st.name) + '_نقاط-لایه');
   }
+  /** کارت خروجی نقاط لایه‌ها در تب «لایه‌ها» */
+  function layerPointsCard() {
+    const ll = C.normalizeLayers(P().layers).layers;
+    if (!ll.length) return '';
+    return '<section class="card"><h2>خروجی نقاط لایه‌ها</h2>' +
+      '<div class="grid2"><label class="field"><span>کدام لایه</span><select class="inp" id="expLayer"><option value="all"' + (S.exp.layer === 'all' || !S.exp.layer ? ' selected' : '') + '>همه‌ی لایه‌ها</option>' +
+      ll.map(function (l) { return '<option value="' + esc(l.id) + '"' + (S.exp.layer === l.id ? ' selected' : '') + '>' + esc(l.name) + '</option>'; }).join('') + '</select></label>' +
+      '<label class="field"><span>قالب فایل</span><select class="inp" id="expLTpl">' + gpsTplOpts() + '</select></label></div>' +
+      '<p class="muted small">Z هر نقطه با جابه‌جایی لایه تغییر می‌کند. قالب GPS: محور = کیلومتراژ، چپ/راست/میانی = نام کوتاه خیابان + حرف؛ نام کوتاه را در تب «محور و لبه‌ها» تنظیم کنید.</p>' +
+      '<div class="row"><button class="btn primary grow" data-act="expLPdf">PDF</button><button class="btn primary grow" data-act="expL" data-k="points" data-f="txt">TXT</button><button class="btn grow" data-act="expL" data-k="points" data-f="csv">CSV</button><button class="btn grow" data-act="expL" data-k="points" data-f="xlsx">Excel</button></div></section>';
+  }
   function layerExportCard() {
     const p = P(), ll = C.normalizeLayers(p.layers).layers;
     let h = '<section class="card"><h2>لایه‌ها (بستر، خاکریزی و …)</h2>';
@@ -5944,8 +5955,7 @@ select.inp, .inp, .cell { background: var(--card); }
     h += '<label class="field"><span>کدام لایه</span><select class="inp" id="expLayer"><option value="all"' + (S.exp.layer === 'all' || !S.exp.layer ? ' selected' : '') + '>همه‌ی لایه‌ها</option>' +
       ll.map(function (l) { return '<option value="' + esc(l.id) + '"' + (S.exp.layer === l.id ? ' selected' : '') + '>' + esc(l.name) + '</option>'; }).join('') + '</select></label>' +
       '<p class="muted small">نقاط: با «قالب خروجی نقاط» بالا؛ Z هر نقطه با جابه‌جایی لایه تغییر می‌کند و نام لایه به انتهای Code اضافه می‌شود (مثل CL-بستر) و ستون «نام لایه» هم قابل انتخاب است. نیوو: ستون Layer در انتها اضافه می‌شود و استقرارها طبق انتخاب بالا هستند.</p>' +
-      '<label class="field"><span>قالب فایل نقاط (TXT، CSV، Excel)</span><select class="inp" id="expLTpl">' + gpsTplOpts() + '</select></label>' +
-      '<div class="row" style="margin-top:6px"><b class="small">نقاط:</b><button class="btn primary grow" data-act="expLPdf">PDF</button><button class="btn primary grow" data-act="expL" data-k="points" data-f="txt">TXT</button><button class="btn grow" data-act="expL" data-k="points" data-f="csv">CSV</button><button class="btn grow" data-act="expL" data-k="points" data-f="xlsx">Excel</button></div>' +
+      '<p class="muted small">خروجی نقاط لایه‌ها (GPS، PDF، TXT…) در تب «لایه‌ها» است.</p>' +
       '<div class="row" style="margin-top:8px"><b class="small">نیوو:</b><button class="btn grow" data-act="expL" data-k="newo" data-f="csv">CSV</button><button class="btn grow" data-act="expL" data-k="newo" data-f="xlsx">Excel</button><button class="btn grow" data-act="expL" data-k="newo" data-f="txt">TXT</button></div></section>';
     return h;
   }
