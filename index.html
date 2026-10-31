@@ -815,6 +815,21 @@ select.inp, .inp, .cell { background: var(--card); }
 .pm-chips { display: flex; flex-wrap: wrap; gap: 4px; } .pm-chip { background: #fdf6e0; border: 1px solid #d9a93b; border-radius: 14px; padding: 1px 8px; font-size: .78rem; } .pm-chip button { border: 0; background: none; cursor: pointer; }
 .pm-tb { margin: 8px 0; display: flex; flex-direction: column; gap: 6px; }
 @media print { #printArea.permit.a4 { page: permita4; } @page permita4 { size: A4; margin: 0; @bottom-center { content: none; } } }
+
+/* ===== مسیریابی بنچ‌مارک ===== */
+.bn-list { display: flex; flex-direction: column; gap: 8px; margin: 8px 0; }
+.bn-row { display: flex; align-items: center; gap: 8px; padding: 8px; border: 1px solid #d5dde4; border-radius: 10px; background: #fff; cursor: pointer; }
+.bn-row.on { border-color: #d9a93b; background: #fffaf0; }
+.bn-ar { width: 34px; height: 34px; flex: none; display: grid; place-items: center; color: #0b2a43; }
+.bn-ar svg { width: 28px; height: 28px; transition: transform .25s; }
+.bn-n { flex: 1; min-width: 0; display: flex; flex-direction: column; } .bn-n small { font-size: 11px; color: #5b6b78; }
+.bn-d { display: flex; flex-direction: column; align-items: center; font-weight: 700; color: #0b2a43; } .bn-d small { font-size: 10px; font-weight: 400; color: #5b6b78; }
+.bn-app { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; font-size: 13px; margin-bottom: 8px; } .bn-app label { display: inline-flex; gap: 4px; align-items: center; }
+.bn-cmp { display: flex; gap: 14px; align-items: center; padding: 10px; border: 1px dashed #d9a93b; border-radius: 12px; margin-top: 8px; }
+.bn-rose { position: relative; width: 84px; height: 84px; flex: none; border: 2px solid #0b2a43; border-radius: 50%; display: grid; place-items: center; }
+.bn-rose i { position: absolute; top: -2px; font-style: normal; font-size: 10px; font-weight: 700; background: #fff; padding: 0 3px; transform: translateY(-50%); }
+.bn-rose svg { width: 64px; height: 64px; transition: transform .25s; }
+.bn-big { font-size: 22px; font-weight: 800; color: #0b2a43; }
 </style>
 </head>
 <body>
@@ -3253,12 +3268,14 @@ select.inp, .inp, .cell { background: var(--card); }
     }
     base.sections = normSecs(p.sections);
     base.benchmarks = (Array.isArray(p.benchmarks) ? p.benchmarks : []).map(function (b) {
-      return { id: String(b.id || C.uid('bm')), name: String(b.name || ''), x: num(b.x), y: num(b.y), z: num(b.z), desc: String(b.desc == null ? '' : b.desc) };
+      return { id: String(b.id || C.uid('bm')), name: String(b.name || ''), x: num(b.x), y: num(b.y), z: num(b.z), lat: num(b.lat), lon: num(b.lon), desc: String(b.desc == null ? '' : b.desc) };
     });
     base.setups = (Array.isArray(p.setups) ? p.setups : []).map(function (s) {
       return { id: String(s.id || C.uid('su')), name: String(s.name || ''), bmId: s.bmId || null, bs: num(s.bs), from: num(s.from), to: num(s.to) };
     });
     base.activeSetupId = p.activeSetupId || null;
+    if (typeof p.newoBm === 'string') base.newoBm = p.newoBm.slice(0, 80);
+    if (typeof p.newoBs === 'string' || typeof p.newoBs === 'number') base.newoBs = String(p.newoBs).slice(0, 20);
     base.importTemplates = normTpl(p.importTemplates, 'points').filter(function (t) { return t.roles; });
     if (Array.isArray(p.signers)) base.signers = p.signers.slice(0, 6).map(function (x) { return { title: str(x && x.title), name: str(x && x.name) }; });
     if (p.permitCfg && typeof p.permitCfg === 'object') {
@@ -3686,7 +3703,7 @@ select.inp, .inp, .cell { background: var(--card); }
   const PAGE_SIZE = 50;       // ردیف در هر صفحه‌ی جدول نقاط
   const TABLE_STATIONS = 30;  // مقطع در هر صفحه‌ی جدول سه‌نقطه‌ای
 
-  const APP_VERSION = 'UI-3.3.1 (بر پایه‌ی 1.22.1)';
+  const APP_VERSION = 'UI-3.4.0 (بر پایه‌ی 1.22.1)';
   const S = {
     project: null, dirty: false, rev: 0, calc: null, calcRev: -1,
     page: 'home', imp: null, ptPage: 0, tPage: 0, stakeIdx: 0, rawBad: {},
@@ -3866,10 +3883,7 @@ select.inp, .inp, .cell { background: var(--card); }
   }
 
   /* ============================== محاسبه (کش) ============================== */
-  function activeSetup() {
-    const p = P();
-    return p.setups.find(function (s) { return s.id === p.activeSetupId; }) || p.setups[0] || null;
-  }
+  function activeSetup() { return newoSetup(P()); }
 
   function calc() {
     if (S.calc && S.calcRev === S.rev) return S.calc;
@@ -6103,6 +6117,128 @@ select.inp, .inp, .cell { background: var(--card); }
   }
 
   /* ============================== ۵) نیوو ============================== */
+  /* ============================== بنچ‌مارک: بنچ‌مارک و BS نیوو + مسیریابی ============================== */
+  /** نیوو یک بنچ‌مارک و یک BS برای کل پروژه دارد؛ پروژه‌های قدیمی از اولین استقرار فعال مهاجرت داده می‌شوند */
+  function newoSetup(p) {
+    p = p || P(); if (!p) return null;
+    if (p.newoBm === undefined) {
+      const s = (p.setups || []).find(function (x) { return x.id === p.activeSetupId; }) || (p.setups || [])[0];
+      p.newoBm = s && s.bmId && p.benchmarks.some(function (b) { return b.id === s.bmId; }) ? s.bmId : (p.benchmarks[0] ? p.benchmarks[0].id : '');
+      p.newoBs = s && s.bs != null && String(s.bs) !== '' ? String(s.bs) : '';
+    }
+    return { id: '_', name: 'نیوو', bmId: p.newoBm || '', bs: p.newoBs || '', from: null, to: null };
+  }
+  function newoCard() {
+    const p = P(), su = newoSetup(p), info = C.computeSetup(su, p.benchmarks);
+    let h = '<section class="card"><h2>بنچ‌مارک و قرائت عقب (نیوو)</h2><p class="muted small">قرائت نیوو، کدها و خروجی‌های نیوو با همین بنچ‌مارک و BS ساخته می‌شود: <code>HI = Z بنچ‌مارک + BS</code></p>' +
+      field('بنچ‌مارک', '<select class="inp" id="nwBm"><option value="">— انتخاب کنید —</option>' + p.benchmarks.map(function (b) { return '<option value="' + esc(b.id) + '"' + (b.id === su.bmId ? ' selected' : '') + '>' + esc((b.name || 'بدون نام') + ' (Z=' + fx(C.toNumber(b.z)) + ')') + '</option>'; }).join('') + '</select>') +
+      field('قرائت عقب BS (' + unitL() + ')', '<input class="inp ltr" id="nwBs" dir="ltr" inputmode="decimal" value="' + esc(su.bs) + '">') +
+      '<div class="small">HI: <b class="num" id="nwHi">' + (info.ok ? fx(info.hi) : '—') + '</b></div>' + bmInfo(su, info) + (info.ok ? '' : msgList(info.errors, 'err')) + msgList(info.warnings.map(function (m) { return { msg: m }; }), 'warn') + '</section>';
+    return h;
+  }
+  /* ---------- مختصات جغرافیایی و مسیریابی ---------- */
+  const NAV_APP_KEY = 'roadstakeui:navApp';
+  function navApp() { try { return localStorage.getItem(NAV_APP_KEY) === 'google' ? 'google' : 'neshan'; } catch (e) { return 'neshan'; } }
+  /** طول و عرض جغرافیایی بنچ‌مارک: مقدار واردشده، وگرنه تبدیل UTM (WGS84) */
+  function bmLL(b, p) {
+    const la = C.toNumber(b.lat), lo = C.toNumber(b.lon);
+    if (fin(la) && fin(lo) && Math.abs(la) <= 90 && Math.abs(lo) <= 180) return { lat: la, lon: lo, src: 'manual' };
+    const st = (p || P()).settings, x = C.toNumber(b.x), y = C.toNumber(b.y);
+    if (st.coordSystem === 'UTM' && fin(x) && fin(y)) {
+      try { const r = C.utmToLatLon(x, y, st.utmZone, st.hemisphere === 'S'); if (fin(r.lat) && fin(r.lon) && Math.abs(r.lat) <= 90 && Math.abs(r.lon) <= 180) return { lat: r.lat, lon: r.lon, src: 'utm' }; } catch (e) { /* ignore */ }
+    }
+    return null;
+  }
+  function geoDist(a, b) {
+    const R = 6371008.8, rd = Math.PI / 180, dLa = (b.lat - a.lat) * rd, dLo = (b.lon - a.lon) * rd;
+    const h = Math.sin(dLa / 2) * Math.sin(dLa / 2) + Math.cos(a.lat * rd) * Math.cos(b.lat * rd) * Math.sin(dLo / 2) * Math.sin(dLo / 2);
+    return 2 * R * Math.asin(Math.min(1, Math.sqrt(h)));
+  }
+  function geoBearing(a, b) {
+    const rd = Math.PI / 180, y = Math.sin((b.lon - a.lon) * rd) * Math.cos(b.lat * rd), x = Math.cos(a.lat * rd) * Math.sin(b.lat * rd) - Math.sin(a.lat * rd) * Math.cos(b.lat * rd) * Math.cos((b.lon - a.lon) * rd);
+    return (Math.atan2(y, x) / rd + 360) % 360;
+  }
+  const DIR8 = ['شمال', 'شمال‌شرق', 'شرق', 'جنوب‌شرق', 'جنوب', 'جنوب‌غرب', 'غرب', 'شمال‌غرب'];
+  const dirName = function (deg) { return DIR8[Math.round(deg / 45) % 8]; };
+  const distTxt = function (m) { return m < 1000 ? Math.round(m).toLocaleString('fa-IR') + ' m' : (m / 1000).toLocaleString('fa-IR', { maximumFractionDigits: 1 }) + ' km'; };
+  const llTxt = function (ll) { return Math.abs(ll.lat).toFixed(5) + (ll.lat >= 0 ? '°N' : '°S') + ' ' + Math.abs(ll.lon).toFixed(5) + (ll.lon >= 0 ? '°E' : '°W'); };
+  S.bmq = ''; S.bmPos = null; S.bmHead = null; S.bmTarget = ''; S.bmGpsMsg = ''; S.bmWatch = null;
+  function bmNavInner() {
+    const p = P(), pos = S.bmPos, q = (S.bmq || '').trim().toLowerCase();
+    let list = p.benchmarks.map(function (b) { return { b: b, ll: bmLL(b, p) }; }).filter(function (x) { return !q || String(x.b.name).toLowerCase().indexOf(q) >= 0; });
+    list.forEach(function (x) { if (pos && x.ll) { x.d = geoDist(pos, x.ll); x.br = geoBearing(pos, x.ll); } });
+    if (pos) list.sort(function (a, b) { return (fin(a.d) ? a.d : 1e15) - (fin(b.d) ? b.d : 1e15); });
+    let h = '';
+    if (S.bmGpsMsg) h += '<div class="msg warn small">' + esc(S.bmGpsMsg) + '</div>';
+    if (pos) h += '<p class="muted small">موقعیت شما: <span class="num" dir="ltr">' + esc(llTxt(pos)) + '</span> • دقت ±' + Math.round(pos.acc || 0) + ' m • لیست بر اساس فاصله مرتب است.</p>';
+    if (!list.length) return h + '<p class="muted">' + (p.benchmarks.length ? 'بنچ‌مارکی با این نام نیست.' : 'هنوز بنچ‌مارکی نیست.') + '</p>';
+    const rot = function (br) { return fin(S.bmHead) ? br - S.bmHead : br; };
+    h += '<div class="bn-list">';
+    list.forEach(function (x) {
+      const on = S.bmTarget === x.b.id;
+      h += '<div class="bn-row' + (on ? ' on' : '') + '" data-act="bmSel" data-id="' + esc(x.b.id) + '" role="button" tabindex="0">' +
+        '<span class="bn-ar">' + (fin(x.br) ? '<svg viewBox="0 0 24 24" style="transform:rotate(' + rot(x.br).toFixed(0) + 'deg)"><path d="M12 3l6 15-6-4-6 4z" fill="currentColor"/></svg>' : '·') + '</span>' +
+        '<span class="bn-n"><b>' + esc(x.b.name || 'بدون نام') + '</b><small class="num" dir="ltr">Z=' + esc(fx(C.toNumber(x.b.z))) + (x.ll ? ' • ' + esc(llTxt(x.ll)) : '') + '</small>' +
+        (x.ll ? '' : '<small class="muted">بدون طول/عرض جغرافیایی (' + (p.settings.coordSystem === 'UTM' ? 'X و Y یا' : '') + ' ستون‌های Lat/Lon را پر کنید)</small>') + '</span>' +
+        (fin(x.d) ? '<span class="bn-d num">' + distTxt(x.d) + '<small>' + dirName(x.br) + '</small></span>' : '') +
+        '<button class="btn sm primary" data-act="bmGo" data-id="' + esc(x.b.id) + '"' + (x.ll ? '' : ' disabled') + '>مسیریابی</button></div>';
+    });
+    h += '</div>';
+    const t = S.bmTarget && list.find(function (x) { return x.b.id === S.bmTarget; });
+    if (t && t.ll) {
+      h += '<div class="bn-cmp"><div class="bn-rose"><i>N</i>' + (pos ? '<svg viewBox="0 0 70 70" style="transform:rotate(' + rot(t.br).toFixed(0) + 'deg)"><path d="M35 6 L48 56 L35 46 L22 56 Z" fill="#0b2a43"/><circle cx="35" cy="35" r="3" fill="#d9a93b"/></svg>' : '') + '</div><div><b>جهت‌یاب تا ' + esc(t.b.name || '') + '</b>' +
+        (pos ? '<div class="bn-big num">' + distTxt(t.d) + '</div><div class="muted small">جهت: ' + dirName(t.br) + ' (' + Math.round(t.br) + '°)' + (fin(S.bmHead) ? '' : ' • فلش نسبت به شمال است') + '</div>' : '<div class="muted small">برای دیدن فاصله و جهت، «نزدیک‌ترین بنچ‌مارک به من» را بزنید.</div>') +
+        '<div class="muted small">فقط خط مستقیم را نشان می‌دهد و بدون اینترنت هم کار می‌کند.</div></div></div>';
+    }
+    return h;
+  }
+  function bmNavCard() {
+    const app = navApp();
+    return '<section class="card"><h2>مسیریابی به بنچ‌مارک‌ها</h2><input class="inp" id="bmSearch" placeholder="جست‌وجوی نام بنچ‌مارک…" value="' + esc(S.bmq) + '" autocomplete="off">' +
+      '<div class="row" style="margin:8px 0"><button class="btn primary grow" data-act="bmNear">◎ نزدیک‌ترین بنچ‌مارک به من</button></div>' +
+      '<div class="bn-app"><span>برنامه‌ی مسیریابی:</span><label><input type="radio" name="navApp" data-nav="neshan"' + (app === 'neshan' ? ' checked' : '') + '> نشان</label><label><input type="radio" name="navApp" data-nav="google"' + (app === 'google' ? ' checked' : '') + '> گوگل مپ</label></div>' +
+      '<div id="bmNavBox">' + bmNavInner() + '</div>' +
+      '<p class="muted small">طول و عرض جغرافیایی از X و Y (UTM، WGS84، زون ' + esc(P().settings.utmZone) + ') خودکار تبدیل می‌شود؛ برای پروژه‌ی محلی یا مقدار دقیق‌تر، ستون‌های Lat و Lon در جدول بنچ‌مارک‌ها را پر کنید.</p></section>';
+  }
+  function bmNavUpdate() {
+    const el = $('#bmNavBox');
+    if (!el) { bmNavStop(); return; }
+    el.innerHTML = bmNavInner();
+  }
+  let bmHeadT = 0;
+  function bmHeadH(e) {
+    const h = fin(e.webkitCompassHeading) ? e.webkitCompassHeading : (e.absolute && fin(e.alpha) ? (360 - e.alpha) % 360 : (e.type === 'deviceorientationabsolute' && fin(e.alpha) ? (360 - e.alpha) % 360 : null));
+    if (h === null || h === undefined) return;
+    S.bmHead = h; const now = Date.now(); if (now - bmHeadT > 300) { bmHeadT = now; bmNavUpdate(); }
+  }
+  function bmNavStop() {
+    if (S.bmWatch !== null) { try { navigator.geolocation.clearWatch(S.bmWatch); } catch (e) { /* ignore */ } S.bmWatch = null; }
+    window.removeEventListener('deviceorientationabsolute', bmHeadH, true); window.removeEventListener('deviceorientation', bmHeadH, true);
+  }
+  async function bmNavStart() {
+    if (!navigator.geolocation) { S.bmGpsMsg = 'این دستگاه موقعیت‌یابی (GPS) ندارد.'; bmNavUpdate(); return; }
+    S.bmGpsMsg = 'در حال دریافت موقعیت…'; bmNavUpdate(); bmNavStop();
+    try { if (window.DeviceOrientationEvent && typeof DeviceOrientationEvent.requestPermission === 'function') await DeviceOrientationEvent.requestPermission(); } catch (e) { /* ignore */ }
+    window.addEventListener('deviceorientationabsolute', bmHeadH, true); window.addEventListener('deviceorientation', bmHeadH, true);
+    S.bmWatch = navigator.geolocation.watchPosition(function (g) {
+      S.bmPos = { lat: g.coords.latitude, lon: g.coords.longitude, acc: g.coords.accuracy }; S.bmGpsMsg = '';
+      if (!S.bmTarget) {
+        const p = P(); let best = null;
+        p.benchmarks.forEach(function (b) { const ll = bmLL(b, p); if (ll) { const d = geoDist(S.bmPos, ll); if (!best || d < best.d) best = { id: b.id, d: d }; } });
+        if (best) S.bmTarget = best.id;
+      }
+      bmNavUpdate();
+    }, function (err) { S.bmGpsMsg = err && err.code === 1 ? 'اجازه‌ی دسترسی به موقعیت داده نشد؛ در تنظیمات مرورگر آن را فعال کنید.' : 'موقعیت دریافت نشد؛ GPS را روشن کنید و دوباره امتحان کنید.'; bmNavUpdate(); }, { enableHighAccuracy: true, maximumAge: 5000, timeout: 20000 });
+  }
+  function bmGo(id) {
+    const p = P(), b = p.benchmarks.find(function (x) { return x.id === id; }), ll = b && bmLL(b, p); if (!ll) { toast('طول و عرض جغرافیایی این بنچ‌مارک مشخص نیست.', 'err'); return; }
+    const c = ll.lat.toFixed(6) + ',' + ll.lon.toFixed(6);
+    if (navApp() === 'google') { window.open('https://www.google.com/maps/dir/?api=1&destination=' + c + '&travelmode=driving', '_blank', 'noopener'); return; }
+    try { if (navigator.clipboard) navigator.clipboard.writeText(c); } catch (e) { /* ignore */ }
+    toast('مختصات کپی شد؛ برنامه‌ی نقشه باز می‌شود (اگر «نشان» باز نشد، آن را انتخاب یا مختصات را جای‌گذاری کنید).');
+    location.href = 'geo:' + c + '?q=' + c + '(' + encodeURIComponent(b.name || 'BM') + ')';
+  }
+
   function bmCards() {
     const p = P(), r = calc();
     let h = '<section class="card"><h2>افزودن بنچ‌مارک</h2><div class="grid2">' +
@@ -6115,12 +6251,14 @@ select.inp, .inp, .cell { background: var(--card); }
     h += '<section class="card"><h2>بنچ‌مارک‌های پروژه (' + p.benchmarks.length + ')</h2>';
     if (!p.benchmarks.length) h += '<p class="muted">هنوز بنچ‌مارکی تعریف نشده است. حداقل یک بنچ‌مارک با ارتفاع معلوم لازم است.</p>';
     else {
-      h += '<div class="tbl-wrap"><table><thead><tr><th>نام</th><th>Z</th><th>X</th><th>Y</th><th>توضیح</th><th></th></tr></thead><tbody>';
+      h += '<div class="tbl-wrap"><table><thead><tr><th>نام</th><th>Z</th><th>X</th><th>Y</th><th>Lat</th><th>Lon</th><th>توضیح</th><th></th></tr></thead><tbody>';
       p.benchmarks.forEach(function (b, i) {
         h += '<tr><td>' + inp('benchmarks.' + i + '.name', b.name, { t: 'text', re: true, aria: 'نام بنچ‌مارک' }) + '</td>' +
           '<td>' + inp('benchmarks.' + i + '.z', b.z, { im: 'text', re: true, aria: 'ارتفاع' }) + '</td>' +
-          '<td>' + inp('benchmarks.' + i + '.x', b.x, { aria: 'X' }) + '</td>' +
-          '<td>' + inp('benchmarks.' + i + '.y', b.y, { aria: 'Y' }) + '</td>' +
+          '<td>' + inp('benchmarks.' + i + '.x', b.x, { aria: 'X', re: true }) + '</td>' +
+          '<td>' + inp('benchmarks.' + i + '.y', b.y, { aria: 'Y', re: true }) + '</td>' +
+          '<td>' + inp('benchmarks.' + i + '.lat', b.lat == null ? '' : b.lat, { aria: 'عرض جغرافیایی', ph: 'خودکار', re: true }) + '</td>' +
+          '<td>' + inp('benchmarks.' + i + '.lon', b.lon == null ? '' : b.lon, { aria: 'طول جغرافیایی', ph: 'خودکار', re: true }) + '</td>' +
           '<td>' + inp('benchmarks.' + i + '.desc', b.desc || '', { t: 'text', aria: 'توضیح' }) + '</td>' +
           '<td><button class="btn icon danger sm" data-act="delBM" data-i="' + i + '" aria-label="حذف بنچ‌مارک">×</button></td></tr>';
       });
@@ -6212,8 +6350,7 @@ select.inp, .inp, .cell { background: var(--card); }
     const p = P(), s = p.settings;
     let h = '<section class="card"><h2>طول شاخص</h2><div class="grid2">' + field('طول شاخص (' + unitL() + ')', inp('settings.staffLength', s.staffLength, { t: 'raw', cls: 'inp' })) + '</div>' +
       '<p class="muted small">قرائت بزرگ‌تر از این مقدار، صفر یا منفی «غیرقابل اجرا» علامت می‌خورد.</p><div id="stfMsg"></div></section>';
-    h += bmCards();
-    h += setupAddCard() + setupTable();
+    h += newoCard() + bmNavCard() + bmCards();
     return h;
   }
 
@@ -6230,48 +6367,6 @@ select.inp, .inp, .cell { background: var(--card); }
     return stationSelect('class="cell sel" data-p="' + path + '" data-t="ssel" data-re="1" aria-label="' + esc(blank) + '"', cur, blank);
   }
 
-  function setupAddCard() {
-    const p = P(), sorted = C.sortSetups(p.setups);
-    const prev = sorted.length ? sorted[sorted.length - 1] : null;
-    const prevTo = prev && fin(C.toNumber(prev.to)) ? C.toNumber(prev.to) : null;
-    let h = '<section class="card"><h2>افزودن استقرار دستگاه</h2>';
-    if (!p.benchmarks.length) return h + '<div class="msg warn">ابتدا یک بنچ‌مارک در کارت‌های بالا تعریف کنید.</div></section>';
-    h += '<p class="muted small">بعد از هر جابه‌جایی دستگاه یک استقرار بسازید: بنچ‌مارک و قرائت عقب (BS) را بدهید تا <code>HI = Z بنچ‌مارک + BS</code> محاسبه شود، و بازه‌ی کیلومتر را از فهرست محور انتخاب کنید. «از» و «تا» خالی = ابتدا و انتهای مسیر. اگر استقرار بعدی را از همان کیلومترِ پایانِ قبلی شروع کنید، آن کیلومتر برای هر دو استقرار نوشته می‌شود (مرز مشترک) تا خطا قابل تشخیص باشد.</p>' +
-      '<div class="grid2">' +
-      field('نام استقرار', '<input class="inp" id="suName" autocomplete="off" value="' + esc('استقرار ' + (p.setups.length + 1)) + '">') +
-      field('بنچ‌مارک', '<select class="inp" id="suBm">' + p.benchmarks.map(function (b) { return '<option value="' + esc(b.id) + '">' + esc((b.name || 'بدون نام') + ' (Z=' + C.fmt(b.z, 3) + ')') + '</option>'; }).join('') + '</select>') +
-      field('قرائت عقب BS (' + unitL() + ')', '<input class="inp ltr" id="suBs" dir="ltr" inputmode="decimal" autocomplete="off">') +
-      '<div class="field"><span>ارتفاع خط دید (HI)</span><b class="num" id="suHi" style="font-size:1.3rem">—</b></div>' +
-      field('از کیلومتر', rangeSelect('class="inp" id="suFrom"', prevTo, 'from')) +
-      field('تا کیلومتر', rangeSelect('class="inp" id="suTo"', null, 'to')) + '</div>' +
-      '<div class="row" style="margin-top:10px"><button class="btn primary grow" data-act="addSetup">افزودن</button></div></section>';
-    return h;
-  }
-
-  function setupAddHi() {
-    const el = $('#suHi'); if (!el) return;
-    const info = C.computeSetup({ bmId: $('#suBm').value, bs: $('#suBs').value }, P().benchmarks);
-    el.textContent = info.ok ? fx(info.hi) : '—';
-  }
-
-  function setupTable() {
-    const p = P(), act = activeSetup();
-    let h = '<section class="card"><div class="sec-title"><h2>استقرارهای دستگاه (' + p.setups.length + ')</h2></div>';
-    if (!p.setups.length) return h + '<p class="muted">هنوز استقراری تعریف نشده است؛ از کارت «افزودن استقرار» بالا شروع کنید.</p></section>';
-    h += '<div id="suAnalysis"></div><div class="tbl-wrap"><table><thead><tr><th>نام</th><th>بنچ‌مارک</th><th>BS</th><th>از کیلومتر</th><th>تا کیلومتر</th><th>HI</th><th>وضعیت</th><th></th></tr></thead><tbody>';
-    p.setups.forEach(function (su, i) {
-      const isAct = act && act.id === su.id;
-      h += '<tr class="' + (isAct ? 'act-row' : '') + '"><td>' + inp('setups.' + i + '.name', su.name, { t: 'text', aria: 'نام استقرار' }) + '</td>' +
-        '<td>' + sel('setups.' + i + '.bmId', su.bmId || '', [['', '— انتخاب کنید —']].concat(p.benchmarks.map(function (b) { return [b.id, (b.name || 'بدون نام') + ' (' + C.fmt(b.z, 3) + ')']; })), { re: true, aria: 'بنچ‌مارک استقرار' }) + '</td>' +
-        '<td>' + inp('setups.' + i + '.bs', su.bs, { t: 'raw', aria: 'قرائت عقب' }) + '</td>' +
-        '<td>' + rangeCell('setups.' + i + '.from', su.from, 'from') + '</td><td>' + rangeCell('setups.' + i + '.to', su.to, 'to') + '</td>' +
-        '<td class="n" id="hi_' + i + '">—</td><td><div class="badges" id="suBd_' + i + '"></div></td>' +
-        '<td><div class="row" style="flex-wrap:nowrap">' + (isAct ? '<span class="chip C">فعال</span>' : '<button class="btn sm primary" data-act="setActive" data-i="' + i + '">فعال کن</button>') +
-        '<button class="btn icon danger sm" data-act="delSetup" data-i="' + i + '" aria-label="حذف استقرار">×</button></div></td></tr>';
-    });
-    return h + '</tbody></table></div><div id="suDetail"></div></section>';
-  }
-
   function pointOptions(sections) {
     let o = '';
     const lim = Math.min(sections.length, 2500);
@@ -6285,43 +6380,8 @@ select.inp, .inp, .cell { background: var(--card); }
   }
 
   function newoLive() {
-    const p = P(), st = p.settings, axs = axisStations();
-    const an = C.analyzeSetups(p.setups, p.benchmarks, axs);
-    const LR = function (v) { return '⁦' + stLabel(v) + '⁩'; };
-    const other = function (x, id) { return x.a === id ? x.bName : x.aName; };
-    p.setups.forEach(function (su, i) {
-      const info = C.computeSetup(su, p.benchmarks);
-      const hi = $('#hi_' + i); if (hi) hi.textContent = info.ok ? fx(info.hi) : '—';
-      const bd = $('#suBd_' + i); if (!bd) return;
-      const a = C.toNumber(su.from), z = C.toNumber(su.to), o = an.byId[su.id] || { boundaries: [], overlaps: [] }, b = [];
-      if (!info.ok) b.push(['err', 'نامعتبر', info.errors.join('، ')]);
-      info.warnings.forEach(function (w) { b.push(['warn', 'هشدار', w]); });
-      if (fin(a) && fin(z) && a > z) b.push(['err', '«از» بزرگ‌تر از «تا»', '']);
-      if (info.ok && st.staffLength > 0 && C.toNumber(su.bs) > st.staffLength) b.push(['warn', 'BS بیش از طول شاخص', 'احتمالاً اشتباه خوانده شده']);
-      o.boundaries.forEach(function (x) { b.push(['info', 'مرز مشترک با «' + other(x, su.id) + '» در ' + LR(x.station), 'این کیلومتر برای هر دو استقرار نوشته می‌شود']); });
-      o.overlaps.forEach(function (x) { b.push(['warn', 'همپوشانی با «' + other(x, su.id) + '»', LR(x.from) + ' تا ' + LR(x.to)]); });
-      if (axs.length && ((fin(a) && (a < axs[0] - 1e-6 || a > axs[axs.length - 1] + 1e-6)) || (fin(z) && (z < axs[0] - 1e-6 || z > axs[axs.length - 1] + 1e-6)))) b.push(['warn', 'خارج از محور', 'کیلومتر انتخابی در نقاط محور این خیابان نیست']);
-      if (!b.length) b.push(['ok', 'معتبر', '']);
-      bd.innerHTML = b.map(function (x) { return '<span class="bdg ' + x[0] + '" title="' + esc(x[2]) + '">' + esc(x[1]) + '</span>'; }).join('');
-    });
-    const box = $('#suAnalysis');
-    if (box) {
-      let h = '';
-      p.setups.forEach(function (su) {
-        const info = C.computeSetup(su, p.benchmarks);
-        if (!info.ok) h += '<div class="msg err small"><b>«' + esc(su.name) + '»:</b> ' + esc(info.errors.join('، ')) + '</div>';
-      });
-      if (an.gaps.length) h += '<div class="msg warn small"><b>کیلومترهای بدون استقرار:</b> ' + an.gaps.slice(0, 5).map(function (g) { return '<bdi>' + esc(stLabel(g.from)) + '</bdi> تا <bdi>' + esc(stLabel(g.to)) + '</bdi> (' + g.count + ' نقطه)'; }).join('، ') + (an.gaps.length > 5 ? ' و …' : '') + '. برای این کیلومترها در خروجی ردیف نیوو ساخته نمی‌شود.</div>';
-      if (an.overlaps.length) h += '<div class="msg warn small"><b>همپوشانی استقرارها:</b> ' + an.overlaps.slice(0, 4).map(function (x) { return '«' + esc(x.aName) + '» و «' + esc(x.bName) + '» (<bdi>' + esc(stLabel(x.from)) + '</bdi> تا <bdi>' + esc(stLabel(x.to)) + '</bdi>)'; }).join('، ') + '. در خروجی، این کیلومترها برای هر دو استقرار نوشته می‌شود.</div>';
-      if (an.boundaries.length) h += '<div class="msg info small"><b>مرز مشترک:</b> ' + an.boundaries.map(function (x) { return 'در <bdi>' + esc(stLabel(x.station)) + '</bdi> هر دو استقرار «' + esc(x.aName) + '» و «' + esc(x.bName) + '» قرائت می‌دهند' + (fin(x.dHI) ? ' (اختلاف HI = <span class="num">' + C.fmt(x.dHI * 1000, 1) + '</span> mm)' : ''); }).join('؛ ') + '. اگر قرائت دو استقرار روی این نقطه با هم نخواند، خطای ارتفاعی دارید.</div>';
-      box.innerHTML = h;
-    }
-    const act = activeSetup(), dt = $('#suDetail');
-    if (dt) {
-      const info = C.computeSetup(act, p.benchmarks);
-      dt.innerHTML = act ? '<h3 style="margin-top:12px">مشخصات بنچ‌مارک استقرار فعال «' + esc(act.name) + '»</h3>' + bmInfo(act, info) +
-        msgList(info.warnings.map(function (m) { return { msg: m }; }), 'warn') : '';
-    }
+    const p = P(), st = p.settings, su = newoSetup(p), info = C.computeSetup(su, p.benchmarks);
+    const hi = $('#nwHi'); if (hi) hi.textContent = info.ok ? fx(info.hi) : '—';
     const m = $('#stfMsg');
     if (m) m.innerHTML = st.staffLength > 0 ? '' : '<div class="msg err">طول شاخص باید عددی بزرگ‌تر از صفر باشد.</div>';
   }
@@ -6570,8 +6630,7 @@ select.inp, .inp, .cell { background: var(--card); }
 
   /** استقرارهای انتخاب‌شده برای خروجی نیوو، به ترتیب کیلومتر (null = همه) */
   function expSetupList() {
-    const all = C.sortSetups(P().setups), sel = S.exp.newoSel;
-    return sel ? all.filter(function (s) { return sel.indexOf(s.id) >= 0; }) : all;
+    return [newoSetup(P())];
   }
 
   /** ردیف‌های نیوو به ترتیب استقرار، سپس لایه، سپس کیلومتر؛ کیلومتر مرزی برای هر دو استقرار نوشته می‌شود */
@@ -6603,19 +6662,9 @@ select.inp, .inp, .cell { background: var(--card); }
   }
 
   function setupPickCard() {
-    const p = P(), r = calc(), all = C.sortSetups(p.setups), sel = S.exp.newoSel;
-    if (!all.length) return '<div class="msg warn">استقراری تعریف نشده است؛ فایل خروجی ردیفی نخواهد داشت. <a href="#/newo"><b>تعریف استقرار</b></a></div>';
-    let h = '<b class="small">استقرارهای داخل خروجی (هر استقرار جدا و به ترتیب کیلومتر نوشته می‌شود):</b><div class="sl-list">';
-    all.forEach(function (su) {
-      const info = C.computeSetup(su, p.benchmarks), n = r.sections ? r.sections.filter(function (q) { return C.setupCovers(su, q.station); }).length : 0;
-      const on = !sel || sel.indexOf(su.id) >= 0;
-      h += '<label class="' + (info.ok ? '' : 'dis') + '"><input type="checkbox" data-exps="' + esc(su.id) + '"' + (on && info.ok ? ' checked' : '') + (info.ok ? '' : ' disabled') + '> <span><b>' + esc(su.name) + '</b> — ' +
-        rangeText(fin(C.toNumber(su.from)) ? C.toNumber(su.from) : null, fin(C.toNumber(su.to)) ? C.toNumber(su.to) : null) +
-        ' • <span class="num">' + n + '</span> مقطع' + (info.ok ? '' : ' • نامعتبر') + '</span></label>';
-    });
-    h += '</div><label class="row" style="margin:8px 0"><input type="checkbox" id="expSplit"' + (S.exp.split ? ' checked' : '') + '> در CSV و TXT برای هر استقرار یک فایل جدا (همه در یک فایل ZIP)</label>' +
-      '<p class="muted small">پیش‌فرض: همه‌ی استقرارها در یک فایل با ستون <code>Setup</code>. Excel همیشه یک برگه‌ی «All» (با مشخصات استقرارها بالای آن) و یک برگه برای هر استقرار دارد. کیلومتر مرزی بین دو استقرار برای هر دو نوشته می‌شود.</p>';
-    return h;
+    const p = P(), su = newoSetup(p), info = C.computeSetup(su, p.benchmarks), bm = info.bm;
+    if (!info.ok) return '<div class="msg warn">بنچ‌مارک و BS نیوو تعریف نشده یا نامعتبر است؛ فایل خروجی ردیفی نخواهد داشت. <a href="#/newo"><b>تنظیم در تب بنچ‌مارک</b></a></div>';
+    return '<p class="small">خروجی نیوو با بنچ‌مارک «' + esc(bm.name || '') + '» و BS = <span class="num">' + esc(su.bs) + '</span> (HI = <span class="num">' + esc(fx(info.hi)) + '</span>) ساخته می‌شود. <a href="#/newo">تغییر در تب بنچ‌مارک</a></p>';
   }
 
   /** فهرست قالب‌های نقاط با «GPS» در صدر */
@@ -8768,13 +8817,10 @@ select.inp, .inp, .cell { background: var(--card); }
     if (el.id === 'npCs') { const u = el.value === 'UTM'; ['npZone', 'npHem'].forEach(function (i) { $('#' + i).disabled = !u; }); $('#npDatum').disabled = !el.value; return; }
     if (el.id === 'tbLayer') { S.tbLayer = el.value; S.tPage = 0; render(); return; }
     if (el.id === 'qaModel') { qaModelUi(); return; }
-    if (el.id === 'suBm') { setupAddHi(); return; }
+    if (el.id === 'nwBm') { P().newoBm = el.value; structural(); return; }
+    if (el.id === 'nwBs') { P().newoBs = el.value.trim(); structural(); return; }
+    if (el.dataset.nav) { try { localStorage.setItem(NAV_APP_KEY, el.dataset.nav); } catch (e) { /* ignore */ } return; }
     if (el.dataset.fmt) { onFmtChange(el); return; }
-    if (el.dataset.exps) {
-      const ids = $$('[data-exps]').filter(function (x) { return x.checked; }).map(function (x) { return x.dataset.exps; });
-      const okN = C.sortSetups(P().setups).filter(function (x) { return C.computeSetup(x, P().benchmarks).ok; }).length;
-      S.exp.newoSel = ids.length === okN ? null : ids; exportLive(); return;
-    }
     if (el.id === 'expSplit') { S.exp.split = el.checked; return; }
     if (el.id === 'expSvLayer') { S.exp.svLayer = el.value; exportLive(); return; }
     if (el.id === 'svLayer') { const v = el.value; svNavigate(function () { svSetLayer(v); }); return; }
@@ -8844,7 +8890,6 @@ select.inp, .inp, .cell { background: var(--card); }
     setPath(path, v);
     const pgm = /^points\.(\d+)\.(id|station|x|y|z)$/.exec(path); if (pgm && P().points[+pgm[1]]) delete P().points[+pgm[1]].peg;
     if (/^sections\.\d+\.(mode|wL|wR|sL|sR)$/.test(path)) { const row = P().sections[parseInt(path.split('.')[1], 10)]; if (row && row.auto) row.auto = false; }
-    if (/^setups\.\d+\.(from|to)$/.test(path)) P().setups = C.sortSetups(P().setups);
     const sm = /^streets\.(\d+)\.survey\.(\d+)\.(reading|bs)$/.exec(path);
     if (sm && typeof v === 'number' && !Number.isNaN(v)) {
       const rec = P().streets[+sm[1]].survey[+sm[2]];
@@ -9308,36 +9353,13 @@ select.inp, .inp, .cell { background: var(--card); }
         break;
       }
       case 'delBM': {
-        const i = parseInt(b.dataset.i, 10), bm = p.benchmarks[i];
-        const used = p.setups.filter(function (s) { return s.bmId === bm.id; });
-        const msg = 'بنچ‌مارک «' + esc(bm.name) + '» حذف شود؟' + (used.length ? ' <b>در ' + used.length + ' استقرار استفاده شده؛ انتخاب بنچ‌مارک آن‌ها خالی می‌شود.</b>' : '');
-        if (await ask(msg, { danger: true, ok: 'حذف' })) { used.forEach(function (s) { s.bmId = null; }); p.benchmarks.splice(i, 1); structural(); }
+        const i = parseInt(b.dataset.i, 10), bm = p.benchmarks[i], used = p.newoBm === bm.id;
+        if (await ask('بنچ‌مارک «' + esc(bm.name) + '» حذف شود؟' + (used ? ' <b>این بنچ‌مارک برای نیوو انتخاب شده؛ انتخاب آن خالی می‌شود.</b>' : ''), { danger: true, ok: 'حذف' })) { if (used) p.newoBm = ''; if (S.bmTarget === bm.id) S.bmTarget = ''; p.benchmarks.splice(i, 1); structural(); }
         break;
       }
-      case 'addSetup': {
-        const bmId = $('#suBm') ? $('#suBm').value : '', name = ($('#suName').value || '').trim(), bs = C.toNumber($('#suBs').value);
-        const fromV = $('#suFrom').value === '' ? null : C.toNumber($('#suFrom').value), toV = $('#suTo').value === '' ? null : C.toNumber($('#suTo').value);
-        if (!name) { toast('نام استقرار را وارد کنید.', 'err'); $('#suName').focus(); break; }
-        if (p.setups.some(function (x) { return String(x.name).trim() === name; })) { toast('استقراری با نام «' + name + '» وجود دارد؛ نام دیگری بگذارید.', 'err'); $('#suName').focus(); break; }
-        if (!bmId) { toast('بنچ‌مارک را انتخاب کنید.', 'err'); break; }
-        if (!fin(bs) || bs < 0) { toast('قرائت عقب (BS) را به‌صورت عدد غیرمنفی وارد کنید.', 'err'); $('#suBs').focus(); break; }
-        if (fromV !== null && toV !== null && toV < fromV) { toast('«تا کیلومتر» نباید قبل از «از کیلومتر» باشد.', 'err'); break; }
-        const su = { id: C.uid('su'), name: name, bmId: bmId, bs: bs, from: fromV, to: toV };
-        p.setups.push(su); p.setups = C.sortSetups(p.setups);
-        if (!p.activeSetupId) p.activeSetupId = su.id;
-        structural(); toast('استقرار «' + name + '» افزوده شد.');
-        break;
-      }
-      case 'setActive': p.activeSetupId = p.setups[parseInt(b.dataset.i, 10)].id; structural(); break;
-      case 'delSetup': {
-        const i = parseInt(b.dataset.i, 10);
-        if (await ask('استقرار «' + esc(p.setups[i].name) + '» حذف شود؟', { danger: true, ok: 'حذف' })) {
-          const was = p.setups[i].id; p.setups.splice(i, 1);
-          if (p.activeSetupId === was) p.activeSetupId = p.setups[0] ? p.setups[0].id : null;
-          structural();
-        }
-        break;
-      }
+      case 'bmNear': bmNavStart(); break;
+      case 'bmSel': if (!e.target.closest('[data-act=bmGo]')) { S.bmTarget = b.dataset.id; bmNavUpdate(); } break;
+      case 'bmGo': bmGo(b.dataset.id); break;
       case 'stkToggle': { const cx = stakeCtx(); if (cx.secs && cx.secs[S.stakeIdx]) stkToggle(cx.secs[S.stakeIdx]); break; }
       case 'stkSide': { const cx = stakeCtx(); if (cx.secs && cx.secs[S.stakeIdx]) stkSide(cx.secs[S.stakeIdx], b.dataset.side); break; }
       case 'svMids': svInitSet(); P().svMidOff = !P().svMidOff; markDirty(); render(); break;
@@ -9680,7 +9702,7 @@ select.inp, .inp, .cell { background: var(--card); }
     else if (el.id.indexOf('pg_') === 0) { const pg = S.peg || (S.peg = {}); pg[el.id.slice(3)] = el.value; pegPreview(); }
     else if (el.id.indexOf('svRd_') === 0) { S.sv.reads[el.id.slice(5)] = el.value; svRefreshLive(); }
     else if (el.id === 'svBs') { S.sv.bs = el.value; svRefreshLive(); }
-    else if (el.id === 'suBs') setupAddHi();
+    else if (el.id === 'bmSearch') { S.bmq = el.value; bmNavUpdate(); }
   });
   document.addEventListener('keydown', function (e) {
     const el = e.target;
