@@ -778,7 +778,7 @@ select.inp, .inp, .cell { background: var(--card); }
 .pm-it { cursor: pointer; } .pm-op { margin: 8px 0; } .pm-op textarea { margin-top: 4px; }
 .pm-ph { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; } .pm-ph figure { margin: 0; width: 30%; } .pm-ph img { width: 100%; border-radius: 6px; border: 1px solid #c4ced6; }
 #modal .pm-prev { max-width: 96vw; max-height: 92vh; overflow: auto; padding: 8px; } .pm-sc { zoom: .62; display: flex; flex-direction: column; gap: 12px; align-items: center; }
-.pm-pg { width: 148mm; height: 210mm; padding: 8mm; display: flex; flex-direction: column; gap: 2.6mm; position: relative; overflow: hidden; background: #fff; color: #0b2a40; box-sizing: border-box; font-family: 'Vazirmatn', Tahoma, sans-serif; border: 1px solid #c4ced6; }
+.pm-pg { width: 148mm; min-height: 209mm; padding: 8mm; display: flex; flex-direction: column; gap: 2.6mm; position: relative; background: #fff; color: #0b2a40; box-sizing: border-box; font-family: 'Vazirmatn', Tahoma, sans-serif; border: 1px solid #c4ced6; }
 .pm-pg * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 .pm-pg > * { flex: none; }
 .pm-pg .ltr { direction: ltr; unicode-bidi: isolate; display: inline-block; }
@@ -806,6 +806,15 @@ select.inp, .inp, .cell { background: var(--card); }
   #printArea.permit { page: permit; } @page permit { size: A5; margin: 0; @bottom-center { content: none; } }
   #printArea.permit .pm-pg { border: 0; page-break-after: always; break-after: page; } #printArea.permit .pm-pg:last-child { break-after: auto; page-break-after: auto; }
 }
+
+.pm-pg.a4 { width: 210mm; min-height: 296mm; padding: 12mm; gap: 4mm; }
+.pm-pg .meta .mt { grid-column: span 6; font-size: 8pt; font-weight: 700; }
+.pm-pg .nm { display: block; font-style: normal; font-size: 7.6pt; color: #0b2a40; font-weight: 400; }
+.pm-pg .pmtb { width: 100%; border-collapse: collapse; margin-top: 3pt; font-size: 8pt; } .pm-pg .pmtb th { background: #fdf6e0; border: .6pt solid #c4ced6; padding: 2pt 4pt; } .pm-pg .pmtb td { border: .6pt solid #c4ced6; padding: 3pt 4pt; text-align: center; height: 7mm; }
+.pm-fc { border: 1px solid #c4ced6; border-radius: 8px; padding: 8px; margin: 8px 0; display: flex; flex-direction: column; gap: 6px; }
+.pm-chips { display: flex; flex-wrap: wrap; gap: 4px; } .pm-chip { background: #fdf6e0; border: 1px solid #d9a93b; border-radius: 14px; padding: 1px 8px; font-size: .78rem; } .pm-chip button { border: 0; background: none; cursor: pointer; }
+.pm-tb { margin: 8px 0; display: flex; flex-direction: column; gap: 6px; }
+@media print { #printArea.permit.a4 { page: permita4; } @page permita4 { size: A4; margin: 0; @bottom-center { content: none; } } }
 </style>
 </head>
 <body>
@@ -3256,30 +3265,59 @@ select.inp, .inp, .cell { background: var(--card); }
       const pc = p.permitCfg, ps = function (k) { return str(pc[k]).slice(0, 200); };
       base.permitCfg = { supervisor: ps('supervisor'), contractor: ps('contractor'), site: ps('site'), region: ps('region'), contractNo: ps('contractNo'), contractDate: ps('contractDate'), projCode: ps('projCode'), counter: Math.max(0, Math.round(Number(pc.counter) || 0)) };
     }
+    const arr = function (v) { return Array.isArray(v) ? v : []; };
+    const normFm = function (f) {
+      const FT = ['text', 'num', 'date', 'list', 'km', 'street', 'layer', 'check'], BT = ['text', 'fields', 'km', 'sign', 'table'];
+      const o = { id: String(f.id || C.uid('pf')), v: 2, name: str(f.name).slice(0, 80), title: str(f.title).slice(0, 80), paper: f.paper === 'A4' ? 'A4' : 'A5', overlap: f.overlap === true,
+        copies: arr(f.copies).slice(0, 12).map(function (c) { return str(c).slice(0, 60); }),
+        fields: arr(f.fields).slice(0, 40).map(function (x) {
+          return { id: String((x && x.id) || C.uid('ff')), key: str(x && x.key).replace(/[{}]/g, '').slice(0, 40), type: FT.indexOf(x && x.type) >= 0 ? x.type : 'text', role: x && (x.role === 'from' || x.role === 'to' || x.role === 'point') ? x.role : '', req: !!(x && x.req), def: str(x && x.def).slice(0, 200), opts: arr(x && x.opts).slice(0, 80).map(function (q) { return str(q).slice(0, 100); }), nextOps: !!(x && x.nextOps) };
+        }).filter(function (x) { return x.key; }),
+        blocks: arr(f.blocks).filter(function (b) { return b && BT.indexOf(b.type) >= 0; }).slice(0, 40).map(function (b) {
+          const r = { id: String(b.id || C.uid('bl')), type: b.type };
+          if (b.type === 'text') { r.title = str(b.title).slice(0, 100); r.text = str(b.text).slice(0, 3000); r.box = b.box !== false; r.soft = !!b.soft; }
+          else if (b.type === 'fields') { r.title = str(b.title).slice(0, 100); r.keys = arr(b.keys).slice(0, 30).map(function (k) { return str(k).slice(0, 40); }); }
+          else if (b.type === 'km') { r.from = str(b.from).slice(0, 40); r.to = str(b.to).slice(0, 40); r.len = !!b.len; }
+          else if (b.type === 'sign') r.signers = arr(b.signers).slice(0, 12).map(function (g) { return { id: String((g && g.id) || C.uid('sg')), title: str(g && g.title).slice(0, 60), op: !!(g && g.op) }; });
+          else if (b.type === 'table') { r.title = str(b.title).slice(0, 100); r.minRows = Math.max(0, Math.min(40, Math.round(Number(b.minRows) || 0))); r.cols = arr(b.cols).slice(0, 8).map(function (c) { return { id: String((c && c.id) || C.uid('cl')), label: str(c && c.label).slice(0, 40) }; }); }
+          return r;
+        }) };
+      return o;
+    };
     if (Array.isArray(p.permitForms)) {
       base.permitForms = p.permitForms.filter(function (f) { return f && typeof f === 'object'; }).slice(0, 40).map(function (f) {
+        if (f.v === 2) return normFm(f);
         return { id: String(f.id || C.uid('pf')), name: str(f.name).slice(0, 80), title: str(f.title).slice(0, 80), addr: str(f.addr).slice(0, 80), text: str(f.text).slice(0, 3000), reply: str(f.reply).slice(0, 3000),
           range: f.range === 'point' || f.range === 'none' ? f.range : 'range', next: f.next === true, testType: f.testType === true, overlap: f.overlap !== false,
-          custom: (Array.isArray(f.custom) ? f.custom : []).slice(0, 12).map(function (c) { return { label: str(c && c.label).replace(/[{}]/g, '').slice(0, 40), type: c && c.type === 'num' ? 'num' : 'text' }; }).filter(function (c) { return c.label; }),
-          signers: (Array.isArray(f.signers) ? f.signers : []).slice(0, 12).map(function (g) { return { id: String((g && g.id) || C.uid('sg')), title: str(g && g.title).slice(0, 60), op: !!(g && g.op) }; }),
-          copies: (Array.isArray(f.copies) ? f.copies : []).slice(0, 12).map(function (c) { return str(c).slice(0, 60); }) };
+          custom: arr(f.custom).slice(0, 12).map(function (c) { return { label: str(c && c.label).replace(/[{}]/g, '').slice(0, 40), type: c && c.type === 'num' ? 'num' : 'text' }; }).filter(function (c) { return c.label; }),
+          signers: arr(f.signers).slice(0, 12).map(function (g) { return { id: String((g && g.id) || C.uid('sg')), title: str(g && g.title).slice(0, 60), op: !!(g && g.op) }; }),
+          copies: arr(f.copies).slice(0, 12).map(function (c) { return str(c).slice(0, 60); }) };
       });
     }
     if (Array.isArray(p.permits)) {
-      const jx = function (v) { try { const sj = JSON.stringify(v); return sj && sj.length < 30000 ? JSON.parse(sj) : null; } catch (e) { return null; } };
+      const jx = function (v) { try { const sj = JSON.stringify(v); return sj && sj.length < 60000 ? JSON.parse(sj) : null; } catch (e) { return null; } };
+      const prim = function (m, n) { const r = {}; if (m && typeof m === 'object') Object.keys(m).slice(0, n || 40).forEach(function (k) { const v = m[k]; r[String(k).slice(0, 40)] = typeof v === 'number' ? (Number.isFinite(v) ? v : null) : typeof v === 'boolean' ? v : str(v).slice(0, 300); }); return r; };
       base.permits = p.permits.filter(function (x) { return x && typeof x === 'object' && Number.isFinite(Number(x.no)); }).slice(0, 3000).map(function (x) {
-        const o = { id: String(x.id || C.uid('pm')), no: Math.round(Number(x.no)), formId: str(x.formId), formName: str(x.formName).slice(0, 80), title: str(x.title).slice(0, 80), addr: str(x.addr).slice(0, 80), range: x.range === 'point' || x.range === 'none' ? x.range : 'range',
-          text: str(x.text).slice(0, 3000), reply: str(x.reply).slice(0, 3000), streetId: str(x.streetId), streetName: str(x.streetName).slice(0, 80), layerId: str(x.layerId), layerName: str(x.layerName).slice(0, 80),
-          from: num(x.from), to: num(x.to), date: str(x.date).slice(0, 10), status: ['wait', 'ok', 'rej', 'del'].indexOf(x.status) >= 0 ? x.status : 'wait', delReason: str(x.delReason).slice(0, 400), overlap: x.overlap !== false };
-        const v = x.vals && typeof x.vals === 'object' ? x.vals : {};
-        o.vals = { next: str(v.next).slice(0, 200), testType: str(v.testType).slice(0, 120), custom: {} };
-        if (v.custom && typeof v.custom === 'object') Object.keys(v.custom).slice(0, 12).forEach(function (k) { o.vals.custom[String(k).slice(0, 40)] = str(v.custom[k]).slice(0, 200); });
-        o.signers = (Array.isArray(x.signers) ? x.signers : []).slice(0, 12).map(function (g) { return { title: str(g && g.title).slice(0, 60), op: !!(g && g.op) }; });
-        o.copies = (Array.isArray(x.copies) ? x.copies : []).slice(0, 12).map(function (c) { return str(c).slice(0, 60); });
-        o.opinions = (Array.isArray(x.opinions) ? x.opinions : []).slice(0, 12).map(function (q) { return { who: str(q && q.who).slice(0, 60), res: q && q.res === 'rej' ? 'rej' : 'ok', text: str(q && q.text).slice(0, 2000), date: str(q && q.date).slice(0, 10) }; });
-        o.photos = (Array.isArray(x.photos) ? x.photos : []).filter(function (f) { return f && typeof f.data === 'string' && /^data:image\/(jpeg|png|webp);base64,/.test(f.data) && f.data.length < 600000; }).slice(0, 8).map(function (f) { return { id: String(f.id || C.uid('ph')), name: str(f.name).slice(0, 60), data: f.data }; });
-        o.history = (Array.isArray(x.history) ? x.history : []).slice(-200).map(function (e) { return { at: str(e && e.at).slice(0, 30), ev: str(e && e.ev).slice(0, 200), reason: str(e && e.reason).slice(0, 400) }; });
-        o.versions = (Array.isArray(x.versions) ? x.versions : []).slice(-40).map(function (r) { return { n: Math.round(Number(r && r.n)) || 1, at: str(r && r.at).slice(0, 30), code: str(r && r.code).slice(0, 20), snap: jx(r && r.snap) }; }).filter(function (r) { return r.snap; });
+        const o = { id: String(x.id || C.uid('pm')), no: Math.round(Number(x.no)), formId: str(x.formId), formName: str(x.formName).slice(0, 80), title: str(x.title).slice(0, 80), range: x.range === 'point' || x.range === 'none' ? x.range : 'range',
+          streetId: str(x.streetId), streetName: str(x.streetName).slice(0, 80), layerId: str(x.layerId), layerName: str(x.layerName).slice(0, 80),
+          from: num(x.from), to: num(x.to), date: str(x.date).slice(0, 10), status: ['wait', 'ok', 'rej', 'del'].indexOf(x.status) >= 0 ? x.status : 'wait', delReason: str(x.delReason).slice(0, 400) };
+        if (x.fm && typeof x.fm === 'object') {
+          o.fm = normFm(x.fm); o.fm.overlap = x.fm.overlap === true; o.fm.name = str(x.fm.name).slice(0, 80);
+          o.vals = prim(x.vals); o.other = prim(x.other); o.disp = {}; Object.keys(prim(x.disp)).forEach(function (k) { o.disp[k] = str(x.disp[k]).slice(0, 300); });
+          o.names = {}; if (x.names && typeof x.names === 'object') Object.keys(x.names).slice(0, 40).forEach(function (k) { o.names[String(k).slice(0, 40)] = str(x.names[k]).slice(0, 100); });
+          o.tables = {}; if (x.tables && typeof x.tables === 'object') Object.keys(x.tables).slice(0, 20).forEach(function (k) { o.tables[String(k).slice(0, 40)] = arr(x.tables[k]).slice(0, 80).map(function (r) { return arr(r).slice(0, 8).map(function (c) { return str(c).slice(0, 200); }); }); });
+        } else {
+          o.addr = str(x.addr).slice(0, 80); o.text = str(x.text).slice(0, 3000); o.reply = str(x.reply).slice(0, 3000);
+          const v = x.vals && typeof x.vals === 'object' ? x.vals : {};
+          o.vals = { next: str(v.next).slice(0, 200), testType: str(v.testType).slice(0, 120), custom: {} };
+          if (v.custom && typeof v.custom === 'object') Object.keys(v.custom).slice(0, 12).forEach(function (k) { o.vals.custom[String(k).slice(0, 40)] = str(v.custom[k]).slice(0, 200); });
+          o.signers = arr(x.signers).slice(0, 12).map(function (g) { return { title: str(g && g.title).slice(0, 60), op: !!(g && g.op) }; });
+          o.copies = arr(x.copies).slice(0, 12).map(function (c) { return str(c).slice(0, 60); });
+        }
+        o.opinions = arr(x.opinions).slice(0, 12).map(function (q) { return { who: str(q && q.who).slice(0, 60), res: q && q.res === 'rej' ? 'rej' : 'ok', text: str(q && q.text).slice(0, 2000), date: str(q && q.date).slice(0, 10) }; });
+        o.photos = arr(x.photos).filter(function (f) { return f && typeof f.data === 'string' && /^data:image\/(jpeg|png|webp);base64,/.test(f.data) && f.data.length < 600000; }).slice(0, 8).map(function (f) { return { id: String(f.id || C.uid('ph')), name: str(f.name).slice(0, 60), data: f.data }; });
+        o.history = arr(x.history).slice(-200).map(function (e) { return { at: str(e && e.at).slice(0, 30), ev: str(e && e.ev).slice(0, 200), reason: str(e && e.reason).slice(0, 400) }; });
+        o.versions = arr(x.versions).slice(-40).map(function (r) { return { n: Math.round(Number(r && r.n)) || 1, at: str(r && r.at).slice(0, 30), code: str(r && r.code).slice(0, 20), snap: jx(r && r.snap) }; }).filter(function (r) { return r.snap; });
         return o;
       });
     }
@@ -3648,7 +3686,7 @@ select.inp, .inp, .cell { background: var(--card); }
   const PAGE_SIZE = 50;       // ردیف در هر صفحه‌ی جدول نقاط
   const TABLE_STATIONS = 30;  // مقطع در هر صفحه‌ی جدول سه‌نقطه‌ای
 
-  const APP_VERSION = 'UI-3.2.0 (بر پایه‌ی 1.22.1)';
+  const APP_VERSION = 'UI-3.3.1 (بر پایه‌ی 1.22.1)';
   const S = {
     project: null, dirty: false, rev: 0, calc: null, calcRev: -1,
     page: 'home', imp: null, ptPage: 0, tPage: 0, stakeIdx: 0, rawBad: {},
@@ -4189,31 +4227,66 @@ select.inp, .inp, .cell { background: var(--card); }
     if (pg.undated) h += '<p class="muted small"><b class="num">' + pg.undated + '</b> میخ پیاده‌شده تاریخ ثبت ندارد (پیش از افزودن تاریخ علامت خورده) و در نمودار روزانه نیامده.</p>';
     return h + '</section>';
   }
-  /* ============================== پرمیت (درخواست کنترل/آزمایش) ============================== */
-  const PM_KEYS = ['لایه', 'خیابان', 'از', 'تا', 'طول', 'عملیات بعدی', 'نوع تست', 'تاریخ', 'شماره'];
+  /* ============================== پرمیت (فرم‌ساز کامل: فقط سربرگ ثابت است) ============================== */
   const PM_TESTS = ['تراکم (دانسیته)', 'CBR', 'دانه‌بندی', 'حدود اتربرگ', 'پروکتور'];
   const PM_ST = { wait: ['در انتظار', 'wait'], ok: ['تأییدشده', 'ok'], rej: ['ردشده', 'rej'], del: ['حذف‌شده', 'del'] };
   const PM_REPLY = 'نظر به کنترل عملیات انجام‌شده و مطابقت با دستور کار و نقشه‌های اجرایی، ادامه‌ی کار و شروع عملیات بعدی بلامانع است.';
+  const PM_CFGK = { 'دستگاه نظارت': 'supervisor', 'پیمانکار': 'contractor', 'کد پروژه': 'projCode', 'شماره‌ی قرارداد': 'contractNo', 'شماره قرارداد': 'contractNo', 'تاریخ قرارداد': 'contractDate', 'منطقه': 'region', 'محل اجرا': 'site' };
+  const PM_SYS = ['شماره', 'تاریخ', 'طول', 'پروژه', 'دستگاه نظارت', 'پیمانکار', 'کد پروژه', 'شماره قرارداد', 'تاریخ قرارداد', 'منطقه', 'محل اجرا'];
+  const PM_FT = [['text', 'متن'], ['num', 'عدد'], ['date', 'تاریخ'], ['list', 'لیست انتخابی'], ['km', 'کیلومتر'], ['street', 'خیابان'], ['layer', 'لایه'], ['check', 'تیک (بله/خیر)']];
+  const PM_BT = [['text', 'متن (درخواست / نظر)'], ['fields', 'کارت مشخصات'], ['km', 'کارت کیلومتر'], ['sign', 'امضاها'], ['table', 'جدول']];
   const pmId = function (k) { return C.uid(k); };
   const pmNo = function (n) { return 'P-' + String(n).padStart(3, '0'); };
   const pmKm = function (v) { return fin(v) ? C.formatStation(v, 3) : '—'; };
+  const pmFld = function (key, type, o) { return Object.assign({ id: pmId('ff'), key: key, type: type, role: '', req: false, def: '', opts: [], nextOps: false }, o || {}); };
+  const pmSg = function (title, op) { return { id: pmId('sg'), title: title, op: op }; };
+  const pmCopies = function () { return ['پیمانکار', 'نقشه‌بردار پیمانکار', 'نقشه‌بردار کارفرما', 'کارفرما']; };
   function pmDefaults() {
-    const sg = function () { return [{ id: pmId('sg'), title: 'سرپرست کارگاه پیمانکار', op: false }, { id: pmId('sg'), title: 'ناظر مقیم', op: true }, { id: pmId('sg'), title: 'ناظر نقشه‌بردار', op: true }]; };
-    const cp = function () { return ['پیمانکار', 'نقشه‌بردار پیمانکار', 'نقشه‌بردار کارفرما', 'کارفرما']; };
+    const base = function (name, title, extra, text, reply) {
+      return { id: pmId('pf'), v: 2, name: name, title: title, paper: 'A5', overlap: true, copies: pmCopies(),
+        fields: [pmFld('خیابان', 'street', { req: true }), pmFld('لایه', 'layer', { req: true }), pmFld('از', 'km', { role: 'from', req: true }), pmFld('تا', 'km', { role: 'to', req: true })].concat(extra),
+        blocks: [{ id: pmId('bl'), type: 'fields', title: '', keys: ['دستگاه نظارت', 'پیمانکار', 'کد پروژه', 'شماره قرارداد', 'تاریخ قرارداد', 'منطقه', 'محل اجرا'] },
+          { id: pmId('bl'), type: 'text', title: 'دستگاه محترم نظارت', text: text, box: true, soft: false },
+          { id: pmId('bl'), type: 'km', from: 'از', to: 'تا', len: true },
+          { id: pmId('bl'), type: 'sign', signers: [pmSg('سرپرست کارگاه پیمانکار', false)] },
+          { id: pmId('bl'), type: 'text', title: 'نظر دستگاه نظارت', text: reply, box: true, soft: true },
+          { id: pmId('bl'), type: 'sign', signers: [pmSg('ناظر مقیم', true), pmSg('ناظر نقشه‌بردار', true)] }] };
+    };
     return [
-      { id: pmId('pf'), name: 'کنترل کد ارتفاعی', title: 'فرم درخواست کنترل', addr: 'دستگاه محترم نظارت', range: 'range', next: true, testType: false, overlap: true, custom: [], signers: sg(), copies: cp(), reply: PM_REPLY,
-        text: 'با احترام، خواهشمند است نسبت به کنترل کدهای ارتفاعی {لایه} خیابان {خیابان} اقدام نموده و در صورت مطابقت با مشخصات و نقشه‌ها، جهت اجرای عملیات {عملیات بعدی} مجوز لازم را صادر فرمایید.' },
-      { id: pmId('pf'), name: 'آزمایش تراکم', title: 'فرم درخواست آزمایش', addr: 'دستگاه محترم نظارت', range: 'range', next: false, testType: true, overlap: true, custom: [], signers: sg(), copies: cp(), reply: 'نظر به انجام آزمایش و مطابقت نتایج با مشخصات فنی، ادامه‌ی کار بلامانع است.',
-        text: 'با احترام، خواهشمند است نسبت به انجام آزمایش {نوع تست} {لایه} خیابان {خیابان} اقدام فرمایید.' }
+      base('کنترل کد ارتفاعی', 'فرم درخواست کنترل', [pmFld('عملیات بعدی', 'list', { nextOps: true })], 'با احترام، خواهشمند است نسبت به کنترل کدهای ارتفاعی {لایه} خیابان {خیابان} اقدام نموده و در صورت مطابقت با مشخصات و نقشه‌ها، جهت اجرای عملیات {عملیات بعدی} مجوز لازم را صادر فرمایید.', PM_REPLY),
+      base('آزمایش تراکم', 'فرم درخواست آزمایش', [pmFld('نوع تست', 'list', { opts: PM_TESTS.slice() })], 'با احترام، خواهشمند است نسبت به انجام آزمایش {نوع تست} {لایه} خیابان {خیابان} اقدام فرمایید.', 'نظر به انجام آزمایش و مطابقت نتایج با مشخصات فنی، ادامه‌ی کار بلامانع است.')
     ];
+  }
+  function pmBlank() {
+    return { id: pmId('pf'), v: 2, name: 'فرم جدید', title: 'فرم درخواست', paper: 'A5', overlap: false, copies: pmCopies(),
+      fields: [pmFld('خیابان', 'street', { req: true }), pmFld('لایه', 'layer'), pmFld('از', 'km', { role: 'from' }), pmFld('تا', 'km', { role: 'to' })],
+      blocks: [{ id: pmId('bl'), type: 'text', title: 'دستگاه محترم نظارت', text: 'با احترام، خواهشمند است نسبت به … خیابان {خیابان} کیلومتر {از} الی {تا} اقدام فرمایید.', box: true, soft: false }, { id: pmId('bl'), type: 'km', from: 'از', to: 'تا', len: true }, { id: pmId('bl'), type: 'sign', signers: [pmSg('امضاکننده', false)] }] };
+  }
+  /** فرم نسخه‌ی قبلی (۳٫۲) به ساختار بلوکی */
+  function pmV1toV2(f) {
+    const fl = [pmFld('خیابان', 'street', { req: true }), pmFld('لایه', 'layer')];
+    if (f.range === 'range') { fl.push(pmFld('از', 'km', { role: 'from', req: true }), pmFld('تا', 'km', { role: 'to', req: true })); } else if (f.range === 'point') fl.push(pmFld('کیلومتر', 'km', { role: 'point', req: true }));
+    if (f.next) fl.push(pmFld('عملیات بعدی', 'list', { nextOps: true }));
+    if (f.testType) fl.push(pmFld('نوع تست', 'list', { opts: PM_TESTS.slice() }));
+    (f.custom || []).forEach(function (c) { fl.push(pmFld(c.label, c.type === 'num' ? 'num' : 'text')); });
+    const sg1 = (f.signers || []).filter(function (g) { return !g.op; }), sg2 = (f.signers || []).filter(function (g) { return g.op; });
+    const bl = [{ id: pmId('bl'), type: 'fields', title: '', keys: ['دستگاه نظارت', 'پیمانکار', 'کد پروژه', 'شماره قرارداد', 'تاریخ قرارداد', 'منطقه', 'محل اجرا'] }, { id: pmId('bl'), type: 'text', title: f.addr || '', text: f.text || '', box: true, soft: false }];
+    if (f.range === 'range') bl.push({ id: pmId('bl'), type: 'km', from: 'از', to: 'تا', len: true }); else if (f.range === 'point') bl.push({ id: pmId('bl'), type: 'km', from: 'کیلومتر', to: '', len: false });
+    if (sg1.length) bl.push({ id: pmId('bl'), type: 'sign', signers: sg1.map(function (g) { return pmSg(g.title, false); }) });
+    if (f.reply) bl.push({ id: pmId('bl'), type: 'text', title: 'نظر دستگاه نظارت', text: f.reply, box: true, soft: true });
+    if (sg2.length) bl.push({ id: pmId('bl'), type: 'sign', signers: sg2.map(function (g) { return pmSg(g.title, true); }) });
+    return { id: f.id, v: 2, name: f.name, title: f.title, paper: 'A5', overlap: f.overlap !== false, copies: (f.copies || []).slice(), fields: fl, blocks: bl };
   }
   function pmInit(p) {
     if (!p.permitCfg) p.permitCfg = { supervisor: '', contractor: '', site: '', region: '', contractNo: '', contractDate: '', projCode: '', counter: 0 };
     if (!Array.isArray(p.permitForms) || !p.permitForms.length) p.permitForms = pmDefaults();
+    else if (p.permitForms.some(function (f) { return f.v !== 2; })) p.permitForms = p.permitForms.map(function (f) { return f.v === 2 ? f : pmV1toV2(f); });
     if (!Array.isArray(p.permits)) p.permits = [];
     return p;
   }
   const pmForm = function (p, id) { return p.permitForms.find(function (f) { return f.id === id; }); };
+  const pmFT = function (f, type) { return f.fields.filter(function (x) { return x.type === type; }); };
+  const pmRole = function (f, role) { return f.fields.find(function (x) { return x.type === 'km' && x.role === role; }); };
   /** مقاطع یک خیابان (در بازه‌ی لایه) برای لیست انتخاب کیلومتر */
   function pmStations(s, L) {
     let a = ((s.sections && s.sections.length) ? s.sections : (s.points || [])).map(function (q) { return C.toNumber(q.station); }).filter(fin);
@@ -4227,61 +4300,113 @@ select.inp, .inp, .cell { background: var(--card); }
     return { all: ls.map(function (l) { return 'اجرای ' + l.name; }), def: i >= 0 && ls[i + 1] ? 'اجرای ' + ls[i + 1].name : '' };
   }
   const pmActive = function (x) { return x.status !== 'rej' && x.status !== 'del'; };
-  /** بررسی بازه‌ی تکراری و فاصله‌ی خالی؛ فقط در همان فرم + خیابان + لایه */
-  function pmCheck(p, d, form) {
-    const out = { over: [], gap: null, last: NaN };
-    if (!form || !form.overlap || form.range === 'none' || !d.streetId) return out;
-    const same = p.permits.filter(function (x) { return x.formId === form.id && x.streetId === d.streetId && (x.layerId || '') === (d.layerId || '') && pmActive(x) && x.id !== d.editId && fin(x.from); });
-    same.forEach(function (x) { if (d.from < x.to - 1e-9 && x.from < d.to - 1e-9 || (form.range === 'point' && d.from >= x.from - 1e-9 && d.from <= x.to + 1e-9 && x.to > x.from)) out.over.push(x); });
-    if (same.length) { out.last = Math.max.apply(null, same.map(function (x) { return x.to; })); if (fin(d.from) && d.from > out.last + 1e-6) out.gap = [out.last, d.from]; }
+  function pmCtx(p, form, d) {
+    const sf = pmFT(form, 'street')[0], lf = pmFT(form, 'layer')[0], sid = sf ? d.vals[sf.key] : '';
+    const s = p.streets.find(function (x) { return x.id === sid; }) || activeStreet(p), ls = pmLayers(s), L = ls.find(function (l) { return l.id === (lf ? d.vals[lf.key] : ''); });
+    return { s: s, ls: ls, L: L, st: pmStations(s, L), sf: sf, lf: lf };
+  }
+  const pmFromTo = function (form, d) {
+    const a = pmRole(form, 'from'), b = pmRole(form, 'to'), c = pmRole(form, 'point');
+    if (a) return { from: d.vals[a.key], to: b ? d.vals[b.key] : d.vals[a.key], mode: b ? 'range' : 'point' };
+    if (c) return { from: d.vals[c.key], to: d.vals[c.key], mode: 'point' };
+    return { from: NaN, to: NaN, mode: 'none' };
+  };
+  /** بازه‌ی تکراری و فاصله‌ی خالی؛ فقط در همان فرم + خیابان + لایه */
+  function pmCheck(p, form, d, cx) {
+    const out = { over: [], gap: null, last: NaN }, ft = pmFromTo(form, d);
+    if (!form.overlap || ft.mode === 'none') return out;
+    const lid = cx.L ? cx.L.id : '';
+    const same = p.permits.filter(function (x) { return x.formId === form.id && x.streetId === cx.s.id && (x.layerId || '') === lid && pmActive(x) && x.id !== d.editId && fin(x.from); });
+    if (fin(ft.from)) same.forEach(function (x) {
+      if (ft.mode === 'range' ? (ft.from < x.to - 1e-9 && x.from < ft.to - 1e-9) : (ft.from >= x.from - 1e-9 && ft.from <= x.to + 1e-9)) out.over.push(x);
+    });
+    if (same.length) { out.last = Math.max.apply(null, same.map(function (x) { return x.to; })); if (fin(ft.from) && ft.from > out.last + 1e-6) out.gap = [out.last, ft.from]; }
     return out;
   }
   function pmFill(raw, v, mark) {
-    return String(raw || '').replace(/\{([^{}]+)\}/g, function (m, k) {
+    return esc(String(raw || '')).replace(/\{([^{}]+)\}/g, function (m, k) {
       k = k.trim(); const val = v[k]; if (val === undefined || val === '') return m;
-      return mark ? '<mark>' + esc(val) + '</mark>' : String(val);
-    });
+      return mark ? '<mark>' + esc(val) + '</mark>' : esc(val);
+    }).replace(/\n/g, '<br>');
   }
-  function pmVals(snap) {
-    const v = { 'لایه': snap.layerName || '', 'خیابان': snap.streetName || '', 'از': pmKm(snap.from), 'تا': pmKm(snap.to), 'طول': fin(snap.from) && fin(snap.to) ? fmtN(snap.to - snap.from, 1) + ' m' : '', 'عملیات بعدی': (snap.vals && snap.vals.next) || '', 'نوع تست': (snap.vals && snap.vals.testType) || '', 'تاریخ': pgDate(snap.date), 'شماره': pmNo(snap.no) };
-    ((snap.vals && snap.vals.custom) || {}) && Object.keys((snap.vals && snap.vals.custom) || {}).forEach(function (k) { v[k] = snap.vals.custom[k]; });
-    return v;
+  /** مقدار نمایشی هر فیلد */
+  function pmDisp(p, form, f, d, cx) {
+    const v = d.vals[f.key];
+    if (f.type === 'street') return cx.s.name;
+    if (f.type === 'layer') { const l = cx.ls.find(function (x) { return x.id === v; }); return l ? l.name : ''; }
+    if (f.type === 'km') return fin(v) ? pmKm(v) : '';
+    if (f.type === 'date') return v ? pgDate(v) : '';
+    if (f.type === 'check') return v ? 'بله' : 'خیر';
+    if (f.type === 'list') return v === '__other' ? String(d.other[f.key] || '') : String(v || '');
+    return String(v == null ? '' : v);
   }
-  /** برداشت (snapshot) کامل پرمیت: چاپ و بایگانی از روی همین ساخته می‌شود */
+  const pmFm = function (form) { return JSON.parse(JSON.stringify({ name: form.name, title: form.title, paper: form.paper, overlap: !!form.overlap, blocks: form.blocks, fields: form.fields, copies: form.copies })); };
+  const pmSigners = function (fm) { const o = []; (fm.blocks || []).forEach(function (b) { if (b.type === 'sign') (b.signers || []).forEach(function (g) { o.push(g); }); }); return o; };
   function pmSnap(p, x) {
     const c = p.permitCfg || {};
+    if (x.fm) return { v: 2, no: x.no, projName: p.name, cfg: { supervisor: c.supervisor, contractor: c.contractor, site: c.site, region: c.region, contractNo: c.contractNo, contractDate: c.contractDate, projCode: c.projCode }, fm: x.fm, vals: x.vals, disp: x.disp, tables: x.tables || {}, names: x.names || {}, date: x.date, streetName: x.streetName };
     return { no: x.no, projName: p.name, cfg: { supervisor: c.supervisor, contractor: c.contractor, site: c.site, region: c.region, contractNo: c.contractNo, contractDate: c.contractDate, projCode: c.projCode },
       title: x.title, addr: x.addr, text: x.text, reply: x.reply, range: x.range, streetName: x.streetName, layerName: x.layerName, from: x.from, to: x.to, date: x.date, vals: x.vals, signers: x.signers, copies: x.copies };
   }
   const pmCode = function (snap) { return C.controlCode(C.sha256Text(JSON.stringify(snap))); };
-  /** صفحه‌های چاپی A5: هر نسخه یک برگ */
+  function pmVars2(snap) {
+    const c = snap.cfg || {}, v = { 'پروژه': snap.projName, 'شماره': pmNo(snap.no), 'تاریخ': pgDate(snap.date) };
+    Object.keys(PM_CFGK).forEach(function (k) { v[k] = c[PM_CFGK[k]] || ''; });
+    Object.keys(snap.disp || {}).forEach(function (k) { v[k] = snap.disp[k]; });
+    const fl = (snap.fm.fields || []), a = fl.find(function (x) { return x.type === 'km' && x.role === 'from'; }), b = fl.find(function (x) { return x.type === 'km' && x.role === 'to'; });
+    if (a && b && fin(snap.vals[a.key]) && fin(snap.vals[b.key])) v['طول'] = fmtN(snap.vals[b.key] - snap.vals[a.key], 1) + ' m';
+    return v;
+  }
+  /** صفحه‌های چاپی: هر نسخه یک برگ */
   function pmPages(snap, code) {
-    const v = pmVals(snap), cfg = snap.cfg || {}, cp = snap.copies && snap.copies.length ? snap.copies : ['—'];
-    const meta = [['دستگاه نظارت', cfg.supervisor], ['پیمانکار', cfg.contractor], ['کد پروژه', cfg.projCode], ['شماره‌ی قرارداد', cfg.contractNo], ['تاریخ قرارداد', cfg.contractDate], ['منطقه', cfg.region]].filter(function (m) { return m[1]; });
-    let mh = meta.map(function (m) { return '<div class="c"><span>' + esc(m[0]) + '</span><b>' + esc(m[1]) + '</b></div>'; }).join('');
-    if (cfg.site) mh += '<div class="c w"><span>محل اجرا</span><b>' + esc(cfg.site) + '</b></div>';
-    const sg1 = (snap.signers || []).filter(function (x) { return !x.op; }), sg2 = (snap.signers || []).filter(function (x) { return x.op; });
-    const box = function (x, op) { return '<div><b>' + esc(x.title) + '</b>' + (op ? '<small>اظهار نظر:</small>' : '') + '<em>نام و امضا</em></div>'; };
-    let km = '';
-    if (snap.range === 'range' && fin(snap.from) && fin(snap.to)) km = '<div class="km"><div><span>از کیلومتر</span><b class="ltr">' + esc(pmKm(snap.from)) + '</b></div><div class="ar">◄</div><div><span>تا کیلومتر</span><b class="ltr">' + esc(pmKm(snap.to)) + '</b></div><div class="len"><span>طول بازه</span><b class="ltr">' + esc(fmtN(snap.to - snap.from, 1)) + ' m</b></div></div>';
-    else if (snap.range === 'point' && fin(snap.from)) km = '<div class="km"><div><span>کیلومتر</span><b class="ltr">' + esc(pmKm(snap.from)) + '</b></div></div>';
+    if (!snap.fm) return pmPagesV1(snap, code);
+    const fm = snap.fm, v = pmVars2(snap), cp = fm.copies && fm.copies.length ? fm.copies : ['—'], a4 = fm.paper === 'A4';
+    const body = (fm.blocks || []).map(function (b) {
+      if (b.type === 'text') return '<div class="req' + (b.soft ? ' nz' : '') + '">' + (b.title ? '<h4>' + esc(b.title) + '</h4>' : '') + '<p>' + pmFill(b.text, v, true) + '</p></div>';
+      if (b.type === 'fields') {
+        const cells = (b.keys || []).map(function (k) { return v[k] ? '<div class="c"><span>' + esc(k) + '</span><b>' + esc(v[k]) + '</b></div>' : ''; }).join('');
+        return cells ? '<div class="meta">' + (b.title ? '<div class="mt">' + esc(b.title) + '</div>' : '') + cells + '</div>' : '';
+      }
+      if (b.type === 'km') {
+        const f = snap.vals[b.from], t = b.to ? snap.vals[b.to] : NaN;
+        if (!fin(f)) return '';
+        return '<div class="km"><div><span>' + esc(b.to ? 'از کیلومتر' : (b.from || 'کیلومتر')) + '</span><b class="ltr">' + esc(pmKm(f)) + '</b></div>' + (b.to && fin(t) ? '<div class="ar">◄</div><div><span>تا کیلومتر</span><b class="ltr">' + esc(pmKm(t)) + '</b></div>' + (b.len ? '<div class="len"><span>طول بازه</span><b class="ltr">' + esc(fmtN(t - f, 1)) + ' m</b></div>' : '') : '') + '</div>';
+      }
+      if (b.type === 'sign') return '<div class="pmsg">' + (b.signers || []).map(function (g) { const nm = (snap.names || {})[g.id]; return '<div><b>' + esc(g.title) + '</b>' + (nm ? '<i class="nm">' + esc(nm) + '</i>' : '') + (g.op ? '<small>اظهار نظر:</small>' : '') + '<em>نام و امضا</em></div>'; }).join('') + '</div>';
+      if (b.type === 'table') {
+        const rows = ((snap.tables || {})[b.id] || []).filter(function (r) { return r.some(function (c) { return String(c).trim(); }); }), n = Math.max(rows.length, b.minRows || 0), cols = b.cols || [];
+        let h = '<div class="req nz">' + (b.title ? '<h4>' + esc(b.title) + '</h4>' : '') + '<table class="pmtb"><thead><tr><th>#</th>' + cols.map(function (c) { return '<th>' + esc(c.label) + '</th>'; }).join('') + '</tr></thead><tbody>';
+        for (let i = 0; i < n; i++) h += '<tr><td>' + (i + 1) + '</td>' + cols.map(function (c, j) { return '<td>' + esc((rows[i] || [])[j] || '') + '</td>'; }).join('') + '</tr>';
+        return h + '</tbody></table></div>';
+      }
+      return '';
+    }).join('');
     return cp.map(function (name, i) {
       const dist = cp.map(function (n, j) { return '<span' + (j === i ? ' class="on"' : '') + '>' + esc(n) + '</span>'; }).join('');
-      return '<section class="pm-pg"><div class="cover"><div class="l"><div class="brand">RoadStake</div><div class="sub">' + esc(snap.title) + '</div></div>' +
-        '<div class="title">' + esc(snap.projName) + '<small>خیابان: <b>' + esc(snap.streetName) + '</b> • پرمیت شماره‌ی <b class="ltr">' + esc(pmNo(snap.no)) + '</b></small></div>' +
+      return '<section class="pm-pg' + (a4 ? ' a4' : '') + '"><div class="cover"><div class="l"><div class="brand">RoadStake</div><div class="sub">' + esc(fm.title) + '</div></div>' +
+        '<div class="title">' + esc(snap.projName) + '<small>خیابان: <b>' + esc(snap.streetName || '—') + '</b> • پرمیت شماره‌ی <b class="ltr">' + esc(pmNo(snap.no)) + '</b></small></div>' +
         '<div class="r"><div>' + esc(pgDate(snap.date)) + '</div><div>کد کنترل</div><div class="ltr"><b>' + esc(code) + '</b></div></div></div>' +
-        '<div class="copy"><i>نسخه‌ی</i><b>' + esc(name) + '</b></div>' + (mh ? '<div class="meta">' + mh + '</div>' : '') +
-        '<div class="req"><h4>' + esc(snap.addr || '') + '</h4><p>' + pmFill(snap.text, v, true) + '</p>' + km + '</div>' +
-        (sg1.length ? '<div class="pmsg">' + sg1.map(function (x) { return box(x, false); }).join('') + '</div>' : '') +
-        (snap.reply ? '<div class="req nz"><h4>نظر دستگاه نظارت</h4><p>' + esc(snap.reply) + '</p></div>' : '') +
-        (sg2.length ? '<div class="pmsg">' + sg2.map(function (x) { return box(x, true); }).join('') + '</div>' : '') +
+        '<div class="copy"><i>نسخه‌ی</i><b>' + esc(name) + '</b></div>' + body +
         '<div class="foot"><div class="dist">توزیع: ' + dist + '</div><div class="fl"><span>RoadStake • کد کنترل: <b class="ltr">' + esc(code) + '</b></span><span>برگ ' + (i + 1) + ' از ' + cp.length + '</span></div></div></section>';
     }).join('');
   }
+  /** پرمیت‌های قدیمی (۳٫۲) */
+  function pmPagesV1(snap, code) {
+    const vv = { 'لایه': snap.layerName || '', 'خیابان': snap.streetName || '', 'از': pmKm(snap.from), 'تا': pmKm(snap.to), 'طول': fin(snap.from) && fin(snap.to) ? fmtN(snap.to - snap.from, 1) + ' m' : '', 'عملیات بعدی': (snap.vals && snap.vals.next) || '', 'نوع تست': (snap.vals && snap.vals.testType) || '', 'تاریخ': pgDate(snap.date), 'شماره': pmNo(snap.no) };
+    Object.keys((snap.vals && snap.vals.custom) || {}).forEach(function (k) { vv[k] = snap.vals.custom[k]; });
+    const fm = { title: snap.title, paper: 'A5', copies: snap.copies, fields: [{ key: 'از', type: 'km', role: 'from' }, { key: 'تا', type: 'km', role: 'to' }], blocks: [] };
+    const sg1 = (snap.signers || []).filter(function (g) { return !g.op; }), sg2 = (snap.signers || []).filter(function (g) { return g.op; });
+    fm.blocks.push({ id: 'a', type: 'fields', keys: ['دستگاه نظارت', 'پیمانکار', 'کد پروژه', 'شماره قرارداد', 'تاریخ قرارداد', 'منطقه', 'محل اجرا'] }, { id: 'b', type: 'text', title: snap.addr || '', text: snap.text, box: true });
+    if (snap.range === 'range') fm.blocks.push({ id: 'c', type: 'km', from: 'از', to: 'تا', len: true });
+    if (sg1.length) fm.blocks.push({ id: 'd', type: 'sign', signers: sg1.map(function (g, i) { return { id: 'x' + i, title: g.title, op: false }; }) });
+    if (snap.reply) fm.blocks.push({ id: 'e', type: 'text', title: 'نظر دستگاه نظارت', text: snap.reply, soft: true });
+    if (sg2.length) fm.blocks.push({ id: 'f', type: 'sign', signers: sg2.map(function (g, i) { return { id: 'y' + i, title: g.title, op: true }; }) });
+    return pmPages({ v: 2, no: snap.no, projName: snap.projName, cfg: snap.cfg, fm: fm, vals: { 'از': snap.from, 'تا': snap.to }, disp: vv, tables: {}, names: {}, date: snap.date, streetName: snap.streetName }, code);
+  }
   function pmPrint(snap, code) {
     const pa = $('#printArea'), oldTitle = document.title;
-    pa.className = 'rp permit'; pa.innerHTML = pmPages(snap, code);
-    document.title = 'Permite_' + slugFa(snap.streetName) + '_' + pmNo(snap.no);
+    pa.className = 'rp permit' + (snap.fm && snap.fm.paper === 'A4' ? ' a4' : ''); pa.innerHTML = pmPages(snap, code);
+    document.title = 'Permite_' + slugFa(snap.streetName || 'form') + '_' + pmNo(snap.no);
     window.print();
     setTimeout(function () { pa.innerHTML = ''; pa.className = ''; document.title = oldTitle; }, 1000);
   }
@@ -4298,6 +4423,20 @@ select.inp, .inp, .cell { background: var(--card); }
       setTimeout(function () { const t = $('#rsnTx'); if (t) t.focus(); }, 60);
     });
   }
+  /** تأیید با تایپ کلمه‌ی مشخص (برای کارهای بی‌بازگشت) */
+  function askType(title, msg, word) {
+    return new Promise(function (resolve) {
+      const m = $('#modal');
+      m.innerHTML = '<div class="box"><h3>' + esc(title) + '</h3><p>' + msg + '</p><label class="field"><span>برای تأیید بنویسید: <b class="ltr" dir="ltr">' + esc(word) + '</b></span><input class="inp ltr" dir="ltr" id="typTx" autocomplete="off"></label><div class="acts"><button class="btn" data-v="0">انصراف</button><button class="btn danger" data-v="1">حذف دائمی</button></div></div>';
+      m.classList.add('on');
+      const done = function (v) { m.classList.remove('on'); m.innerHTML = ''; m.onclick = null; resolve(v); };
+      m.onclick = function (e) {
+        const b = e.target.closest('[data-v]');
+        if (b) { if (b.dataset.v === '1') { if ($('#typTx').value.trim().toUpperCase() !== word.toUpperCase()) { toast('عبارت تأیید درست نیست.', 'err'); return; } done(true); } else done(false); } else if (e.target === m) done(false);
+      };
+      setTimeout(function () { const t = $('#typTx'); if (t) t.focus(); }, 60);
+    });
+  }
   function pmCompress(file) {
     return new Promise(function (ok, bad) {
       const url = URL.createObjectURL(file), im = new Image();
@@ -4309,24 +4448,38 @@ select.inp, .inp, .cell { background: var(--card); }
   S.pm = { view: 'list', fForm: '', fStreet: '', fStatus: '', q: '', id: '' };
   S.pn = null; S.pf = null;
   const pmOpt = function (list, cur) { return list.map(function (x) { const v = Array.isArray(x) ? x[0] : x, l = Array.isArray(x) ? x[1] : x; return '<option value="' + esc(v) + '"' + (String(v) === String(cur) ? ' selected' : '') + '>' + esc(l) + '</option>'; }).join(''); };
-  function pmDraft(p, formId, base) {
-    const form = pmForm(p, formId) || p.permitForms[0], s = p.streets.find(function (x) { return x.id === (base && base.streetId); }) || activeStreet(p), ls = pmLayers(s);
-    const d = Object.assign({ formId: form.id, streetId: s.id, layerId: ls[0] ? ls[0].id : '', from: NaN, to: NaN, date: todayIso(), next: '', nextTxt: '', testType: PM_TESTS[0], testTxt: '', custom: {}, text: form.text, reply: form.reply, editId: '' }, base || {});
-    if (!(base && base.touched)) {
-      const L = ls.find(function (l) { return l.id === d.layerId; }), st = pmStations(s, L), chk = pmCheck(p, Object.assign({}, d, { from: -Infinity, to: -Infinity }), form);
-      if (!fin(d.from) && st.length) d.from = fin(chk.last) && chk.last >= st[0] && chk.last <= st[st.length - 1] ? chk.last : st[0];
-      if (!fin(d.to) && st.length) d.to = form.range === 'point' ? d.from : (st.find(function (v) { return v > d.from + 1e-9; }) || st[st.length - 1]);
-      if (!d.next) d.next = pmNextOps(s, d.layerId).def;
-    }
+  const pmLastEnd = function (p, form, cx, exclude) {
+    const lid = cx.L ? cx.L.id : '', l = p.permits.filter(function (x) { return x.formId === form.id && x.streetId === cx.s.id && (x.layerId || '') === lid && pmActive(x) && x.id !== exclude && fin(x.to); });
+    return l.length ? Math.max.apply(null, l.map(function (x) { return x.to; })) : NaN;
+  };
+  /** پیش‌فرض‌های پیش‌نویس؛ reset = محاسبه‌ی دوباره‌ی کیلومتر و عملیات بعدی */
+  function pmFix(p, form, d, reset) {
+    form.fields.forEach(function (f) {
+      if (d.vals[f.key] !== undefined && !(reset && (f.type === 'layer' || f.type === 'km' || (f.type === 'list' && f.nextOps)))) return;
+      if (f.type === 'street' && d.vals[f.key] === undefined) d.vals[f.key] = activeStreet(p).id;
+    });
+    let cx = pmCtx(p, form, d);
+    form.fields.forEach(function (f) {
+      if (f.type === 'layer' && (d.vals[f.key] === undefined || !cx.ls.some(function (l) { return l.id === d.vals[f.key]; }))) d.vals[f.key] = cx.ls[0] ? cx.ls[0].id : '';
+    });
+    cx = pmCtx(p, form, d);
+    const a = pmRole(form, 'from') || pmRole(form, 'point'), b = pmRole(form, 'to');
+    if (a && cx.st.length && (reset || d.vals[a.key] === undefined)) { const le = pmLastEnd(p, form, cx, d.editId); d.vals[a.key] = fin(le) && le >= cx.st[0] && le < cx.st[cx.st.length - 1] ? le : cx.st[0]; }
+    if (b && cx.st.length && (reset || d.vals[b.key] === undefined || !(d.vals[b.key] > d.vals[a.key]))) d.vals[b.key] = cx.st.find(function (v) { return v > d.vals[a.key] + 1e-9; }) || d.vals[a.key];
+    form.fields.forEach(function (f) {
+      if (d.vals[f.key] !== undefined && !(reset && f.type === 'list' && f.nextOps)) return;
+      if (f.type === 'list') d.vals[f.key] = f.nextOps ? (pmNextOps(cx.s, cx.L ? cx.L.id : '').def || f.def || '') : (f.def || (f.opts[0] || ''));
+      else if (f.type === 'check') d.vals[f.key] = f.def === '1';
+      else if (f.type === 'date') d.vals[f.key] = f.def || d.date;
+      else if (f.type === 'num' || f.type === 'text') d.vals[f.key] = f.def || '';
+    });
     return d;
   }
-  function pmPermitFrom(p, d, form, no) {
-    const s = p.streets.find(function (x) { return x.id === d.streetId; }) || activeStreet(p), L = pmLayers(s).find(function (l) { return l.id === d.layerId; });
-    const nextV = d.next === '__other' ? d.nextTxt : d.next, tt = d.testType === '__other' ? d.testTxt : d.testType;
-    return { no: no, formId: form.id, formName: form.name, title: form.title, addr: form.addr, range: form.range, text: d.text, reply: d.reply, streetId: s.id, streetName: s.name, layerId: L ? L.id : '', layerName: L ? L.name : '', from: form.range === 'none' ? null : d.from, to: form.range === 'none' ? null : (form.range === 'point' ? d.from : d.to), date: d.date,
-      vals: { next: form.next ? nextV : '', testType: form.testType ? tt : '', custom: d.custom }, signers: form.signers.map(function (x) { return { title: x.title, op: !!x.op }; }), copies: form.copies.slice(), overlap: !!form.overlap };
+  function pmDraft(p, form, base) {
+    const d = Object.assign({ formId: form.id, vals: {}, other: {}, tables: {}, names: {}, date: todayIso(), editId: '' }, base || {});
+    return pmFix(p, form, d, false);
   }
-  /* ---------- صفحه ---------- */
+  /* ---------- صفحه‌ها ---------- */
   function permitPage() {
     const p = pmInit(P()), v = S.pm.view;
     const tabs = [['list', 'بایگانی'], ['new', 'صدور پرمیت'], ['forms', 'فرم‌ها'], ['cfg', 'مشخصات']];
@@ -4340,8 +4493,8 @@ select.inp, .inp, .cell { background: var(--card); }
   }
   function pmListView(p) {
     const f = S.pm, q = f.q.trim();
-    let list = p.permits.slice().sort(function (a, b) { return b.no - a.no; }).filter(function (x) {
-      return (!f.fForm || x.formId === f.fForm) && (!f.fStreet || x.streetId === f.fStreet) && (!f.fStatus || x.status === f.fStatus) && (!q || (x.streetName + ' ' + x.layerName + ' ' + x.formName + ' ' + pmNo(x.no) + ' ' + (x.opinions || []).map(function (o) { return o.text; }).join(' ')).indexOf(q) >= 0);
+    const list = p.permits.slice().sort(function (a, b) { return b.no - a.no; }).filter(function (x) {
+      return (!f.fForm || x.formId === f.fForm) && (!f.fStreet || x.streetId === f.fStreet) && (!f.fStatus || x.status === f.fStatus) && (!q || (x.streetName + ' ' + x.layerName + ' ' + x.formName + ' ' + pmNo(x.no) + ' ' + Object.keys(x.disp || {}).map(function (k) { return x.disp[k]; }).join(' ') + ' ' + (x.opinions || []).map(function (o) { return o.text; }).join(' ')).indexOf(q) >= 0);
     });
     let h = '<section class="card"><h3>بایگانی پرمیت‌ها (' + p.permits.length + ')</h3><div class="row">' +
       '<select class="inp grow" data-pmf="fForm"><option value="">همه‌ی فرم‌ها</option>' + pmOpt(p.permitForms.map(function (x) { return [x.id, x.name]; }), f.fForm) + '</select>' +
@@ -4352,54 +4505,63 @@ select.inp, .inp, .cell { background: var(--card); }
     list.forEach(function (x) {
       const st = PM_ST[x.status] || PM_ST.wait;
       h += '<section class="card pm-it" data-act="pmOpen" data-id="' + esc(x.id) + '" role="button" tabindex="0"><div class="row" style="justify-content:space-between"><b class="num">' + esc(pmNo(x.no)) + '</b><span class="pm-st ' + st[1] + '">' + st[0] + '</span></div>' +
-        '<div class="small">' + esc(x.formName) + ' • ' + esc(x.streetName) + (x.layerName ? ' • ' + esc(x.layerName) : '') + '</div>' +
+        '<div class="small">' + esc(x.formName) + (x.streetName ? ' • ' + esc(x.streetName) : '') + (x.layerName ? ' • ' + esc(x.layerName) : '') + '</div>' +
         (fin(x.from) ? '<div class="small num" dir="ltr">' + esc(pmKm(x.from)) + (x.to > x.from ? ' → ' + esc(pmKm(x.to)) : '') + '</div>' : '') +
         '<div class="muted small">' + esc(pgDate(x.date)) + ((x.versions || []).length ? ' • ' + x.versions.length + ' نسخه‌ی چاپی' : '') + ((x.photos || []).length ? ' • ' + x.photos.length + ' عکس' : '') + '</div></section>';
     });
     return h;
   }
+  function pmFieldHtml(p, form, d, f, cx) {
+    const v = d.vals[f.key], a = ' data-pnf="' + esc(f.key) + '"', lbl = '<span>' + esc(f.key) + (f.req ? ' *' : '') + '</span>';
+    if (f.type === 'street') return '<label class="field">' + lbl + '<select class="inp"' + a + '>' + pmOpt(p.streets.map(function (x) { return [x.id, x.name]; }), v) + '</select></label>';
+    if (f.type === 'layer') return '<label class="field">' + lbl + '<select class="inp"' + a + '>' + (cx.ls.length ? pmOpt(cx.ls.map(function (l) { return [l.id, l.name]; }), v) : '<option value="">— (لایه‌ای تعریف نشده)</option>') + '</select></label>';
+    if (f.type === 'km') {
+      if (!cx.st.length) return '<label class="field">' + lbl + '<input class="inp ltr" dir="ltr"' + a + ' value="' + esc(fin(v) ? pmKm(v) : '') + '" placeholder="0+100"></label>';
+      const fr = pmRole(form, 'from'), min = f.role === 'to' && fr && fin(d.vals[fr.key]) ? d.vals[fr.key] : -Infinity;
+      return '<label class="field">' + lbl + '<select class="inp ltr" dir="ltr"' + a + '>' + cx.st.filter(function (s) { return s > min + 1e-9; }).map(function (s) { return '<option value="' + s + '"' + (Math.abs(s - v) < 1e-6 ? ' selected' : '') + '>' + esc(pmKm(s)) + '</option>'; }).join('') + '</select></label>';
+    }
+    if (f.type === 'list') {
+      const opts = (f.nextOps ? pmNextOps(cx.s, cx.L ? cx.L.id : '').all : []).concat(f.opts);
+      return '<label class="field">' + lbl + '<select class="inp"' + a + '><option value="">—</option>' + pmOpt(opts.concat([['__other', 'سایر (متن دلخواه)']]), v) + '</select></label>' +
+        (v === '__other' ? '<label class="field"><span>' + esc(f.key) + ' (متن دلخواه)</span><input class="inp" data-pno="' + esc(f.key) + '" value="' + esc(d.other[f.key] || '') + '"></label>' : '');
+    }
+    if (f.type === 'check') return '<label class="chk"><input type="checkbox"' + a + (v ? ' checked' : '') + '> ' + esc(f.key) + '</label>';
+    if (f.type === 'date') return '<label class="field">' + lbl + '<input class="inp ltr" type="date" dir="ltr"' + a + ' value="' + esc(v || '') + '"></label>';
+    return '<label class="field">' + lbl + '<input class="inp"' + a + (f.type === 'num' ? ' inputmode="decimal"' : '') + ' value="' + esc(v == null ? '' : v) + '"></label>';
+  }
   function pmNewView(p) {
-    if (!S.pn) S.pn = pmDraft(p, p.permitForms[0].id);
-    const d = S.pn, form = pmForm(p, d.formId) || p.permitForms[0], s = p.streets.find(function (x) { return x.id === d.streetId; }) || activeStreet(p), ls = pmLayers(s), L = ls.find(function (l) { return l.id === d.layerId; }), st = pmStations(s, L);
-    const stOpts = function (cur, min) { return st.filter(function (v) { return min === undefined || v > min + 1e-9; }).map(function (v) { return [String(v), pmKm(v)]; }).map(function (x) { return '<option value="' + x[0] + '"' + (Math.abs(parseFloat(x[0]) - cur) < 1e-6 ? ' selected' : '') + '>' + x[1] + '</option>'; }).join(''); };
+    if (!S.pn || !pmForm(p, S.pn.formId)) S.pn = pmDraft(p, p.permitForms[0]);
+    const d = S.pn, form = d.editForm || pmForm(p, d.formId), cx = pmCtx(p, form, d);
     let h = '<section class="card"><h3>' + (d.editId ? 'ویرایش پرمیت ' + esc(pmNo((p.permits.find(function (x) { return x.id === d.editId; }) || {}).no)) : 'صدور پرمیت جدید') + '</h3>' +
-      '<label class="field"><span>فرم</span><select class="inp" data-pn="formId"' + (d.editId ? ' disabled' : '') + '>' + pmOpt(p.permitForms.map(function (x) { return [x.id, x.name]; }), d.formId) + '</select></label>' +
-      '<label class="field"><span>خیابان</span><select class="inp" data-pn="streetId">' + pmOpt(p.streets.map(function (x) { return [x.id, x.name]; }), d.streetId) + '</select></label>' +
-      '<label class="field"><span>لایه</span><select class="inp" data-pn="layerId">' + (ls.length ? pmOpt(ls.map(function (l) { return [l.id, l.name]; }), d.layerId) : '<option value="">— (لایه‌ای تعریف نشده)</option>') + '</select></label>';
-    if (form.range !== 'none') {
-      h += '<div class="row"><label class="field grow"><span>' + (form.range === 'point' ? 'کیلومتر' : 'از کیلومتر') + '</span><select class="inp ltr" dir="ltr" data-pn="from">' + stOpts(d.from) + '</select></label>' +
-        (form.range === 'range' ? '<label class="field grow"><span>تا کیلومتر</span><select class="inp ltr" dir="ltr" data-pn="to">' + stOpts(d.to, d.from) + '</select></label>' : '') + '</div>';
-      if (!st.length) h += '<p class="muted small">مقطعی برای این خیابان/لایه تعریف نشده است.</p>';
-    }
-    h += '<label class="field"><span>تاریخ</span><input class="inp ltr" type="date" dir="ltr" data-pn="date" value="' + esc(d.date) + '"></label>';
-    if (form.next) {
-      const no = pmNextOps(s, d.layerId);
-      h += '<label class="field"><span>عملیات بعدی</span><select class="inp" data-pn="next">' + pmOpt(no.all.concat([['__other', 'سایر (متن دلخواه)']]), d.next) + '</select></label>' +
-        (d.next === '__other' ? '<label class="field"><span>متن عملیات بعدی</span><input class="inp" data-pn="nextTxt" value="' + esc(d.nextTxt) + '"></label>' : '');
-    }
-    if (form.testType) h += '<label class="field"><span>نوع آزمایش</span><select class="inp" data-pn="testType">' + pmOpt(PM_TESTS.concat([['__other', 'سایر (متن دلخواه)']]), d.testType) + '</select></label>' + (d.testType === '__other' ? '<label class="field"><span>نام آزمایش</span><input class="inp" data-pn="testTxt" value="' + esc(d.testTxt) + '"></label>' : '');
-    form.custom.forEach(function (c) { h += '<label class="field"><span>' + esc(c.label) + '</span><input class="inp" data-pnc="' + esc(c.label) + '" value="' + esc(d.custom[c.label] || '') + '"' + (c.type === 'num' ? ' inputmode="decimal"' : '') + '></label>'; });
-    const chk = pmCheck(p, d, form);
+      '<label class="field"><span>فرم</span><select class="inp" data-pnform="1"' + (d.editId ? ' disabled' : '') + '>' + pmOpt(p.permitForms.map(function (x) { return [x.id, x.name]; }), d.formId) + '</select></label>' +
+      form.fields.map(function (f) { return pmFieldHtml(p, form, d, f, cx); }).join('') +
+      '<label class="field"><span>تاریخ پرمیت</span><input class="inp ltr" type="date" dir="ltr" data-pnd="1" value="' + esc(d.date) + '"></label>';
+    form.blocks.filter(function (b) { return b.type === 'table'; }).forEach(function (b) {
+      const rows = d.tables[b.id] || (d.tables[b.id] = []); while (rows.length < Math.max(1, b.minRows || 0)) rows.push([]);
+      h += '<div class="pm-tb"><b>' + esc(b.title || 'جدول') + '</b>' + rows.map(function (r, i) { return '<div class="row">' + (b.cols || []).map(function (c, j) { return '<input class="inp grow" placeholder="' + esc(c.label) + '" data-pnt="' + esc(b.id) + '.' + i + '.' + j + '" value="' + esc(r[j] || '') + '">'; }).join('') + '<button class="btn sm danger" data-act="pmTDel" data-b="' + esc(b.id) + '" data-i="' + i + '">×</button></div>'; }).join('') + '<button class="btn sm" data-act="pmTAdd" data-b="' + esc(b.id) + '">افزودن ردیف</button></div>';
+    });
+    const sg = pmSigners(form);
+    if (sg.length) h += '<h4 style="margin:10px 0 4px">نام امضاکنندگان (اختیاری؛ زیر عنوان چاپ می‌شود)</h4>' + sg.map(function (g) { return '<label class="field"><span>' + esc(g.title) + '</span><input class="inp" data-pnn="' + esc(g.id) + '" value="' + esc(d.names[g.id] || '') + '"></label>'; }).join('');
+    const chk = pmCheck(p, form, d, cx);
     chk.over.forEach(function (x) { h += '<div class="msg warn">این بخش قبلاً در <b>' + esc(pmNo(x.no)) + '</b> (' + esc(pmKm(x.from)) + ' تا ' + esc(pmKm(x.to)) + ') ثبت شده است.</div>'; });
     if (chk.gap) h += '<div class="msg warn">یادآوری: بازه‌ی ' + esc(pmKm(chk.gap[0])) + ' تا ' + esc(pmKm(chk.gap[1])) + ' هنوز پرمیت ندارد.</div>';
     if (fin(chk.last) && !chk.over.length && !chk.gap) h += '<p class="muted small">آخرین پرمیت فعال این لایه تا ' + esc(pmKm(chk.last)) + ' ثبت شده است.</p>';
-    h += '<label class="field"><span>متن درخواست (قابل ویرایش؛ متغیرها: ' + PM_KEYS.concat(form.custom.map(function (c) { return c.label; })).map(function (k) { return '{' + k + '}'; }).join(' ') + ')</span><textarea class="inp" rows="4" data-pn="text">' + esc(d.text) + '</textarea></label>' +
-      '<label class="field"><span>متن نظر دستگاه نظارت</span><textarea class="inp" rows="2" data-pn="reply">' + esc(d.reply) + '</textarea></label>' +
-      '<div class="row"><button class="btn primary grow" data-act="pmSave">' + (d.editId ? 'ثبت ویرایش' : 'ثبت و پیش‌نمایش چاپ') + '</button>' + (d.editId ? '<button class="btn" data-act="pmCancel">انصراف</button>' : '') + '</div></section>';
+    h += '<div class="row" style="margin-top:8px"><button class="btn primary grow" data-act="pmSave">' + (d.editId ? 'ثبت ویرایش' : 'ثبت و پیش‌نمایش چاپ') + '</button>' + (d.editId ? '<button class="btn" data-act="pmCancel">انصراف</button>' : '') + '</div></section>';
     return h;
   }
   function pmDetailView(p) {
     const x = p.permits.find(function (y) { return y.id === S.pm.id; });
     if (!x) { S.pm.view = 'list'; return pmListView(p); }
-    const st = PM_ST[x.status] || PM_ST.wait, dead = x.status === 'del';
-    let h = '<section class="card"><div class="row" style="justify-content:space-between"><h3>' + esc(pmNo(x.no)) + ' • ' + esc(x.formName) + '</h3><span class="pm-st ' + st[1] + '">' + st[0] + '</span></div>' +
-      '<div class="kv"><b>خیابان</b><span>' + esc(x.streetName) + '</span><b>لایه</b><span>' + esc(x.layerName || '—') + '</span><b>کیلومتر</b><span class="num" dir="ltr">' + (fin(x.from) ? esc(pmKm(x.from)) + (x.to > x.from ? ' → ' + esc(pmKm(x.to)) : '') : '—') + '</span><b>تاریخ</b><span>' + esc(pgDate(x.date)) + '</span></div>' +
-      '<p class="small">' + pmFill(x.text, pmVals(x), true) + '</p>' + (dead ? '<div class="msg warn">حذف‌شده — علت: ' + esc(x.delReason || '') + '</div>' : '') +
-      '<div class="row"><button class="btn primary grow" data-act="pmPrintNow" data-id="' + esc(x.id) + '"' + (dead ? ' disabled' : '') + '>چاپ (چهار نسخه‌ی A5)</button><button class="btn" data-act="pmEdit" data-id="' + esc(x.id) + '"' + (dead ? ' disabled' : '') + '>ویرایش</button><button class="btn danger" data-act="pmDel" data-id="' + esc(x.id) + '"' + (dead ? ' disabled' : '') + '>حذف</button></div></section>';
+    const st = PM_ST[x.status] || PM_ST.wait, dead = x.status === 'del', signers = x.fm ? pmSigners(x.fm) : (x.signers || []);
+    let h = '<section class="card"><div class="row" style="justify-content:space-between"><h3>' + esc(pmNo(x.no)) + ' • ' + esc(x.formName) + '</h3><span class="pm-st ' + st[1] + '">' + st[0] + '</span></div><div class="kv">' +
+      (x.fm ? Object.keys(x.disp || {}).filter(function (k) { return x.disp[k] !== ''; }).map(function (k) { return '<b>' + esc(k) + '</b><span>' + esc(x.disp[k]) + '</span>'; }).join('') :
+        '<b>خیابان</b><span>' + esc(x.streetName) + '</span><b>لایه</b><span>' + esc(x.layerName || '—') + '</span><b>کیلومتر</b><span class="num" dir="ltr">' + (fin(x.from) ? esc(pmKm(x.from)) + (x.to > x.from ? ' → ' + esc(pmKm(x.to)) : '') : '—') + '</span>') +
+      '<b>تاریخ</b><span>' + esc(pgDate(x.date)) + '</span></div>' + (dead ? '<div class="msg warn">حذف‌شده — علت: ' + esc(x.delReason || '') + '</div>' : '') +
+      (dead ? '<div class="row"><button class="btn danger grow" data-act="pmPurge" data-id="' + esc(x.id) + '">حذف دائمی</button></div>' : '') + '<div class="row"><button class="btn primary grow" data-act="pmPrintNow" data-id="' + esc(x.id) + '"' + (dead ? ' disabled' : '') + '>چاپ</button><button class="btn" data-act="pmEdit" data-id="' + esc(x.id) + '"' + (dead || !x.fm ? ' disabled' : '') + '>ویرایش</button><button class="btn danger" data-act="pmDel" data-id="' + esc(x.id) + '"' + (dead ? ' disabled' : '') + '>حذف</button></div>' + (!x.fm ? '<p class="muted small">این پرمیت با نسخه‌ی قدیمی ساخته شده و ویرایش مقادیرش ممکن نیست.</p>' : '') + '</section>';
     h += '<section class="card"><h3>وضعیت و اظهار نظر</h3><label class="field"><span>وضعیت</span><select class="inp" data-pms="' + esc(x.id) + '"' + (dead ? ' disabled' : '') + '>' + pmOpt(['wait', 'ok', 'rej'].map(function (k) { return [k, PM_ST[k][0]]; }), x.status) + '</select></label>';
-    (x.signers || []).filter(function (g) { return g.op; }).forEach(function (g, i) {
-      const o = (x.opinions || []).find(function (q) { return q.who === g.title; }) || { res: 'ok', text: '', date: '' };
-      h += '<div class="pm-op"><b>' + esc(g.title) + '</b><div class="row"><select class="inp" id="pmOr' + i + '"><option value="ok"' + (o.res !== 'rej' ? ' selected' : '') + '>تأیید</option><option value="rej"' + (o.res === 'rej' ? ' selected' : '') + '>رد</option></select><input class="inp ltr" type="date" dir="ltr" id="pmOd' + i + '" value="' + esc(o.date || todayIso()) + '"></div><textarea class="inp" rows="2" id="pmOt' + i + '" placeholder="متن اظهار نظر (از روی برگه‌ی برگشتی)">' + esc(o.text) + '</textarea></div>';
+    signers.filter(function (g) { return g.op; }).forEach(function (g, i) {
+      const o = (x.opinions || []).find(function (q) { return q.who === g.title; }) || { res: 'ok', text: '', date: '' }, nm = x.fm && x.names ? x.names[g.id] : '';
+      h += '<div class="pm-op"><b>' + esc(g.title) + (nm ? ' — ' + esc(nm) : '') + '</b><div class="row"><select class="inp" id="pmOr' + i + '"><option value="ok"' + (o.res !== 'rej' ? ' selected' : '') + '>تأیید</option><option value="rej"' + (o.res === 'rej' ? ' selected' : '') + '>رد</option></select><input class="inp ltr" type="date" dir="ltr" id="pmOd' + i + '" value="' + esc(o.date || todayIso()) + '"></div><textarea class="inp" rows="2" id="pmOt' + i + '" placeholder="متن اظهار نظر (از روی برگه‌ی برگشتی)">' + esc(o.text) + '</textarea></div>';
     });
     h += '<button class="btn primary" data-act="pmOpSave" data-id="' + esc(x.id) + '"' + (dead ? ' disabled' : '') + '>ثبت اظهار نظرها</button></section>';
     h += '<section class="card"><h3>عکس برگه‌ی امضاشده (' + (x.photos || []).length + ')</h3><div class="pm-ph">' + (x.photos || []).map(function (f) { return '<figure><img src="' + esc(f.data) + '" alt=""><button class="btn sm danger" data-act="pmPhDel" data-id="' + esc(x.id) + '" data-pid="' + esc(f.id) + '">حذف</button></figure>'; }).join('') + '</div>' +
@@ -4409,27 +4571,86 @@ select.inp, .inp, .cell { background: var(--card); }
     return h;
   }
   function pmFormsView(p) {
-    let h = '<section class="card"><h3>فرم‌های پرمیت</h3><p class="muted small">هر فرم متن، فیلدها، امضاکنندگان و نسخه‌های خودش را دارد. پرمیت‌های صادرشده متن زمان صدور را نگه می‌دارند.</p>' +
+    return '<section class="card"><h3>فرم‌های پرمیت</h3><p class="muted small">فقط سربرگ ثابت است؛ بقیه‌ی برگه از بلوک‌ها و فیلدهایی ساخته می‌شود که خودتان تعریف می‌کنید. پرمیت‌های صادرشده متن زمان صدور را نگه می‌دارند.</p>' +
       p.permitForms.map(function (f) { return '<div class="row" style="justify-content:space-between;margin:6px 0"><b>' + esc(f.name) + '</b><span><button class="btn sm" data-act="pmFEdit" data-id="' + esc(f.id) + '">ویرایش</button> <button class="btn sm" data-act="pmFDup" data-id="' + esc(f.id) + '">کپی</button> <button class="btn sm danger" data-act="pmFDel" data-id="' + esc(f.id) + '">حذف</button></span></div>'; }).join('') +
-      '<button class="btn primary" data-act="pmFNew">فرم جدید</button></section>';
-    return h;
+      '<button class="btn primary" data-act="pmFNew">فرم خالی جدید</button></section>';
   }
+  const pmVarList = function (f) { return f.fields.map(function (x) { return x.key; }).concat(['طول', 'شماره', 'تاریخ', 'پروژه', 'دستگاه نظارت', 'پیمانکار', 'کد پروژه', 'شماره قرارداد', 'تاریخ قرارداد', 'منطقه', 'محل اجرا']).filter(function (k, i, a) { return k && a.indexOf(k) === i; }); };
   function pmFormEdit(p) {
     const f = S.pf; if (!f) { S.pm.view = 'forms'; return pmFormsView(p); }
-    const inp = function (k, l, ta) { return '<label class="field"><span>' + l + '</span>' + (ta ? '<textarea class="inp" rows="4" data-pf="' + k + '">' + esc(f[k]) + '</textarea>' : '<input class="inp" data-pf="' + k + '" value="' + esc(f[k]) + '">') + '</label>'; };
-    const chk = function (k, l) { return '<label class="chk"><input type="checkbox" data-pfc="' + k + '"' + (f[k] ? ' checked' : '') + '> ' + l + '</label>'; };
-    let h = '<section class="card"><h3>تعریف فرم</h3>' + inp('name', 'نام فرم') + inp('title', 'عنوان چاپی') + inp('addr', 'مخاطب (مثلاً دستگاه محترم نظارت)') + inp('text', 'متن درخواست (متغیرها مثل {لایه} {خیابان} {از} {تا} {عملیات بعدی} {نوع تست})', true) + inp('reply', 'متن نظر دستگاه نظارت', true) +
-      '<label class="field"><span>کیلومتر</span><select class="inp" data-pf="range">' + pmOpt([['range', 'بازه (از تا)'], ['point', 'یک نقطه'], ['none', 'بدون کیلومتر']], f.range) + '</select></label>' + chk('next', 'عملیات بعدی') + chk('testType', 'نوع آزمایش') + chk('overlap', 'جلوگیری از بازه‌ی تکراری') +
-      '<h4>فیلدهای دلخواه</h4>' + f.custom.map(function (c, i) { return '<div class="row"><input class="inp grow" data-pfcl="' + i + '" value="' + esc(c.label) + '"><select class="inp" data-pfct="' + i + '">' + pmOpt([['text', 'متن'], ['num', 'عدد']], c.type) + '</select><button class="btn sm danger" data-act="pmFCDel" data-i="' + i + '">×</button></div>'; }).join('') + '<button class="btn sm" data-act="pmFCAdd">افزودن فیلد</button>' +
-      '<h4>امضاکنندگان</h4>' + f.signers.map(function (g, i) { return '<div class="row"><input class="inp grow" data-pfsg="' + i + '" value="' + esc(g.title) + '"><label class="chk"><input type="checkbox" data-pfso="' + i + '"' + (g.op ? ' checked' : '') + '> نظر دارد</label><button class="btn sm danger" data-act="pmFSDel" data-i="' + i + '">×</button></div>'; }).join('') + '<button class="btn sm" data-act="pmFSAdd">افزودن امضاکننده</button>' +
-      '<h4>نسخه‌ها (هر مورد یک برگ)</h4>' + f.copies.map(function (c, i) { return '<div class="row"><input class="inp grow" data-pfcp="' + i + '" value="' + esc(c) + '"><button class="btn sm danger" data-act="pmFPDel" data-i="' + i + '">×</button></div>'; }).join('') + '<button class="btn sm" data-act="pmFPAdd">افزودن نسخه</button>' +
-      '<div class="row" style="margin-top:10px"><button class="btn primary grow" data-act="pmFSave">ذخیره‌ی فرم</button><button class="btn" data-act="pmFCancel">انصراف</button></div></section>';
+    const kmKeys = f.fields.filter(function (x) { return x.type === 'km'; }).map(function (x) { return x.key; });
+    const iq = function (attr, val, l, cls) { return '<label class="field"><span>' + l + '</span><input class="inp ' + (cls || '') + '" ' + attr + ' value="' + esc(val) + '"></label>'; };
+    let h = '<section class="card"><h3>تعریف فرم</h3><p class="muted small">سربرگ (نام اپ، عنوان فرم، پروژه، خیابان، شماره، تاریخ و کد کنترل) ثابت است.</p>' +
+      iq('data-pfm="name"', f.name, 'نام فرم') + iq('data-pfm="title"', f.title, 'عنوان چاپی (در سربرگ)') +
+      '<label class="field"><span>اندازه‌ی کاغذ</span><select class="inp" data-pfm="paper">' + pmOpt(['A5', 'A4'], f.paper) + '</select></label>' +
+      '<label class="chk"><input type="checkbox" data-pfmk="overlap"' + (f.overlap ? ' checked' : '') + '> جلوگیری از بازه‌ی تکراری (فقط وقتی فیلد کیلومتر از/تا دارد)</label></section>';
+    h += '<section class="card"><h3>فیلدها (' + f.fields.length + ')</h3>' + f.fields.map(function (x, i) {
+      return '<div class="pm-fc"><div class="row"><input class="inp grow" data-pff="' + i + '.key" value="' + esc(x.key) + '" placeholder="نام فیلد"><select class="inp" data-pff="' + i + '.type">' + pmOpt(PM_FT, x.type) + '</select></div>' +
+        '<div class="row"><label class="chk"><input type="checkbox" data-pffk="' + i + '.req"' + (x.req ? ' checked' : '') + '> اجباری</label>' +
+        (x.type === 'km' ? '<select class="inp" data-pff="' + i + '.role">' + pmOpt([['from', 'ابتدای بازه'], ['to', 'انتهای بازه'], ['point', 'یک نقطه'], ['', 'ساده']], x.role) + '</select>' : '') +
+        (x.type === 'list' ? '<label class="chk"><input type="checkbox" data-pffk="' + i + '.nextOps"' + (x.nextOps ? ' checked' : '') + '> گزینه‌ها از لایه‌های خیابان</label>' : '') + '</div>' +
+        (x.type === 'list' ? '<textarea class="inp" rows="3" data-pff="' + i + '.opts" placeholder="گزینه‌ها؛ هر خط یکی">' + esc(x.opts.join('\n')) + '</textarea>' : '') +
+        (x.type !== 'street' && x.type !== 'layer' && x.type !== 'km' ? '<input class="inp" data-pff="' + i + '.def" value="' + esc(x.def) + '" placeholder="مقدار پیش‌فرض' + (x.type === 'check' ? ' (1 = تیک‌خورده)' : '') + '">' : '') +
+        '<div class="row"><button class="btn sm" data-act="pmFUp" data-i="' + i + '">▲</button><button class="btn sm" data-act="pmFDn" data-i="' + i + '">▼</button><button class="btn sm danger" data-act="pmFFDel" data-i="' + i + '">حذف فیلد</button></div></div>';
+    }).join('') + '<div class="row"><select class="inp grow" id="pfNewT">' + pmOpt(PM_FT, 'text') + '</select><button class="btn" data-act="pmFFAdd">افزودن فیلد</button></div></section>';
+    h += '<section class="card"><h3>بلوک‌های برگه (' + f.blocks.length + ')</h3>' + f.blocks.map(function (b, i) {
+      const nm = (PM_BT.find(function (t) { return t[0] === b.type; }) || [0, b.type])[1];
+      let body = '';
+      if (b.type === 'text') body = iq('data-pfb="' + i + '.title"', b.title || '', 'عنوان کادر (اختیاری)') + '<label class="field"><span>متن</span><textarea class="inp" rows="4" id="pfbt_' + i + '" data-pfb="' + i + '.text">' + esc(b.text || '') + '</textarea></label>' +
+        '<div class="pm-chips">' + pmVarList(f).map(function (k) { return '<button class="btn sm" data-act="pmVarIns" data-i="' + i + '" data-k="' + esc(k) + '">{' + esc(k) + '}</button>'; }).join('') + '</div><label class="chk"><input type="checkbox" data-pfbk="' + i + '.soft"' + (b.soft ? ' checked' : '') + '> ظاهر کم‌رنگ</label>';
+      else if (b.type === 'fields') body = iq('data-pfb="' + i + '.title"', b.title || '', 'عنوان (اختیاری)') + '<div class="pm-chips">' + (b.keys || []).map(function (k, j) { return '<span class="pm-chip">' + esc(k) + ' <button data-act="pmBIDel" data-i="' + i + '" data-j="' + j + '">×</button></span>'; }).join('') + '</div><div class="row"><select class="inp grow" id="pfbi_' + i + '">' + pmOpt(pmVarList(f).filter(function (k) { return k !== 'طول'; }), '') + '</select><button class="btn sm" data-act="pmBIAdd" data-i="' + i + '">افزودن</button></div>';
+      else if (b.type === 'km') body = '<label class="field"><span>از (فیلد کیلومتر)</span><select class="inp" data-pfb="' + i + '.from">' + pmOpt(kmKeys, b.from) + '</select></label><label class="field"><span>تا (اختیاری)</span><select class="inp" data-pfb="' + i + '.to"><option value="">—</option>' + pmOpt(kmKeys, b.to) + '</select></label><label class="chk"><input type="checkbox" data-pfbk="' + i + '.len"' + (b.len ? ' checked' : '') + '> نمایش طول بازه</label>';
+      else if (b.type === 'sign') body = (b.signers || []).map(function (g, j) { return '<div class="row"><input class="inp grow" data-pfbs="' + i + '.' + j + '" value="' + esc(g.title) + '" placeholder="عنوان امضاکننده"><label class="chk"><input type="checkbox" data-pfbso="' + i + '.' + j + '"' + (g.op ? ' checked' : '') + '> نظر دارد</label><button class="btn sm danger" data-act="pmBSDel" data-i="' + i + '" data-j="' + j + '">×</button></div>'; }).join('') + '<button class="btn sm" data-act="pmBSAdd" data-i="' + i + '">افزودن امضاکننده</button>';
+      else if (b.type === 'table') body = iq('data-pfb="' + i + '.title"', b.title || '', 'عنوان جدول') + (b.cols || []).map(function (c, j) { return '<div class="row"><input class="inp grow" data-pfbcl="' + i + '.' + j + '" value="' + esc(c.label) + '" placeholder="عنوان ستون"><button class="btn sm danger" data-act="pmBCDel" data-i="' + i + '" data-j="' + j + '">×</button></div>'; }).join('') + '<button class="btn sm" data-act="pmBCAdd" data-i="' + i + '">افزودن ستون</button>' + iq('data-pfb="' + i + '.minRows" inputmode="numeric"', b.minRows || 0, 'حداقل ردیف چاپی', 'ltr');
+      return '<div class="pm-fc"><b>' + (i + 1) + '. ' + esc(nm) + '</b>' + body + '<div class="row"><button class="btn sm" data-act="pmBUp" data-i="' + i + '">▲</button><button class="btn sm" data-act="pmBDn" data-i="' + i + '">▼</button><button class="btn sm" data-act="pmBDup" data-i="' + i + '">کپی</button><button class="btn sm danger" data-act="pmBDel" data-i="' + i + '">حذف بلوک</button></div></div>';
+    }).join('') + '<div class="row"><select class="inp grow" id="pfNewB">' + pmOpt(PM_BT, 'text') + '</select><button class="btn" data-act="pmBAdd">افزودن بلوک</button></div></section>';
+    h += '<section class="card"><h3>نسخه‌ها (هر مورد یک برگ)</h3>' + f.copies.map(function (c, i) { return '<div class="row"><input class="inp grow" data-pfcp="' + i + '" value="' + esc(c) + '"><button class="btn sm danger" data-act="pmFPDel" data-i="' + i + '">×</button></div>'; }).join('') + '<button class="btn sm" data-act="pmFPAdd">افزودن نسخه</button></section>';
+    h += '<div class="row"><button class="btn" data-act="pmFPrev">پیش‌نمایش</button><button class="btn primary grow" data-act="pmFSave">ذخیره‌ی فرم</button><button class="btn" data-act="pmFCancel">انصراف</button></div>';
     return h;
   }
   function pmCfgView(p) {
     const c = p.permitCfg, f = function (k, l) { return '<label class="field"><span>' + l + '</span><input class="inp" data-pmc="' + k + '" value="' + esc(c[k] || '') + '"></label>'; };
-    return '<section class="card"><h3>مشخصات ثابت پروژه برای پرمیت</h3><p class="muted small">در سربرگ همه‌ی پرمیت‌ها می‌آید. خالی‌ها چاپ نمی‌شوند.</p>' + f('supervisor', 'دستگاه نظارت') + f('contractor', 'پیمانکار') + f('projCode', 'کد پروژه') + f('contractNo', 'شماره‌ی قرارداد') + f('contractDate', 'تاریخ قرارداد') + f('region', 'منطقه') + f('site', 'محل اجرا') +
+    return '<section class="card"><h3>مشخصات ثابت پروژه برای پرمیت</h3><p class="muted small">این مقدارها در فرم‌ها به‌صورت متغیر ({دستگاه نظارت} و مانند آن) و در کارت مشخصات می‌آیند. خالی‌ها چاپ نمی‌شوند.</p>' + f('supervisor', 'دستگاه نظارت') + f('contractor', 'پیمانکار') + f('projCode', 'کد پروژه') + f('contractNo', 'شماره‌ی قرارداد') + f('contractDate', 'تاریخ قرارداد') + f('region', 'منطقه') + f('site', 'محل اجرا') +
       '<label class="field"><span>آخرین شماره‌ی پرمیت صادرشده (شماره‌ی بعدی یکی بیشتر)</span><input class="inp ltr" dir="ltr" data-pmc="counter" inputmode="numeric" value="' + esc(c.counter || 0) + '"></label></section>';
+  }
+  /** تغییر نام یک فیلد (یا حذف آن با نام تهی) در همه‌ی متن‌ها و بلوک‌های فرم */
+  function pmRenameKey(f, oldK, newK) {
+    f.blocks.forEach(function (b) {
+      if (b.type === 'text') b.text = String(b.text || '').split('{' + oldK + '}').join(newK ? '{' + newK + '}' : '');
+      if (b.type === 'fields') b.keys = b.keys.map(function (k) { return k === oldK ? newK : k; }).filter(Boolean);
+      if (b.type === 'km') { if (b.from === oldK) b.from = newK; if (b.to === oldK) b.to = newK; }
+    });
+  }
+  function pmFormErr(f) {
+    if (!String(f.name || '').trim()) return 'نام فرم را بنویسید.';
+    if (!f.copies.length || f.copies.some(function (c) { return !c; })) return 'دست‌کم یک نسخه با نام لازم است.';
+    const seen = {};
+    for (let i = 0; i < f.fields.length; i++) {
+      const k = f.fields[i].key;
+      if (!k) return 'نام همه‌ی فیلدها لازم است.';
+      if (seen[k]) return 'نام فیلد «' + k + '» تکراری است.';
+      if (PM_SYS.indexOf(k) >= 0) return 'نام «' + k + '» برای متغیر سیستم رزرو است.';
+      seen[k] = 1;
+    }
+    for (let i = 0; i < f.blocks.length; i++) {
+      const b = f.blocks[i];
+      if (b.type === 'km' && (!seen[b.from] || (b.to && !seen[b.to]))) return 'در بلوک کیلومتر فیلد کیلومتر انتخاب کنید.';
+      if (b.type === 'sign' && (!(b.signers || []).length || b.signers.some(function (g) { return !g.title; }))) return 'عنوان همه‌ی امضاکنندگان لازم است.';
+      if (b.type === 'table' && (!(b.cols || []).length || b.cols.some(function (c) { return !c.label; }))) return 'عنوان همه‌ی ستون‌های جدول لازم است.';
+    }
+    return '';
+  }
+  function pmSample(p, f) {
+    const vals = {}, disp = {}, tables = {};
+    f.fields.forEach(function (x) {
+      let v = 'نمونه', dsp = 'نمونه';
+      if (x.type === 'street') { v = 's'; dsp = 'نام خیابان'; } else if (x.type === 'layer') { v = 'l'; dsp = 'نام لایه'; } else if (x.type === 'km') { v = x.role === 'to' ? 310 : 210; dsp = pmKm(v); }
+      else if (x.type === 'list') { v = x.opts[0] || 'گزینه'; dsp = v; } else if (x.type === 'date') { v = todayIso(); dsp = pgDate(v); } else if (x.type === 'check') { v = true; dsp = 'بله'; } else if (x.type === 'num') { v = '12'; dsp = '12'; }
+      vals[x.key] = v; disp[x.key] = dsp;
+    });
+    f.blocks.forEach(function (b) { if (b.type === 'table') tables[b.id] = [(b.cols || []).map(function () { return 'نمونه'; })]; });
+    const c = pmInit(p).permitCfg;
+    return { v: 2, no: 1, projName: p.name, cfg: { supervisor: c.supervisor || 'دستگاه نظارت', contractor: c.contractor || 'پیمانکار', site: c.site, region: c.region, contractNo: c.contractNo, contractDate: c.contractDate, projCode: c.projCode }, fm: JSON.parse(JSON.stringify(Object.assign({}, f, { name: f.name }))), vals: vals, disp: disp, tables: tables, names: {}, date: todayIso(), streetName: 'نام خیابان' };
   }
 
   /** پیش‌نمایش چاپ؛ هنگام چاپ، اگر محتوا تازه باشد یک «نسخه‌ی چاپی» در بایگانی ثبت می‌شود */
@@ -8422,26 +8643,41 @@ select.inp, .inp, .cell { background: var(--card); }
       })();
       return;
     }
-    if (el.dataset.pnc !== undefined && S.pn) { S.pn.custom[el.dataset.pnc] = el.value; return; }
-    if (el.dataset.pn && S.pn) {
-      const k = el.dataset.pn, p = pmInit(P()), d = S.pn, keep = { streetId: d.streetId, date: d.date, text: d.text, reply: d.reply, custom: d.custom };
-      if (k === 'formId') S.pn = pmDraft(p, el.value, { streetId: d.streetId, date: d.date, custom: {} });
-      else if (k === 'streetId') S.pn = pmDraft(p, d.formId, Object.assign(keep, { streetId: el.value }));
-      else if (k === 'layerId') S.pn = pmDraft(p, d.formId, Object.assign(keep, { layerId: el.value }));
-      else if (k === 'from' || k === 'to') {
-        d[k] = parseFloat(el.value);
-        if (k === 'from') { const s = p.streets.find(function (x) { return x.id === d.streetId; }), L = pmLayers(s).find(function (l) { return l.id === d.layerId; }), st = pmStations(s, L); if (!(d.to > d.from)) d.to = st.find(function (v) { return v > d.from + 1e-9; }) || d.from; }
-        d.touched = true;
-      } else d[k] = el.value;
-      render(); return;
+    if (S.pn && (el.dataset.pnform || el.dataset.pnd || el.dataset.pno !== undefined || el.dataset.pnn !== undefined || el.dataset.pnt || el.dataset.pnf !== undefined)) {
+      const p = pmInit(P()), d = S.pn, form = d.editForm || pmForm(p, d.formId);
+      if (el.dataset.pnform) { S.pn = pmDraft(p, pmForm(p, el.value), { date: d.date }); render(); return; }
+      if (el.dataset.pnd) { d.date = el.value; return; }
+      if (el.dataset.pno !== undefined) { d.other[el.dataset.pno] = el.value; return; }
+      if (el.dataset.pnn !== undefined) { d.names[el.dataset.pnn] = el.value.trim(); return; }
+      if (el.dataset.pnt) { const a = el.dataset.pnt.split('.'), rows = d.tables[a[0]] || (d.tables[a[0]] = []); (rows[+a[1]] || (rows[+a[1]] = []))[+a[2]] = el.value; return; }
+      const f = form.fields.find(function (x) { return x.key === el.dataset.pnf; }); if (!f) return;
+      if (f.type === 'check') d.vals[f.key] = el.checked;
+      else if (f.type === 'km') { const v = el.tagName === 'SELECT' ? parseFloat(el.value) : C.parseStation(el.value); d.vals[f.key] = fin(v) ? v : NaN; }
+      else d.vals[f.key] = el.value;
+      if (f.type === 'street' || f.type === 'layer') pmFix(p, form, d, true);
+      else if (f.type === 'km' && f.role === 'from') { const t = pmRole(form, 'to'); if (t && !(d.vals[t.key] > d.vals[f.key])) { const cx = pmCtx(p, form, d); d.vals[t.key] = cx.st.find(function (v) { return v > d.vals[f.key] + 1e-9; }) || d.vals[f.key]; } }
+      if (f.type !== 'text' && f.type !== 'num' && f.type !== 'date' && f.type !== 'check') render();
+      return;
     }
-    if (el.dataset.pf !== undefined && S.pf) { S.pf[el.dataset.pf] = el.value; return; }
-    if (el.dataset.pfc !== undefined && S.pf) { S.pf[el.dataset.pfc] = el.checked; return; }
-    if (el.dataset.pfcl !== undefined && S.pf) { S.pf.custom[+el.dataset.pfcl].label = el.value.replace(/[{}]/g, '').trim(); return; }
-    if (el.dataset.pfct !== undefined && S.pf) { S.pf.custom[+el.dataset.pfct].type = el.value; return; }
-    if (el.dataset.pfsg !== undefined && S.pf) { S.pf.signers[+el.dataset.pfsg].title = el.value.trim(); return; }
-    if (el.dataset.pfso !== undefined && S.pf) { S.pf.signers[+el.dataset.pfso].op = el.checked; return; }
-    if (el.dataset.pfcp !== undefined && S.pf) { S.pf.copies[+el.dataset.pfcp] = el.value.trim(); return; }
+    if (S.pf) {
+      const F = S.pf, ds = el.dataset, sp = function (s) { return String(s).split('.'); };
+      if (ds.pfm) { F[ds.pfm] = ds.pfm === 'paper' ? (el.value === 'A4' ? 'A4' : 'A5') : el.value; return; }
+      if (ds.pfmk) { F[ds.pfmk] = el.checked; return; }
+      if (ds.pff) {
+        const a = sp(ds.pff), x = F.fields[+a[0]]; if (!x) return;
+        if (a[1] === 'key') { const nk = el.value.replace(/[{}]/g, '').trim(); if (nk && nk !== x.key) { pmRenameKey(F, x.key, nk); x.key = nk; } return; }
+        if (a[1] === 'opts') { x.opts = el.value.split('\n').map(function (s) { return s.trim(); }).filter(Boolean); return; }
+        if (a[1] === 'type') { x.type = el.value; if (x.type !== 'km') x.role = ''; render(); return; }
+        x[a[1]] = el.value; return;
+      }
+      if (ds.pffk) { const a = sp(ds.pffk), x = F.fields[+a[0]]; if (x) x[a[1]] = el.checked; return; }
+      if (ds.pfb) { const a = sp(ds.pfb), bl = F.blocks[+a[0]]; if (bl) bl[a[1]] = a[1] === 'minRows' ? Math.max(0, parseInt(C.normalizeDigits(el.value), 10) || 0) : el.value; return; }
+      if (ds.pfbk) { const a = sp(ds.pfbk), bl = F.blocks[+a[0]]; if (bl) bl[a[1]] = el.checked; return; }
+      if (ds.pfbs) { const a = sp(ds.pfbs); F.blocks[+a[0]].signers[+a[1]].title = el.value.trim(); return; }
+      if (ds.pfbso) { const a = sp(ds.pfbso); F.blocks[+a[0]].signers[+a[1]].op = el.checked; return; }
+      if (ds.pfbcl) { const a = sp(ds.pfbcl); F.blocks[+a[0]].cols[+a[1]].label = el.value.trim(); return; }
+      if (ds.pfcp !== undefined) { F.copies[+ds.pfcp] = el.value.trim(); return; }
+    }
     if (el.dataset.rp === 'map') { S.rpMap = el.checked; return; }
     if (el.id === 'sfLayerMan') { const d0 = sfData(); if (d0.file) { d0.file.layerMan = el.value; markDirty(); render(); } return; }
     if (el.id === 'sfSort') { S.sf.sort = el.value; S.sf.page = 0; render(); return; }
@@ -9137,21 +9373,27 @@ select.inp, .inp, .cell { background: var(--card); }
       case 'pmOpen': S.pm.id = b.dataset.id; S.pm.view = 'detail'; render(); break;
       case 'pmCancel': S.pn = null; S.pm.view = 'detail'; render(); break;
       case 'pmSave': {
-        pmInit(p); const d = S.pn, form = pmForm(p, d.formId); if (!form) break;
-        if (form.range !== 'none' && (!fin(d.from) || (form.range === 'range' && !(d.to > d.from)))) { toast('کیلومتر را درست انتخاب کنید (تا بزرگ‌تر از از).', 'err'); break; }
-        if (!String(d.text || '').trim()) { toast('متن درخواست خالی است.', 'err'); break; }
-        const chk = pmCheck(p, d, form);
+        pmInit(p); const d = S.pn, form = d.editForm || pmForm(p, d.formId); if (!form) break;
+        for (let i = 0; i < form.fields.length; i++) {
+          const f = form.fields[i], v = d.vals[f.key];
+          if (f.req && (f.type === 'km' ? !fin(v) : f.type === 'check' ? false : (v === undefined || v === '' || (f.type === 'list' && v === '__other' && !String(d.other[f.key] || '').trim())))) { toast('فیلد «' + f.key + '» را پر کنید.', 'err'); return; }
+        }
+        const ft = pmFromTo(form, d);
+        if (ft.mode !== 'none' && !fin(ft.from)) { toast('کیلومتر را انتخاب کنید.', 'err'); break; }
+        if (ft.mode === 'range' && !(ft.to > ft.from)) { toast('«تا» باید بزرگ‌تر از «از» باشد.', 'err'); break; }
+        const cx = pmCtx(p, form, d), chk = pmCheck(p, form, d, cx);
         if (chk.over.length && !(await ask('این بازه با ' + chk.over.map(function (x) { return esc(pmNo(x.no)); }).join('، ') + ' همپوشانی دارد. با این حال ثبت شود؟', { ok: 'ثبت' }))) break;
         let reason = '';
         if (d.editId) { reason = await askText('ویرایش پرمیت', 'علت ویرایش'); if (!reason) break; }
+        const disp = {}; form.fields.forEach(function (f) { disp[f.key] = pmDisp(p, form, f, d, cx); });
+        const tables = {}; Object.keys(d.tables).forEach(function (k) { tables[k] = d.tables[k].filter(function (r) { return r.some(function (c) { return String(c || '').trim(); }); }); });
+        const rec = { formId: d.formId, formName: form.name || '', title: form.title, fm: d.editId ? (p.permits.find(function (y) { return y.id === d.editId; }) || {}).fm : pmFm(form), vals: JSON.parse(JSON.stringify(d.vals)), other: JSON.parse(JSON.stringify(d.other)), disp: disp, tables: tables, names: Object.assign({}, d.names), date: d.date || todayIso(),
+          streetId: cx.s.id, streetName: cx.s.name, layerId: cx.L ? cx.L.id : '', layerName: cx.L ? cx.L.name : '', from: ft.mode === 'none' ? null : ft.from, to: ft.mode === 'none' ? null : ft.to, range: ft.mode };
         let x;
-        if (d.editId) {
-          x = p.permits.find(function (y) { return y.id === d.editId; }); if (!x) break;
-          Object.assign(x, pmPermitFrom(p, d, form, x.no)); (x.history || (x.history = [])).push({ at: new Date().toISOString(), ev: 'ویرایش', reason: reason });
-        } else {
-          const no = Math.max(parseInt(p.permitCfg.counter, 10) || 0, p.permits.reduce(function (m, y) { return Math.max(m, y.no); }, 0)) + 1;
-          p.permitCfg.counter = no;
-          x = Object.assign({ id: pmId('pm'), status: 'wait', opinions: [], photos: [], versions: [], history: [{ at: new Date().toISOString(), ev: 'صدور', reason: '' }] }, pmPermitFrom(p, d, form, no)); p.permits.push(x);
+        if (d.editId) { x = p.permits.find(function (y) { return y.id === d.editId; }); if (!x) break; Object.assign(x, rec); x.history.push({ at: new Date().toISOString(), ev: 'ویرایش', reason: reason }); }
+        else {
+          const no = Math.max(parseInt(p.permitCfg.counter, 10) || 0, p.permits.reduce(function (m, y) { return Math.max(m, y.no); }, 0)) + 1; p.permitCfg.counter = no;
+          x = Object.assign({ id: pmId('pm'), no: no, status: 'wait', opinions: [], photos: [], versions: [], history: [{ at: new Date().toISOString(), ev: 'صدور', reason: '' }] }, rec); p.permits.push(x);
         }
         S.pn = null; S.pm.id = x.id; S.pm.view = 'detail'; markDirty(); render(); toast('ثبت شد.');
         pmModal(pmSnap(p, x), pmCode(pmSnap(p, x)), x.id);
@@ -9160,9 +9402,9 @@ select.inp, .inp, .cell { background: var(--card); }
       case 'pmPrintNow': { pmInit(p); const x = p.permits.find(function (y) { return y.id === b.dataset.id; }); if (x) { const sn = pmSnap(p, x); pmModal(sn, pmCode(sn), x.id); } break; }
       case 'pmVer': { const x = p.permits.find(function (y) { return y.id === b.dataset.id; }), vr = x && x.versions[parseInt(b.dataset.i, 10)]; if (vr) pmModal(vr.snap, vr.code, ''); break; }
       case 'pmEdit': {
-        const x = p.permits.find(function (y) { return y.id === b.dataset.id; }); if (!x) break;
-        const s = p.streets.find(function (y) { return y.id === x.streetId; }) || activeStreet(p), no = pmNextOps(s, x.layerId), nx = (x.vals && x.vals.next) || '', tt = (x.vals && x.vals.testType) || '';
-        S.pn = pmDraft(p, x.formId, { streetId: x.streetId, layerId: x.layerId, from: x.from, to: x.to, date: x.date, next: no.all.indexOf(nx) >= 0 || !nx ? nx : '__other', nextTxt: no.all.indexOf(nx) >= 0 ? '' : nx, testType: PM_TESTS.indexOf(tt) >= 0 || !tt ? (tt || PM_TESTS[0]) : '__other', testTxt: PM_TESTS.indexOf(tt) >= 0 ? '' : tt, custom: Object.assign({}, x.vals && x.vals.custom), text: x.text, reply: x.reply, editId: x.id, touched: true });
+        const x = p.permits.find(function (y) { return y.id === b.dataset.id; }); if (!x || !x.fm) break;
+        const ef = Object.assign({ id: x.formId, name: x.formName, overlap: x.fm.overlap !== false }, JSON.parse(JSON.stringify(x.fm)));
+        S.pn = pmFix(p, ef, { formId: x.formId, editForm: ef, vals: JSON.parse(JSON.stringify(x.vals)), other: JSON.parse(JSON.stringify(x.other || {})), tables: JSON.parse(JSON.stringify(x.tables || {})), names: Object.assign({}, x.names), date: x.date, editId: x.id }, false);
         S.pm.view = 'new'; render(); break;
       }
       case 'pmDel': {
@@ -9170,9 +9412,15 @@ select.inp, .inp, .cell { background: var(--card); }
         const r = await askText('حذف پرمیت ' + pmNo(x.no), 'علت حذف'); if (!r) break;
         x.status = 'del'; x.delReason = r; x.history.push({ at: new Date().toISOString(), ev: 'حذف', reason: r }); markDirty(); render(); break;
       }
+      case 'pmPurge': {
+        const x = p.permits.find(function (y) { return y.id === b.dataset.id; }); if (!x || x.status !== 'del') break;
+        if (!(await askType('حذف دائمی ' + pmNo(x.no), 'این پرمیت با همه‌ی عکس‌ها، اظهار نظرها و نسخه‌های چاپی برای همیشه پاک می‌شود و برگشت ندارد. شماره‌ی آن دوباره استفاده نمی‌شود.', pmNo(x.no)))) break;
+        p.permitCfg.counter = Math.max(parseInt(p.permitCfg.counter, 10) || 0, x.no);
+        p.permits = p.permits.filter(function (y) { return y.id !== x.id; }); S.pm.view = 'list'; S.pm.id = ''; markDirty(); render(); toast('پرمیت برای همیشه حذف شد.'); break;
+      }
       case 'pmOpSave': {
         const x = p.permits.find(function (y) { return y.id === b.dataset.id; }); if (!x) break;
-        const ops = (x.signers || []).filter(function (g) { return g.op; }), out = [];
+        const ops = (x.fm ? pmSigners(x.fm) : (x.signers || [])).filter(function (g) { return g.op; }), out = [];
         for (let i = 0; i < ops.length; i++) {
           const t = $('#pmOt' + i).value.trim(), res = $('#pmOr' + i).value === 'rej' ? 'rej' : 'ok', dt = $('#pmOd' + i).value;
           if (t) out.push({ who: ops[i].title, res: res, text: t, date: dt });
@@ -9183,26 +9431,47 @@ select.inp, .inp, .cell { background: var(--card); }
         x.history.push({ at: new Date().toISOString(), ev: 'ثبت اظهار نظر (' + out.length + ' مورد)', reason: '' }); markDirty(); render(); toast('ثبت شد.'); break;
       }
       case 'pmPhDel': { const x = p.permits.find(function (y) { return y.id === b.dataset.id; }); if (x) { x.photos = x.photos.filter(function (f) { return f.id !== b.dataset.pid; }); markDirty(); render(); } break; }
-      case 'pmFNew': { const f = pmDefaults()[0]; f.name = 'فرم جدید'; f.title = 'فرم درخواست'; f.text = 'با احترام، خواهشمند است نسبت به … خیابان {خیابان} کیلومتر {از} الی {تا} اقدام فرمایید.'; S.pf = f; S.pm.view = 'form'; render(); break; }
+      case 'pmTAdd': { (S.pn.tables[b.dataset.b] || (S.pn.tables[b.dataset.b] = [])).push([]); render(); break; }
+      case 'pmTDel': { const r = S.pn.tables[b.dataset.b]; if (r) r.splice(parseInt(b.dataset.i, 10), 1); render(); break; }
+      case 'pmFNew': S.pf = pmBlank(); S.pm.view = 'form'; render(); break;
       case 'pmFEdit': { const f = pmForm(pmInit(p), b.dataset.id); if (f) { S.pf = JSON.parse(JSON.stringify(f)); S.pm.view = 'form'; render(); } break; }
-      case 'pmFDup': { const f = pmForm(pmInit(p), b.dataset.id); if (f) { const c = JSON.parse(JSON.stringify(f)); c.id = pmId('pf'); c.name += ' (کپی)'; c.signers.forEach(function (g) { g.id = pmId('sg'); }); p.permitForms.push(c); markDirty(); render(); } break; }
+      case 'pmFDup': { const f = pmForm(pmInit(p), b.dataset.id); if (f) { const c = JSON.parse(JSON.stringify(f)); c.id = pmId('pf'); c.name += ' (کپی)'; c.blocks.forEach(function (x) { x.id = pmId('bl'); (x.signers || []).forEach(function (g) { g.id = pmId('sg'); }); }); p.permitForms.push(c); markDirty(); render(); } break; }
       case 'pmFDel': {
         pmInit(p); if (p.permitForms.length < 2) { toast('دست‌کم یک فرم باید بماند.', 'err'); break; }
         const f = pmForm(p, b.dataset.id); if (f && await ask('فرم «' + esc(f.name) + '» حذف شود؟ پرمیت‌های صادرشده‌ی قبلی دست‌نخورده می‌مانند.', { danger: true, ok: 'حذف' })) { p.permitForms = p.permitForms.filter(function (x) { return x.id !== f.id; }); markDirty(); render(); }
         break;
       }
       case 'pmFSave': {
-        const f = S.pf; if (!f) break; if (!String(f.name || '').trim()) { toast('نام فرم را بنویسید.', 'err'); break; }
-        if (!f.signers.length || !f.copies.length) { toast('دست‌کم یک امضاکننده و یک نسخه لازم است.', 'err'); break; }
-        const labels = f.custom.map(function (c) { return c.label.trim(); }).filter(Boolean); f.custom = f.custom.filter(function (c) { return c.label.trim(); });
+        const f = S.pf; if (!f) break; const err = pmFormErr(f); if (err) { toast(err, 'err'); break; }
         pmInit(p); const i = p.permitForms.findIndex(function (x) { return x.id === f.id; }); if (i >= 0) p.permitForms[i] = f; else p.permitForms.push(f);
-        S.pf = null; S.pm.view = 'forms'; markDirty(); render(); toast('فرم ذخیره شد.'); void labels; break;
+        S.pf = null; S.pm.view = 'forms'; markDirty(); render(); toast('فرم ذخیره شد.'); break;
       }
       case 'pmFCancel': S.pf = null; S.pm.view = 'forms'; render(); break;
-      case 'pmFCAdd': S.pf.custom.push({ label: 'فیلد جدید', type: 'text' }); render(); break;
-      case 'pmFCDel': S.pf.custom.splice(parseInt(b.dataset.i, 10), 1); render(); break;
-      case 'pmFSAdd': S.pf.signers.push({ id: pmId('sg'), title: 'امضاکننده', op: true }); render(); break;
-      case 'pmFSDel': S.pf.signers.splice(parseInt(b.dataset.i, 10), 1); render(); break;
+      case 'pmFPrev': { const err = pmFormErr(S.pf); if (err) { toast(err, 'err'); break; } const sn = pmSample(p, S.pf); pmModal(sn, 'SAMPLE-0001', ''); break; }
+      case 'pmFFAdd': { const t = $('#pfNewT').value; S.pf.fields.push(pmFld('فیلد ' + (S.pf.fields.length + 1), t, t === 'km' ? { role: 'point' } : {})); render(); break; }
+      case 'pmFFDel': { const i = parseInt(b.dataset.i, 10), k = S.pf.fields[i].key; S.pf.fields.splice(i, 1); pmRenameKey(S.pf, k, ''); render(); break; }
+      case 'pmFUp': case 'pmFDn': { const i = parseInt(b.dataset.i, 10), j = act === 'pmFUp' ? i - 1 : i + 1, a = S.pf.fields; if (j >= 0 && j < a.length) { const t = a[i]; a[i] = a[j]; a[j] = t; } render(); break; }
+      case 'pmBAdd': {
+        const t = $('#pfNewB').value, nb = { id: pmId('bl'), type: t };
+        if (t === 'text') Object.assign(nb, { title: '', text: '', box: true, soft: false }); else if (t === 'fields') nb.keys = ['دستگاه نظارت', 'پیمانکار']; else if (t === 'km') Object.assign(nb, { from: (pmRole(S.pf, 'from') || pmRole(S.pf, 'point') || { key: '' }).key, to: (pmRole(S.pf, 'to') || { key: '' }).key, len: true });
+        else if (t === 'sign') nb.signers = [pmSg('امضاکننده', false)]; else if (t === 'table') Object.assign(nb, { title: 'جدول', cols: [{ id: pmId('cl'), label: 'ردیف' }, { id: pmId('cl'), label: 'توضیح' }], minRows: 0 });
+        S.pf.blocks.push(nb); render(); break;
+      }
+      case 'pmBDel': S.pf.blocks.splice(parseInt(b.dataset.i, 10), 1); render(); break;
+      case 'pmBUp': case 'pmBDn': { const i = parseInt(b.dataset.i, 10), j = act === 'pmBUp' ? i - 1 : i + 1, a = S.pf.blocks; if (j >= 0 && j < a.length) { const t = a[i]; a[i] = a[j]; a[j] = t; } render(); break; }
+      case 'pmBDup': { const i = parseInt(b.dataset.i, 10), c = JSON.parse(JSON.stringify(S.pf.blocks[i])); c.id = pmId('bl'); (c.signers || []).forEach(function (g) { g.id = pmId('sg'); }); S.pf.blocks.splice(i + 1, 0, c); render(); break; }
+      case 'pmBSAdd': S.pf.blocks[parseInt(b.dataset.i, 10)].signers.push(pmSg('امضاکننده', false)); render(); break;
+      case 'pmBSDel': S.pf.blocks[parseInt(b.dataset.i, 10)].signers.splice(parseInt(b.dataset.j, 10), 1); render(); break;
+      case 'pmBCAdd': S.pf.blocks[parseInt(b.dataset.i, 10)].cols.push({ id: pmId('cl'), label: 'ستون' }); render(); break;
+      case 'pmBCDel': S.pf.blocks[parseInt(b.dataset.i, 10)].cols.splice(parseInt(b.dataset.j, 10), 1); render(); break;
+      case 'pmBIAdd': { const bl = S.pf.blocks[parseInt(b.dataset.i, 10)], k = $('#pfbi_' + b.dataset.i).value; if (k && bl.keys.indexOf(k) < 0) bl.keys.push(k); render(); break; }
+      case 'pmBIDel': S.pf.blocks[parseInt(b.dataset.i, 10)].keys.splice(parseInt(b.dataset.j, 10), 1); render(); break;
+      case 'pmVarIns': {
+        const i = parseInt(b.dataset.i, 10), ta = $('#pfbt_' + i), bl = S.pf.blocks[i], tx = ta ? ta.value : (bl.text || ''), pos = ta && ta.selectionStart != null ? ta.selectionStart : tx.length, end = ta && ta.selectionEnd != null ? ta.selectionEnd : pos, ins = '{' + b.dataset.k + '}';
+        bl.text = tx.slice(0, pos) + ins + tx.slice(end); render();
+        setTimeout(function () { const t2 = $('#pfbt_' + i); if (t2) { t2.focus(); t2.setSelectionRange(pos + ins.length, pos + ins.length); } }, 30);
+        break;
+      }
       case 'pmFPAdd': S.pf.copies.push('نسخه‌ی جدید'); render(); break;
       case 'pmFPDel': S.pf.copies.splice(parseInt(b.dataset.i, 10), 1); render(); break;
       case 'svDel': {
