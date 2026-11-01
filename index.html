@@ -796,7 +796,7 @@ select.inp, .inp, .cell { background: var(--card); }
 .pm-pg .km span { display: block; font-size: 6.6pt; color: #5a6875; } .pm-pg .km b { font-size: 12.5pt; letter-spacing: .02em; }
 .pm-pg .km .ar { flex: none; width: 12pt; border: 0; color: #c9962b; align-self: center; padding: 0; } .pm-pg .km .len { flex: .7; background: #fff; border-color: #c9962b; border-style: dashed; }
 .pm-pg .req.nz { background: #fff; border-color: #c4ced6; } .pm-pg .req.nz h4 { font-size: 9pt; } .pm-pg .req.nz p { font-size: 8.8pt; line-height: 1.9; }
-.pm-pg .pmsg { display: grid; grid-template-columns: 1fr 1fr; gap: 4pt; } .pm-pg .pmsg > div { border: .8pt solid #c9962b; border-radius: 4pt; height: 16mm; padding: 3pt 6pt; position: relative; background: #fff; }
+.pm-pg .pmsg { display: grid; grid-template-columns: repeat(var(--sgc, 2), 1fr); gap: 4pt; } .pm-pg .pmsg > div { border: .8pt solid #c9962b; border-radius: 4pt; height: var(--sgh, 16mm); padding: 3pt 6pt; position: relative; background: #fff; }
 .pm-pg .pmsg b { display: block; font-size: 8.2pt; } .pm-pg .pmsg small { font-size: 6.8pt; color: #8a96a0; }
 .pm-pg .pmsg em { position: absolute; left: 6pt; right: 6pt; bottom: 2pt; border-top: .6pt dotted #8a96a0; text-align: center; font-style: normal; color: #8a96a0; font-size: 6.4pt; }
 .pm-pg .foot { margin-top: auto; flex: none; } .pm-pg .dist { display: flex; flex-wrap: wrap; gap: 4pt; align-items: center; font-size: 6.8pt; color: #5a6875; margin-bottom: 3pt; }
@@ -830,6 +830,10 @@ select.inp, .inp, .cell { background: var(--card); }
 .bn-rose i { position: absolute; top: -2px; font-style: normal; font-size: 10px; font-weight: 700; background: #fff; padding: 0 3px; transform: translateY(-50%); }
 .bn-rose svg { width: 64px; height: 64px; transition: transform .25s; }
 .bn-big { font-size: 22px; font-weight: 800; color: #0b2a43; }
+.nw-mk { margin-top: 12px; padding-top: 10px; border-top: 1px dashed #d9a93b; } .nw-mk h3 { margin: 0 0 4px; font-size: 14px; color: #0b2a43; }
+.bn-bt { display: flex; flex-direction: column; gap: 4px; } .bn-gps { color: #8a5a00 !important; }
+.bn-h { font-size: 12px; font-weight: 700; color: #0b2a43; margin: 6px 0 0; padding-bottom: 2px; border-bottom: 2px solid #d9a93b; }
+.bn-tag { display: inline-block; font-size: 10px; font-weight: 700; background: #fff3d6; color: #8a5a00; border: 1px solid #d9a93b; border-radius: 6px; padding: 0 5px; margin-inline-start: 4px; }
 </style>
 </head>
 <body>
@@ -3268,7 +3272,11 @@ select.inp, .inp, .cell { background: var(--card); }
     }
     base.sections = normSecs(p.sections);
     base.benchmarks = (Array.isArray(p.benchmarks) ? p.benchmarks : []).map(function (b) {
-      return { id: String(b.id || C.uid('bm')), name: String(b.name || ''), x: num(b.x), y: num(b.y), z: num(b.z), lat: num(b.lat), lon: num(b.lon), desc: String(b.desc == null ? '' : b.desc) };
+      const o = { id: String(b.id || C.uid('bm')), name: String(b.name || ''), x: num(b.x), y: num(b.y), z: num(b.z), lat: num(b.lat), lon: num(b.lon), desc: String(b.desc == null ? '' : b.desc) };
+      if (b.calc === true) o.calc = true;
+      if (b.chk && typeof b.chk === 'object') { const cz = num(b.chk.z); if (cz !== null) o.chk = { z: cz, date: String(b.chk.date || '').slice(0, 10) }; }
+      if (b.llSrc === 'gps' && o.lat !== null && o.lon !== null) { o.llSrc = 'gps'; const ac = Number(b.llAcc); if (isFinite(ac) && ac >= 0) o.llAcc = Math.round(ac); }
+      return o;
     });
     base.setups = (Array.isArray(p.setups) ? p.setups : []).map(function (s) {
       return { id: String(s.id || C.uid('su')), name: String(s.name || ''), bmId: s.bmId || null, bs: num(s.bs), from: num(s.from), to: num(s.to) };
@@ -3281,10 +3289,11 @@ select.inp, .inp, .cell { background: var(--card); }
     if (p.permitCfg && typeof p.permitCfg === 'object') {
       const pc = p.permitCfg, ps = function (k) { return str(pc[k]).slice(0, 200); };
       base.permitCfg = { supervisor: ps('supervisor'), contractor: ps('contractor'), site: ps('site'), region: ps('region'), contractNo: ps('contractNo'), contractDate: ps('contractDate'), projCode: ps('projCode'), counter: Math.max(0, Math.round(Number(pc.counter) || 0)) };
+      base.permitCfg.vars = (Array.isArray(pc.vars) ? pc.vars : []).slice(0, 30).map(function (q) { return { k: str(q && q.k).replace(/[{}]/g, '').trim().slice(0, 40), v: str(q && q.v).slice(0, 200) }; }).filter(function (q) { return q.k; });
     }
     const arr = function (v) { return Array.isArray(v) ? v : []; };
     const normFm = function (f) {
-      const FT = ['text', 'num', 'date', 'list', 'km', 'street', 'layer', 'check'], BT = ['text', 'fields', 'km', 'sign', 'table'];
+      const FT = ['text', 'num', 'date', 'list', 'km', 'street', 'layer', 'check'], BT = ['text', 'fields', 'km', 'sign', 'table', 'bms'];
       const o = { id: String(f.id || C.uid('pf')), v: 2, name: str(f.name).slice(0, 80), title: str(f.title).slice(0, 80), paper: f.paper === 'A4' ? 'A4' : 'A5', overlap: f.overlap === true,
         copies: arr(f.copies).slice(0, 12).map(function (c) { return str(c).slice(0, 60); }),
         fields: arr(f.fields).slice(0, 40).map(function (x) {
@@ -3295,7 +3304,8 @@ select.inp, .inp, .cell { background: var(--card); }
           if (b.type === 'text') { r.title = str(b.title).slice(0, 100); r.text = str(b.text).slice(0, 3000); r.box = b.box !== false; r.soft = !!b.soft; }
           else if (b.type === 'fields') { r.title = str(b.title).slice(0, 100); r.keys = arr(b.keys).slice(0, 30).map(function (k) { return str(k).slice(0, 40); }); }
           else if (b.type === 'km') { r.from = str(b.from).slice(0, 40); r.to = str(b.to).slice(0, 40); r.len = !!b.len; }
-          else if (b.type === 'sign') r.signers = arr(b.signers).slice(0, 12).map(function (g) { return { id: String((g && g.id) || C.uid('sg')), title: str(g && g.title).slice(0, 60), op: !!(g && g.op) }; });
+          else if (b.type === 'sign') { r.h = Math.max(8, Math.min(40, Math.round(Number(b.h) || 16))); r.cols = Math.max(1, Math.min(3, Math.round(Number(b.cols) || 2))); r.signers = arr(b.signers).slice(0, 12).map(function (g) { return { id: String((g && g.id) || C.uid('sg')), title: str(g && g.title).slice(0, 60), op: !!(g && g.op) }; }); }
+          else if (b.type === 'bms') { r.title = str(b.title).slice(0, 100); r.mode = b.mode === 'check' ? 'check' : 'deliver'; const tl = Number(b.tol); r.tol = Number.isFinite(tl) && tl >= 0 ? Math.min(1000, tl) : 3; }
           else if (b.type === 'table') { r.title = str(b.title).slice(0, 100); r.minRows = Math.max(0, Math.min(40, Math.round(Number(b.minRows) || 0))); r.cols = arr(b.cols).slice(0, 8).map(function (c) { return { id: String((c && c.id) || C.uid('cl')), label: str(c && c.label).slice(0, 40) }; }); }
           return r;
         }) };
@@ -3703,7 +3713,7 @@ select.inp, .inp, .cell { background: var(--card); }
   const PAGE_SIZE = 50;       // ردیف در هر صفحه‌ی جدول نقاط
   const TABLE_STATIONS = 30;  // مقطع در هر صفحه‌ی جدول سه‌نقطه‌ای
 
-  const APP_VERSION = 'UI-3.4.0 (بر پایه‌ی 1.22.1)';
+  const APP_VERSION = 'UI-3.6.0 (بر پایه‌ی 1.22.1)';
   const S = {
     project: null, dirty: false, rev: 0, calc: null, calcRev: -1,
     page: 'home', imp: null, ptPage: 0, tPage: 0, stakeIdx: 0, rawBad: {},
@@ -4248,13 +4258,42 @@ select.inp, .inp, .cell { background: var(--card); }
   const PM_CFGK = { 'دستگاه نظارت': 'supervisor', 'پیمانکار': 'contractor', 'کد پروژه': 'projCode', 'شماره‌ی قرارداد': 'contractNo', 'شماره قرارداد': 'contractNo', 'تاریخ قرارداد': 'contractDate', 'منطقه': 'region', 'محل اجرا': 'site' };
   const PM_SYS = ['شماره', 'تاریخ', 'طول', 'پروژه', 'دستگاه نظارت', 'پیمانکار', 'کد پروژه', 'شماره قرارداد', 'تاریخ قرارداد', 'منطقه', 'محل اجرا'];
   const PM_FT = [['text', 'متن'], ['num', 'عدد'], ['date', 'تاریخ'], ['list', 'لیست انتخابی'], ['km', 'کیلومتر'], ['street', 'خیابان'], ['layer', 'لایه'], ['check', 'تیک (بله/خیر)']];
-  const PM_BT = [['text', 'متن (درخواست / نظر)'], ['fields', 'کارت مشخصات'], ['km', 'کارت کیلومتر'], ['sign', 'امضاها'], ['table', 'جدول']];
+  const PM_BT = [['text', 'متن (درخواست / نظر)'], ['fields', 'کارت مشخصات'], ['km', 'کارت کیلومتر'], ['sign', 'امضاها'], ['table', 'جدول'], ['bms', 'جدول بنچ‌مارک (صورتجلسه)']];
   const pmId = function (k) { return C.uid(k); };
   const pmNo = function (n) { return 'P-' + String(n).padStart(3, '0'); };
   const pmKm = function (v) { return fin(v) ? C.formatStation(v, 3) : '—'; };
   const pmFld = function (key, type, o) { return Object.assign({ id: pmId('ff'), key: key, type: type, role: '', req: false, def: '', opts: [], nextOps: false }, o || {}); };
   const pmSg = function (title, op) { return { id: pmId('sg'), title: title, op: op }; };
   const pmCopies = function () { return ['پیمانکار', 'نقشه‌بردار پیمانکار', 'نقشه‌بردار کارفرما', 'کارفرما']; };
+  const BMS_COLS = { deliver: ['نام بنچ‌مارک', 'X', 'Y', 'Z', 'توضیح'], check: ['نام بنچ‌مارک', 'Z کارفرما', 'Z اندازه‌گیری', 'اختلاف (mm)', 'وضعیت', 'پاسخ کارفرما'] };
+  const bmsAsTable = function (b) { return { id: b.id, type: 'table', title: b.title || (b.mode === 'check' ? 'بررسی بنچ‌مارک‌های کارفرما' : 'بنچ‌مارک‌های تحویلی'), cols: (BMS_COLS[b.mode] || BMS_COLS.deliver).map(function (l, i) { return { id: 'c' + i, label: l }; }), minRows: 0 }; };
+  /** ردیف‌های جدول بنچ‌مارک: مقدارها در لحظه‌ی ثبت به‌صورت متن ذخیره می‌شوند */
+  function bmsRows(p, b, ids) {
+    const tol = fin(Number(b.tol)) ? Number(b.tol) : 3;
+    return ids.map(function (id) { return p.benchmarks.find(function (x) { return x.id === id; }); }).filter(Boolean).map(function (bm) {
+      const z = C.toNumber(bm.z);
+      if (b.mode === 'check') {
+        const m = bm.chk ? C.toNumber(bm.chk.z) : NaN, dd = fin(m) && fin(z) ? (m - z) * 1000 : NaN;
+        return [bm.name || '', fin(z) ? fx(z) : '—', fin(m) ? fx(m) : '—', fin(dd) ? (dd > 0 ? '+' : '') + dd.toFixed(1) : '—', !fin(dd) ? 'اندازه‌گیری نشده' : Math.abs(dd) <= tol + 1e-9 ? 'در حد مجاز' : 'خارج از حد مجاز (' + tol + ' mm)', ''];
+      }
+      const x = C.toNumber(bm.x), y = C.toNumber(bm.y);
+      return [bm.name || '', fin(x) ? fx(x) : '—', fin(y) ? fx(y) : '—', fin(z) ? fx(z) : '—', bm.desc || ''];
+    });
+  }
+  /** دو فرم آماده‌ی صورتجلسه */
+  function pmMinutes() {
+    const mk = function (name, title, mode, text) {
+      return { id: pmId('pf'), v: 2, name: name, title: title, paper: 'A5', overlap: false, copies: pmCopies(), fields: [],
+        blocks: [{ id: pmId('bl'), type: 'fields', title: '', keys: ['دستگاه نظارت', 'پیمانکار', 'کد پروژه', 'شماره قرارداد', 'تاریخ قرارداد', 'منطقه', 'محل اجرا'] },
+          { id: pmId('bl'), type: 'text', title: 'دستگاه محترم نظارت', text: text, box: true, soft: false },
+          { id: pmId('bl'), type: 'bms', title: '', mode: mode, tol: 3 },
+          { id: pmId('bl'), type: 'sign', h: 16, cols: 2, signers: [pmSg('سرپرست کارگاه پیمانکار', false), pmSg('نقشه‌بردار پیمانکار', false)] },
+          { id: pmId('bl'), type: 'text', title: mode === 'check' ? 'نظر کارفرما' : 'نظر دستگاه نظارت', text: '', box: true, soft: true },
+          { id: pmId('bl'), type: 'sign', h: 22, cols: 2, signers: [pmSg('نقشه‌بردار کارفرما', true), pmSg('کارفرما', true)] }] };
+    };
+    return [mk('صورتجلسه‌ی تحویل بنچ‌مارک', 'صورتجلسه‌ی تحویل بنچ‌مارک', 'deliver', 'با احترام، بنچ‌مارک‌های زیر با مختصات رسمی در تاریخ {تاریخ} توسط {پیمانکار} تحویل {دستگاه نظارت} می‌شود.'),
+      mk('صورتجلسه‌ی بررسی بنچ‌مارک کارفرما', 'صورتجلسه‌ی بررسی بنچ‌مارک', 'check', 'با احترام، بنچ‌مارک‌های ابلاغی کارفرما در تاریخ {تاریخ} توسط {پیمانکار} کنترل شد و نتیجه به شرح زیر است. خواهشمند است نظر خود را اعلام فرمایید.')];
+  }
   function pmDefaults() {
     const base = function (name, title, extra, text, reply) {
       return { id: pmId('pf'), v: 2, name: name, title: title, paper: 'A5', overlap: true, copies: pmCopies(),
@@ -4293,6 +4332,7 @@ select.inp, .inp, .cell { background: var(--card); }
   }
   function pmInit(p) {
     if (!p.permitCfg) p.permitCfg = { supervisor: '', contractor: '', site: '', region: '', contractNo: '', contractDate: '', projCode: '', counter: 0 };
+    if (!Array.isArray(p.permitCfg.vars)) p.permitCfg.vars = [];
     if (!Array.isArray(p.permitForms) || !p.permitForms.length) p.permitForms = pmDefaults();
     else if (p.permitForms.some(function (f) { return f.v !== 2; })) p.permitForms = p.permitForms.map(function (f) { return f.v === 2 ? f : pmV1toV2(f); });
     if (!Array.isArray(p.permits)) p.permits = [];
@@ -4358,7 +4398,7 @@ select.inp, .inp, .cell { background: var(--card); }
   const pmSigners = function (fm) { const o = []; (fm.blocks || []).forEach(function (b) { if (b.type === 'sign') (b.signers || []).forEach(function (g) { o.push(g); }); }); return o; };
   function pmSnap(p, x) {
     const c = p.permitCfg || {};
-    if (x.fm) return { v: 2, no: x.no, projName: p.name, cfg: { supervisor: c.supervisor, contractor: c.contractor, site: c.site, region: c.region, contractNo: c.contractNo, contractDate: c.contractDate, projCode: c.projCode }, fm: x.fm, vals: x.vals, disp: x.disp, tables: x.tables || {}, names: x.names || {}, date: x.date, streetName: x.streetName };
+    if (x.fm) return { v: 2, no: x.no, projName: p.name, cfg: Object.assign({ supervisor: c.supervisor, contractor: c.contractor, site: c.site, region: c.region, contractNo: c.contractNo, contractDate: c.contractDate, projCode: c.projCode }, c.vars && c.vars.length ? { vars: c.vars.map(function (q) { return { k: q.k, v: q.v }; }) } : {}), fm: x.fm, vals: x.vals, disp: x.disp, tables: x.tables || {}, names: x.names || {}, date: x.date, streetName: x.streetName };
     return { no: x.no, projName: p.name, cfg: { supervisor: c.supervisor, contractor: c.contractor, site: c.site, region: c.region, contractNo: c.contractNo, contractDate: c.contractDate, projCode: c.projCode },
       title: x.title, addr: x.addr, text: x.text, reply: x.reply, range: x.range, streetName: x.streetName, layerName: x.layerName, from: x.from, to: x.to, date: x.date, vals: x.vals, signers: x.signers, copies: x.copies };
   }
@@ -4366,6 +4406,7 @@ select.inp, .inp, .cell { background: var(--card); }
   function pmVars2(snap) {
     const c = snap.cfg || {}, v = { 'پروژه': snap.projName, 'شماره': pmNo(snap.no), 'تاریخ': pgDate(snap.date) };
     Object.keys(PM_CFGK).forEach(function (k) { v[k] = c[PM_CFGK[k]] || ''; });
+    (c.vars || []).forEach(function (q) { if (q && q.k && PM_SYS.indexOf(q.k) < 0) v[q.k] = String(q.v || ''); });
     Object.keys(snap.disp || {}).forEach(function (k) { v[k] = snap.disp[k]; });
     const fl = (snap.fm.fields || []), a = fl.find(function (x) { return x.type === 'km' && x.role === 'from'; }), b = fl.find(function (x) { return x.type === 'km' && x.role === 'to'; });
     if (a && b && fin(snap.vals[a.key]) && fin(snap.vals[b.key])) v['طول'] = fmtN(snap.vals[b.key] - snap.vals[a.key], 1) + ' m';
@@ -4376,6 +4417,7 @@ select.inp, .inp, .cell { background: var(--card); }
     if (!snap.fm) return pmPagesV1(snap, code);
     const fm = snap.fm, v = pmVars2(snap), cp = fm.copies && fm.copies.length ? fm.copies : ['—'], a4 = fm.paper === 'A4';
     const body = (fm.blocks || []).map(function (b) {
+      if (b.type === 'bms') b = bmsAsTable(b);
       if (b.type === 'text') return '<div class="req' + (b.soft ? ' nz' : '') + '">' + (b.title ? '<h4>' + esc(b.title) + '</h4>' : '') + '<p>' + pmFill(b.text, v, true) + '</p></div>';
       if (b.type === 'fields') {
         const cells = (b.keys || []).map(function (k) { return v[k] ? '<div class="c"><span>' + esc(k) + '</span><b>' + esc(v[k]) + '</b></div>' : ''; }).join('');
@@ -4386,7 +4428,7 @@ select.inp, .inp, .cell { background: var(--card); }
         if (!fin(f)) return '';
         return '<div class="km"><div><span>' + esc(b.to ? 'از کیلومتر' : (b.from || 'کیلومتر')) + '</span><b class="ltr">' + esc(pmKm(f)) + '</b></div>' + (b.to && fin(t) ? '<div class="ar">◄</div><div><span>تا کیلومتر</span><b class="ltr">' + esc(pmKm(t)) + '</b></div>' + (b.len ? '<div class="len"><span>طول بازه</span><b class="ltr">' + esc(fmtN(t - f, 1)) + ' m</b></div>' : '') : '') + '</div>';
       }
-      if (b.type === 'sign') return '<div class="pmsg">' + (b.signers || []).map(function (g) { const nm = (snap.names || {})[g.id]; return '<div><b>' + esc(g.title) + '</b>' + (nm ? '<i class="nm">' + esc(nm) + '</i>' : '') + (g.op ? '<small>اظهار نظر:</small>' : '') + '<em>نام و امضا</em></div>'; }).join('') + '</div>';
+      if (b.type === 'sign') return '<div class="pmsg" style="--sgc:' + Math.max(1, Math.min(3, b.cols || 2)) + ';--sgh:' + Math.max((b.signers || []).some(function (g) { return g.op; }) ? 20 : 8, Math.min(40, b.h || 16)) + 'mm">' + (b.signers || []).map(function (g) { const nm = (snap.names || {})[g.id]; return '<div><b>' + esc(g.title) + '</b>' + (nm ? '<i class="nm">' + esc(nm) + '</i>' : '') + (g.op ? '<small>اظهار نظر:</small>' : '') + '<em>نام و امضا</em></div>'; }).join('') + '</div>';
       if (b.type === 'table') {
         const rows = ((snap.tables || {})[b.id] || []).filter(function (r) { return r.some(function (c) { return String(c).trim(); }); }), n = Math.max(rows.length, b.minRows || 0), cols = b.cols || [];
         let h = '<div class="req nz">' + (b.title ? '<h4>' + esc(b.title) + '</h4>' : '') + '<table class="pmtb"><thead><tr><th>#</th>' + cols.map(function (c) { return '<th>' + esc(c.label) + '</th>'; }).join('') + '</tr></thead><tbody>';
@@ -4490,7 +4532,7 @@ select.inp, .inp, .cell { background: var(--card); }
     return d;
   }
   function pmDraft(p, form, base) {
-    const d = Object.assign({ formId: form.id, vals: {}, other: {}, tables: {}, names: {}, date: todayIso(), editId: '' }, base || {});
+    const d = Object.assign({ formId: form.id, vals: {}, other: {}, tables: {}, bmSel: {}, names: {}, date: todayIso(), editId: '' }, base || {});
     return pmFix(p, form, d, false);
   }
   /* ---------- صفحه‌ها ---------- */
@@ -4554,6 +4596,19 @@ select.inp, .inp, .cell { background: var(--card); }
       const rows = d.tables[b.id] || (d.tables[b.id] = []); while (rows.length < Math.max(1, b.minRows || 0)) rows.push([]);
       h += '<div class="pm-tb"><b>' + esc(b.title || 'جدول') + '</b>' + rows.map(function (r, i) { return '<div class="row">' + (b.cols || []).map(function (c, j) { return '<input class="inp grow" placeholder="' + esc(c.label) + '" data-pnt="' + esc(b.id) + '.' + i + '.' + j + '" value="' + esc(r[j] || '') + '">'; }).join('') + '<button class="btn sm danger" data-act="pmTDel" data-b="' + esc(b.id) + '" data-i="' + i + '">×</button></div>'; }).join('') + '<button class="btn sm" data-act="pmTAdd" data-b="' + esc(b.id) + '">افزودن ردیف</button></div>';
     });
+    form.blocks.filter(function (b) { return b.type === 'bms'; }).forEach(function (b) {
+      const sel = d.bmSel[b.id], exist = d.tables[b.id] || [], chk = b.mode === 'check';
+      h += '<div class="pm-tb"><b>' + esc(b.title || (chk ? 'بنچ‌مارک‌های مورد بررسی' : 'بنچ‌مارک‌های تحویلی')) + '</b>';
+      if (sel === undefined && exist.length) h += '<p class="muted small">' + exist.length + ' ردیف ثبت شده است. برای تغییر، انتخاب را دوباره انجام دهید.</p><button class="btn sm" data-act="pmBmsReset" data-b="' + esc(b.id) + '">انتخاب مجدد</button>';
+      else {
+        const all = !!S.bmsAll, list = p.benchmarks.filter(function (bm) { return all || (chk ? !!bm.chk : bmHasXY(bm)); }), cur = sel || [];
+        h += '<p class="muted small">' + (chk ? 'فقط بنچ‌مارک‌هایی که «کنترل» شده‌اند.' : 'فقط بنچ‌مارک‌های دارای X و Y.') + '</p>' + (list.length ? list.map(function (bm) {
+          return '<label class="chk"><input type="checkbox" data-bmsel="' + esc(b.id) + '|' + esc(bm.id) + '"' + (cur.indexOf(bm.id) >= 0 ? ' checked' : '') + '> <b>' + esc(bm.name || 'بدون نام') + '</b> <span class="muted small num">Z=' + esc(fx(C.toNumber(bm.z))) + (chk && bm.chk ? ' • اندازه‌گیری ' + esc(fx(C.toNumber(bm.chk.z))) : '') + '</span></label>';
+        }).join('') : '<div class="msg warn small">' + (chk ? 'هنوز بنچ‌مارکی کنترل نشده؛ در تب بنچ‌مارک «کنترل بنچ‌مارک» را بزنید.' : 'بنچ‌مارکی با X و Y نیست.') + '</div>') +
+          '<div class="row"><button class="btn sm" data-act="pmBmsAll">' + (all ? 'فقط واجد شرایط' : 'نمایش همه‌ی بنچ‌مارک‌ها') + '</button></div>';
+      }
+      h += '</div>';
+    });
     const sg = pmSigners(form);
     if (sg.length) h += '<h4 style="margin:10px 0 4px">نام امضاکنندگان (اختیاری؛ زیر عنوان چاپ می‌شود)</h4>' + sg.map(function (g) { return '<label class="field"><span>' + esc(g.title) + '</span><input class="inp" data-pnn="' + esc(g.id) + '" value="' + esc(d.names[g.id] || '') + '"></label>'; }).join('');
     const chk = pmCheck(p, form, d, cx);
@@ -4587,9 +4642,9 @@ select.inp, .inp, .cell { background: var(--card); }
   function pmFormsView(p) {
     return '<section class="card"><h3>فرم‌های پرمیت</h3><p class="muted small">فقط سربرگ ثابت است؛ بقیه‌ی برگه از بلوک‌ها و فیلدهایی ساخته می‌شود که خودتان تعریف می‌کنید. پرمیت‌های صادرشده متن زمان صدور را نگه می‌دارند.</p>' +
       p.permitForms.map(function (f) { return '<div class="row" style="justify-content:space-between;margin:6px 0"><b>' + esc(f.name) + '</b><span><button class="btn sm" data-act="pmFEdit" data-id="' + esc(f.id) + '">ویرایش</button> <button class="btn sm" data-act="pmFDup" data-id="' + esc(f.id) + '">کپی</button> <button class="btn sm danger" data-act="pmFDel" data-id="' + esc(f.id) + '">حذف</button></span></div>'; }).join('') +
-      '<button class="btn primary" data-act="pmFNew">فرم خالی جدید</button></section>';
+      '<div class="row"><button class="btn primary" data-act="pmFNew">فرم خالی جدید</button><button class="btn" data-act="pmFSeed">افزودن فرم‌های صورتجلسه‌ی بنچ‌مارک</button></div></section>';
   }
-  const pmVarList = function (f) { return f.fields.map(function (x) { return x.key; }).concat(['طول', 'شماره', 'تاریخ', 'پروژه', 'دستگاه نظارت', 'پیمانکار', 'کد پروژه', 'شماره قرارداد', 'تاریخ قرارداد', 'منطقه', 'محل اجرا']).filter(function (k, i, a) { return k && a.indexOf(k) === i; }); };
+  const pmVarList = function (f) { return f.fields.map(function (x) { return x.key; }).concat(((P().permitCfg || {}).vars || []).map(function (q) { return q.k; })).concat(['طول', 'شماره', 'تاریخ', 'پروژه', 'دستگاه نظارت', 'پیمانکار', 'کد پروژه', 'شماره قرارداد', 'تاریخ قرارداد', 'منطقه', 'محل اجرا']).filter(function (k, i, a) { return k && a.indexOf(k) === i; }); };
   function pmFormEdit(p) {
     const f = S.pf; if (!f) { S.pm.view = 'forms'; return pmFormsView(p); }
     const kmKeys = f.fields.filter(function (x) { return x.type === 'km'; }).map(function (x) { return x.key; });
@@ -4614,7 +4669,9 @@ select.inp, .inp, .cell { background: var(--card); }
         '<div class="pm-chips">' + pmVarList(f).map(function (k) { return '<button class="btn sm" data-act="pmVarIns" data-i="' + i + '" data-k="' + esc(k) + '">{' + esc(k) + '}</button>'; }).join('') + '</div><label class="chk"><input type="checkbox" data-pfbk="' + i + '.soft"' + (b.soft ? ' checked' : '') + '> ظاهر کم‌رنگ</label>';
       else if (b.type === 'fields') body = iq('data-pfb="' + i + '.title"', b.title || '', 'عنوان (اختیاری)') + '<div class="pm-chips">' + (b.keys || []).map(function (k, j) { return '<span class="pm-chip">' + esc(k) + ' <button data-act="pmBIDel" data-i="' + i + '" data-j="' + j + '">×</button></span>'; }).join('') + '</div><div class="row"><select class="inp grow" id="pfbi_' + i + '">' + pmOpt(pmVarList(f).filter(function (k) { return k !== 'طول'; }), '') + '</select><button class="btn sm" data-act="pmBIAdd" data-i="' + i + '">افزودن</button></div>';
       else if (b.type === 'km') body = '<label class="field"><span>از (فیلد کیلومتر)</span><select class="inp" data-pfb="' + i + '.from">' + pmOpt(kmKeys, b.from) + '</select></label><label class="field"><span>تا (اختیاری)</span><select class="inp" data-pfb="' + i + '.to"><option value="">—</option>' + pmOpt(kmKeys, b.to) + '</select></label><label class="chk"><input type="checkbox" data-pfbk="' + i + '.len"' + (b.len ? ' checked' : '') + '> نمایش طول بازه</label>';
-      else if (b.type === 'sign') body = (b.signers || []).map(function (g, j) { return '<div class="row"><input class="inp grow" data-pfbs="' + i + '.' + j + '" value="' + esc(g.title) + '" placeholder="عنوان امضاکننده"><label class="chk"><input type="checkbox" data-pfbso="' + i + '.' + j + '"' + (g.op ? ' checked' : '') + '> نظر دارد</label><button class="btn sm danger" data-act="pmBSDel" data-i="' + i + '" data-j="' + j + '">×</button></div>'; }).join('') + '<button class="btn sm" data-act="pmBSAdd" data-i="' + i + '">افزودن امضاکننده</button>';
+      else if (b.type === 'sign') body = (b.signers || []).map(function (g, j) { return '<div class="row"><input class="inp grow" data-pfbs="' + i + '.' + j + '" value="' + esc(g.title) + '" placeholder="عنوان امضاکننده"><label class="chk"><input type="checkbox" data-pfbso="' + i + '.' + j + '"' + (g.op ? ' checked' : '') + '> نظر دارد</label><button class="btn sm danger" data-act="pmBSDel" data-i="' + i + '" data-j="' + j + '">×</button></div>'; }).join('') + '<button class="btn sm" data-act="pmBSAdd" data-i="' + i + '">افزودن امضاکننده</button>' +
+        '<div class="row"><label class="field grow"><span>ارتفاع کادر (mm، ۸ تا ۴۰)</span><input class="inp ltr" dir="ltr" inputmode="numeric" data-pfb="' + i + '.h" value="' + esc(b.h || 16) + '"></label><label class="field"><span>ستون‌ها</span><select class="inp" data-pfb="' + i + '.cols">' + pmOpt([['1', '۱'], ['2', '۲'], ['3', '۳']], String(b.cols || 2)) + '</select></label></div>';
+      else if (b.type === 'bms') body = iq('data-pfb="' + i + '.title"', b.title || '', 'عنوان جدول (اختیاری)') + '<label class="field"><span>نوع صورتجلسه</span><select class="inp" data-pfb="' + i + '.mode">' + pmOpt([['deliver', 'تحویل بنچ‌مارک (نام، X، Y، Z، توضیح)'], ['check', 'بررسی بنچ‌مارک کارفرما (Z کارفرما، Z اندازه‌گیری، اختلاف، وضعیت، پاسخ)']], b.mode || 'deliver') + '</select></label>' + (b.mode === 'check' ? iq('data-pfb="' + i + '.tol"', b.tol == null ? 3 : b.tol, 'حد مجاز اختلاف (mm)', 'ltr') : '') + '<p class="muted small">ستون «نام بنچ‌مارک» همیشه هست. بنچ‌مارک‌ها هنگام صدور پرمیت انتخاب می‌شوند و مقدارشان همان لحظه ثبت می‌شود.</p>';
       else if (b.type === 'table') body = iq('data-pfb="' + i + '.title"', b.title || '', 'عنوان جدول') + (b.cols || []).map(function (c, j) { return '<div class="row"><input class="inp grow" data-pfbcl="' + i + '.' + j + '" value="' + esc(c.label) + '" placeholder="عنوان ستون"><button class="btn sm danger" data-act="pmBCDel" data-i="' + i + '" data-j="' + j + '">×</button></div>'; }).join('') + '<button class="btn sm" data-act="pmBCAdd" data-i="' + i + '">افزودن ستون</button>' + iq('data-pfb="' + i + '.minRows" inputmode="numeric"', b.minRows || 0, 'حداقل ردیف چاپی', 'ltr');
       return '<div class="pm-fc"><b>' + (i + 1) + '. ' + esc(nm) + '</b>' + body + '<div class="row"><button class="btn sm" data-act="pmBUp" data-i="' + i + '">▲</button><button class="btn sm" data-act="pmBDn" data-i="' + i + '">▼</button><button class="btn sm" data-act="pmBDup" data-i="' + i + '">کپی</button><button class="btn sm danger" data-act="pmBDel" data-i="' + i + '">حذف بلوک</button></div></div>';
     }).join('') + '<div class="row"><select class="inp grow" id="pfNewB">' + pmOpt(PM_BT, 'text') + '</select><button class="btn" data-act="pmBAdd">افزودن بلوک</button></div></section>';
@@ -4625,6 +4682,7 @@ select.inp, .inp, .cell { background: var(--card); }
   function pmCfgView(p) {
     const c = p.permitCfg, f = function (k, l) { return '<label class="field"><span>' + l + '</span><input class="inp" data-pmc="' + k + '" value="' + esc(c[k] || '') + '"></label>'; };
     return '<section class="card"><h3>مشخصات ثابت پروژه برای پرمیت</h3><p class="muted small">این مقدارها در فرم‌ها به‌صورت متغیر ({دستگاه نظارت} و مانند آن) و در کارت مشخصات می‌آیند. خالی‌ها چاپ نمی‌شوند.</p>' + f('supervisor', 'دستگاه نظارت') + f('contractor', 'پیمانکار') + f('projCode', 'کد پروژه') + f('contractNo', 'شماره‌ی قرارداد') + f('contractDate', 'تاریخ قرارداد') + f('region', 'منطقه') + f('site', 'محل اجرا') +
+      '<h4 style="margin:12px 0 4px">متغیرهای دلخواه پروژه (مثل کارفرما، مشاور)</h4><p class="muted small">هر متغیر را در متن بلوک‌ها با {نام} صدا بزنید. پرمیت صادرشده مقدار زمان صدور را نگه می‌دارد.</p>' + (c.vars || []).map(function (q, i) { return '<div class="row"><input class="inp" data-pmv="' + i + '.k" value="' + esc(q.k) + '" placeholder="نام متغیر"><input class="inp grow" data-pmv="' + i + '.v" value="' + esc(q.v) + '" placeholder="مقدار"><button class="btn sm danger" data-act="pmVDel" data-i="' + i + '">×</button></div>'; }).join('') + '<div class="row"><button class="btn sm" data-act="pmVAdd">افزودن متغیر</button><button class="btn sm" data-act="pmVSeed">افزودن کارفرما، مشاور</button></div>' +
       '<label class="field"><span>آخرین شماره‌ی پرمیت صادرشده (شماره‌ی بعدی یکی بیشتر)</span><input class="inp ltr" dir="ltr" data-pmc="counter" inputmode="numeric" value="' + esc(c.counter || 0) + '"></label></section>';
   }
   /** تغییر نام یک فیلد (یا حذف آن با نام تهی) در همه‌ی متن‌ها و بلوک‌های فرم */
@@ -4662,9 +4720,9 @@ select.inp, .inp, .cell { background: var(--card); }
       else if (x.type === 'list') { v = x.opts[0] || 'گزینه'; dsp = v; } else if (x.type === 'date') { v = todayIso(); dsp = pgDate(v); } else if (x.type === 'check') { v = true; dsp = 'بله'; } else if (x.type === 'num') { v = '12'; dsp = '12'; }
       vals[x.key] = v; disp[x.key] = dsp;
     });
-    f.blocks.forEach(function (b) { if (b.type === 'table') tables[b.id] = [(b.cols || []).map(function () { return 'نمونه'; })]; });
+    f.blocks.forEach(function (b) { if (b.type === 'table') tables[b.id] = [(b.cols || []).map(function () { return 'نمونه'; })]; else if (b.type === 'bms') tables[b.id] = [(BMS_COLS[b.mode] || BMS_COLS.deliver).map(function (l, i) { return i === 0 ? 'BM-01' : (b.mode === 'check' && i === 5 ? '' : '1200.000'); })]; });
     const c = pmInit(p).permitCfg;
-    return { v: 2, no: 1, projName: p.name, cfg: { supervisor: c.supervisor || 'دستگاه نظارت', contractor: c.contractor || 'پیمانکار', site: c.site, region: c.region, contractNo: c.contractNo, contractDate: c.contractDate, projCode: c.projCode }, fm: JSON.parse(JSON.stringify(Object.assign({}, f, { name: f.name }))), vals: vals, disp: disp, tables: tables, names: {}, date: todayIso(), streetName: 'نام خیابان' };
+    return { v: 2, no: 1, projName: p.name, cfg: Object.assign({ supervisor: c.supervisor || 'دستگاه نظارت', contractor: c.contractor || 'پیمانکار', site: c.site, region: c.region, contractNo: c.contractNo, contractDate: c.contractDate, projCode: c.projCode }, c.vars && c.vars.length ? { vars: c.vars.map(function (q) { return { k: q.k, v: q.v }; }) } : {}), fm: JSON.parse(JSON.stringify(Object.assign({}, f, { name: f.name }))), vals: vals, disp: disp, tables: tables, names: {}, date: todayIso(), streetName: 'نام خیابان' };
   }
 
   /** پیش‌نمایش چاپ؛ هنگام چاپ، اگر محتوا تازه باشد یک «نسخه‌ی چاپی» در بایگانی ثبت می‌شود */
@@ -6128,12 +6186,46 @@ select.inp, .inp, .cell { background: var(--card); }
     }
     return { id: '_', name: 'نیوو', bmId: p.newoBm || '', bs: p.newoBs || '', from: null, to: null };
   }
+  S.nw = { fs: '', name: '', use: false }; S.ck = { bm: '', fs: '' };
+  function nwDefName(p) { let n = 1; const used = {}; p.benchmarks.forEach(function (b) { used[String(b.name).trim().toLowerCase()] = 1; }); while (used['nbm-' + n]) n++; return 'NBM-' + n; }
+  /** ارتفاع بنچ‌مارک جدید = HI − FS */
+  function nwCalc() {
+    const p = P(), info = C.computeSetup(newoSetup(p), p.benchmarks), fs = C.toNumber(S.nw.fs);
+    if (!info.ok) return { ok: false, msg: 'ابتدا بنچ‌مارک و BS معتبر انتخاب کنید.' };
+    if (!fin(fs)) return { ok: false, msg: '' };
+    const z = Math.round((info.hi - fs) * Math.pow(10, p.settings.decimals)) / Math.pow(10, p.settings.decimals);
+    return { ok: true, z: z, hi: info.hi, fs: fs, bm: info.bm, warn: z < -500 || z > 9000 ? 'ارتفاع به‌دست‌آمده غیرعادی است؛ FS و BS را بررسی کنید.' : (fs < 0 ? 'FS منفی است.' : '') };
+  }
+  function ckCalc() {
+    const p = P(), info = C.computeSetup(newoSetup(p), p.benchmarks), bm = p.benchmarks.find(function (x) { return x.id === S.ck.bm; }), fs = C.toNumber(S.ck.fs);
+    if (!info.ok || !bm || !fin(fs)) return { ok: false, info: info, bm: bm };
+    const d = p.settings.decimals, z = Math.round((info.hi - fs) * Math.pow(10, d)) / Math.pow(10, d), bz = C.toNumber(bm.z);
+    return { ok: true, z: z, diff: fin(bz) ? (z - bz) * 1000 : NaN, bm: bm };
+  }
+  function nwLive() {
+    const k = ckCalc(), cz = $('#ckZ'), cd = $('#ckD'), cw = $('#ckW');
+    if (cz) { cz.textContent = k.ok ? fx(k.z) : '—'; cd.textContent = k.ok && fin(k.diff) ? (k.diff > 0 ? '+' : '') + k.diff.toFixed(1) : '—'; if (cw) cw.innerHTML = k.ok && Math.abs(k.diff) > 50 ? '<div class="msg warn small">اختلاف بیش از ۵۰ میلی‌متر است؛ BS و FS را بررسی کنید.</div>' : ''; }
+    const r = nwCalc(), z = $('#nwNz'), w = $('#nwNw'); if (!z) return;
+    z.textContent = r.ok ? fx(r.z) : '—';
+    if (w) w.innerHTML = r.warn ? '<div class="msg warn small">' + esc(r.warn) + '</div>' : (!r.ok && r.msg ? '<div class="muted small">' + esc(r.msg) + '</div>' : '');
+  }
   function newoCard() {
     const p = P(), su = newoSetup(p), info = C.computeSetup(su, p.benchmarks);
     let h = '<section class="card"><h2>بنچ‌مارک و قرائت عقب (نیوو)</h2><p class="muted small">قرائت نیوو، کدها و خروجی‌های نیوو با همین بنچ‌مارک و BS ساخته می‌شود: <code>HI = Z بنچ‌مارک + BS</code></p>' +
       field('بنچ‌مارک', '<select class="inp" id="nwBm"><option value="">— انتخاب کنید —</option>' + p.benchmarks.map(function (b) { return '<option value="' + esc(b.id) + '"' + (b.id === su.bmId ? ' selected' : '') + '>' + esc((b.name || 'بدون نام') + ' (Z=' + fx(C.toNumber(b.z)) + ')') + '</option>'; }).join('') + '</select>') +
       field('قرائت عقب BS (' + unitL() + ')', '<input class="inp ltr" id="nwBs" dir="ltr" inputmode="decimal" value="' + esc(su.bs) + '">') +
-      '<div class="small">HI: <b class="num" id="nwHi">' + (info.ok ? fx(info.hi) : '—') + '</b></div>' + bmInfo(su, info) + (info.ok ? '' : msgList(info.errors, 'err')) + msgList(info.warnings.map(function (m) { return { msg: m }; }), 'warn') + '</section>';
+      '<div class="small">HI: <b class="num" id="nwHi">' + (info.ok ? fx(info.hi) : '—') + '</b></div>' + bmInfo(su, info) + (info.ok ? '' : msgList(info.errors, 'err')) + msgList(info.warnings.map(function (m) { return { msg: m }; }), 'warn') +
+      '<div class="nw-mk"><h3>ایجاد بنچ‌مارک جدید از روی نقطه</h3><p class="muted small">ارتفاع نقطه = HI − قرائت جلو (FS) روی همان نقطه</p>' +
+      field('قرائت جلو FS (' + unitL() + ')', '<input class="inp ltr" id="nwFs" dir="ltr" inputmode="decimal" value="' + esc(S.nw.fs) + '">') +
+      field('نام بنچ‌مارک جدید', '<input class="inp" id="nwName" autocomplete="off" value="' + esc(S.nw.name) + '" placeholder="' + esc(nwDefName(p)) + '">') +
+      '<div class="small">ارتفاع بنچ‌مارک جدید: <b class="num" id="nwNz">—</b></div><div id="nwNw"></div>' +
+      '<label class="small" style="display:flex;gap:6px;align-items:center;margin:6px 0"><input type="checkbox" id="nwUse"' + (S.nw.use ? ' checked' : '') + '> از این به بعد روی بنچ‌مارک جدید کار کنم (BM نیوو = جدید، BS خالی)</label>' +
+      '<button class="btn primary" data-act="nwMake">ایجاد بنچ‌مارک</button></div>' +
+      '<div class="nw-mk"><h3>کنترل بنچ‌مارک کارفرما</h3><p class="muted small">قرائت جلو روی بنچ‌مارکی که می‌خواهید کنترل کنید؛ ارتفاع اندازه‌گیری‌شده = HI − FS. فقط ثبت می‌شود و Z اصلی بنچ‌مارک عوض نمی‌شود.</p>' +
+      field('بنچ‌مارک مورد کنترل', '<select class="inp" id="ckBm"><option value="">— انتخاب کنید —</option>' + p.benchmarks.filter(function (b) { return b.id !== su.bmId; }).map(function (b) { return '<option value="' + esc(b.id) + '"' + (b.id === S.ck.bm ? ' selected' : '') + '>' + esc((b.name || 'بدون نام') + ' (Z=' + fx(C.toNumber(b.z)) + ')') + '</option>'; }).join('') + '</select>') +
+      field('قرائت جلو FS (' + unitL() + ')', '<input class="inp ltr" id="ckFs" dir="ltr" inputmode="decimal" value="' + esc(S.ck.fs) + '">') +
+      '<div class="small">Z اندازه‌گیری: <b class="num" id="ckZ">—</b> • اختلاف: <b class="num" id="ckD">—</b> mm</div><div id="ckW"></div>' +
+      '<button class="btn primary" data-act="nwChk">ثبت کنترل</button></div></section>';
     return h;
   }
   /* ---------- مختصات جغرافیایی و مسیریابی ---------- */
@@ -6142,7 +6234,7 @@ select.inp, .inp, .cell { background: var(--card); }
   /** طول و عرض جغرافیایی بنچ‌مارک: مقدار واردشده، وگرنه تبدیل UTM (WGS84) */
   function bmLL(b, p) {
     const la = C.toNumber(b.lat), lo = C.toNumber(b.lon);
-    if (fin(la) && fin(lo) && Math.abs(la) <= 90 && Math.abs(lo) <= 180) return { lat: la, lon: lo, src: 'manual' };
+    if (fin(la) && fin(lo) && Math.abs(la) <= 90 && Math.abs(lo) <= 180) return { lat: la, lon: lo, src: b.llSrc === 'gps' ? 'gps' : 'manual', acc: b.llAcc };
     const st = (p || P()).settings, x = C.toNumber(b.x), y = C.toNumber(b.y);
     if (st.coordSystem === 'UTM' && fin(x) && fin(y)) {
       try { const r = C.utmToLatLon(x, y, st.utmZone, st.hemisphere === 'S'); if (fin(r.lat) && fin(r.lon) && Math.abs(r.lat) <= 90 && Math.abs(r.lon) <= 180) return { lat: r.lat, lon: r.lon, src: 'utm' }; } catch (e) { /* ignore */ }
@@ -6162,26 +6254,34 @@ select.inp, .inp, .cell { background: var(--card); }
   const dirName = function (deg) { return DIR8[Math.round(deg / 45) % 8]; };
   const distTxt = function (m) { return m < 1000 ? Math.round(m).toLocaleString('fa-IR') + ' m' : (m / 1000).toLocaleString('fa-IR', { maximumFractionDigits: 1 }) + ' km'; };
   const llTxt = function (ll) { return Math.abs(ll.lat).toFixed(5) + (ll.lat >= 0 ? '°N' : '°S') + ' ' + Math.abs(ll.lon).toFixed(5) + (ll.lon >= 0 ? '°E' : '°W'); };
-  S.bmq = ''; S.bmPos = null; S.bmHead = null; S.bmTarget = ''; S.bmGpsMsg = ''; S.bmWatch = null;
+  S.bmUnl = {}; S.bmq = ''; S.bmPos = null; S.bmHead = null; S.bmTarget = ''; S.bmGpsMsg = ''; S.bmWatch = null;
+  const bmHasXY = function (b) { return fin(C.toNumber(b.x)) && fin(C.toNumber(b.y)); };
+  const bmHasLL = function (b) { return fin(C.toNumber(b.lat)) && fin(C.toNumber(b.lon)); };
+  /** مختصات رسمی (فایل/تایپ) دارد و محاسباتی نیست؛ پس قفل است */
+  const bmCanLock = function (b) { return !b.calc && (bmHasXY(b) || (bmHasLL(b) && b.llSrc !== 'gps')); };
+  const bmLocked = function (b) { return bmCanLock(b) && !S.bmUnl[b.id]; };
   function bmNavInner() {
     const p = P(), pos = S.bmPos, q = (S.bmq || '').trim().toLowerCase();
     let list = p.benchmarks.map(function (b) { return { b: b, ll: bmLL(b, p) }; }).filter(function (x) { return !q || String(x.b.name).toLowerCase().indexOf(q) >= 0; });
     list.forEach(function (x) { if (pos && x.ll) { x.d = geoDist(pos, x.ll); x.br = geoBearing(pos, x.ll); } });
     if (pos) list.sort(function (a, b) { return (fin(a.d) ? a.d : 1e15) - (fin(b.d) ? b.d : 1e15); });
+    const gc = list.filter(function (x) { return x.b.calc; }), go = list.filter(function (x) { return !x.b.calc; });
+    list = gc.concat(go);
     let h = '';
     if (S.bmGpsMsg) h += '<div class="msg warn small">' + esc(S.bmGpsMsg) + '</div>';
     if (pos) h += '<p class="muted small">موقعیت شما: <span class="num" dir="ltr">' + esc(llTxt(pos)) + '</span> • دقت ±' + Math.round(pos.acc || 0) + ' m • لیست بر اساس فاصله مرتب است.</p>';
     if (!list.length) return h + '<p class="muted">' + (p.benchmarks.length ? 'بنچ‌مارکی با این نام نیست.' : 'هنوز بنچ‌مارکی نیست.') + '</p>';
     const rot = function (br) { return fin(S.bmHead) ? br - S.bmHead : br; };
     h += '<div class="bn-list">';
-    list.forEach(function (x) {
+    list.forEach(function (x, ix) {
       const on = S.bmTarget === x.b.id;
+      if (gc.length && (ix === 0 || ix === gc.length)) h += '<div class="bn-h">' + (ix === 0 && x.b.calc ? 'بنچ‌مارک‌های محاسباتی (ساخته‌شده در پروژه)' : 'بنچ‌مارک‌های کارفرما / فایل') + '</div>';
       h += '<div class="bn-row' + (on ? ' on' : '') + '" data-act="bmSel" data-id="' + esc(x.b.id) + '" role="button" tabindex="0">' +
         '<span class="bn-ar">' + (fin(x.br) ? '<svg viewBox="0 0 24 24" style="transform:rotate(' + rot(x.br).toFixed(0) + 'deg)"><path d="M12 3l6 15-6-4-6 4z" fill="currentColor"/></svg>' : '·') + '</span>' +
-        '<span class="bn-n"><b>' + esc(x.b.name || 'بدون نام') + '</b><small class="num" dir="ltr">Z=' + esc(fx(C.toNumber(x.b.z))) + (x.ll ? ' • ' + esc(llTxt(x.ll)) : '') + '</small>' +
+        '<span class="bn-n"><b>' + esc(x.b.name || 'بدون نام') + (x.b.calc ? ' <span class="bn-tag">محاسباتی</span>' : '') + '</b><small class="num" dir="ltr">Z=' + esc(fx(C.toNumber(x.b.z))) + (x.ll ? ' • ' + esc(llTxt(x.ll)) : '') + '</small>' + (x.ll && x.ll.src === 'gps' ? '<small class="bn-gps">GPS حدودی ±' + (x.ll.acc || '?') + ' m</small>' : '') +
         (x.ll ? '' : '<small class="muted">بدون طول/عرض جغرافیایی (' + (p.settings.coordSystem === 'UTM' ? 'X و Y یا' : '') + ' ستون‌های Lat/Lon را پر کنید)</small>') + '</span>' +
         (fin(x.d) ? '<span class="bn-d num">' + distTxt(x.d) + '<small>' + dirName(x.br) + '</small></span>' : '') +
-        '<button class="btn sm primary" data-act="bmGo" data-id="' + esc(x.b.id) + '"' + (x.ll ? '' : ' disabled') + '>مسیریابی</button></div>';
+        '<span class="bn-bt"><button class="btn sm primary" data-act="bmGo" data-id="' + esc(x.b.id) + '"' + (x.ll ? '' : ' disabled') + '>مسیریابی</button>' + (x.b.calc ? '<button class="btn sm" data-act="bmGps" data-id="' + esc(x.b.id) + '">ثبت موقعیت من</button>' : '') + '</span></div>';
     });
     h += '</div>';
     const t = S.bmTarget && list.find(function (x) { return x.b.id === S.bmTarget; });
@@ -6203,8 +6303,14 @@ select.inp, .inp, .cell { background: var(--card); }
   function bmNavUpdate() {
     const el = $('#bmNavBox');
     if (!el) { bmNavStop(); return; }
+    if (bmPressed) { bmDirty = true; return; }
     el.innerHTML = bmNavInner();
   }
+  /* هنگام لمس دکمه‌ها، با رسیدن موقعیت تازه لیست دوباره ساخته نشود (وگرنه کلیک گم می‌شود) */
+  let bmPressed = false, bmDirty = false;
+  document.addEventListener('pointerdown', function (e) { if (e.target.closest && e.target.closest('#bmNavBox')) bmPressed = true; }, true);
+  const bmRel = function () { if (bmPressed) { bmPressed = false; if (bmDirty) { bmDirty = false; setTimeout(bmNavUpdate, 350); } } };
+  document.addEventListener('pointerup', bmRel, true); document.addEventListener('pointercancel', bmRel, true);
   let bmHeadT = 0;
   function bmHeadH(e) {
     const h = fin(e.webkitCompassHeading) ? e.webkitCompassHeading : (e.absolute && fin(e.alpha) ? (360 - e.alpha) % 360 : (e.type === 'deviceorientationabsolute' && fin(e.alpha) ? (360 - e.alpha) % 360 : null));
@@ -6221,7 +6327,7 @@ select.inp, .inp, .cell { background: var(--card); }
     try { if (window.DeviceOrientationEvent && typeof DeviceOrientationEvent.requestPermission === 'function') await DeviceOrientationEvent.requestPermission(); } catch (e) { /* ignore */ }
     window.addEventListener('deviceorientationabsolute', bmHeadH, true); window.addEventListener('deviceorientation', bmHeadH, true);
     S.bmWatch = navigator.geolocation.watchPosition(function (g) {
-      S.bmPos = { lat: g.coords.latitude, lon: g.coords.longitude, acc: g.coords.accuracy }; S.bmGpsMsg = '';
+      S.bmPos = { lat: g.coords.latitude, lon: g.coords.longitude, acc: g.coords.accuracy, t: Date.now() }; S.bmGpsMsg = '';
       if (!S.bmTarget) {
         const p = P(); let best = null;
         p.benchmarks.forEach(function (b) { const ll = bmLL(b, p); if (ll) { const d = geoDist(S.bmPos, ll); if (!best || d < best.d) best = { id: b.id, d: d }; } });
@@ -6255,12 +6361,12 @@ select.inp, .inp, .cell { background: var(--card); }
       p.benchmarks.forEach(function (b, i) {
         h += '<tr><td>' + inp('benchmarks.' + i + '.name', b.name, { t: 'text', re: true, aria: 'نام بنچ‌مارک' }) + '</td>' +
           '<td>' + inp('benchmarks.' + i + '.z', b.z, { im: 'text', re: true, aria: 'ارتفاع' }) + '</td>' +
-          '<td>' + inp('benchmarks.' + i + '.x', b.x, { aria: 'X', re: true }) + '</td>' +
-          '<td>' + inp('benchmarks.' + i + '.y', b.y, { aria: 'Y', re: true }) + '</td>' +
-          '<td>' + inp('benchmarks.' + i + '.lat', b.lat == null ? '' : b.lat, { aria: 'عرض جغرافیایی', ph: 'خودکار', re: true }) + '</td>' +
-          '<td>' + inp('benchmarks.' + i + '.lon', b.lon == null ? '' : b.lon, { aria: 'طول جغرافیایی', ph: 'خودکار', re: true }) + '</td>' +
+          '<td>' + inp('benchmarks.' + i + '.x', b.x, { aria: 'X', re: true, dis: bmLocked(b) }) + '</td>' +
+          '<td>' + inp('benchmarks.' + i + '.y', b.y, { aria: 'Y', re: true, dis: bmLocked(b) }) + '</td>' +
+          '<td>' + inp('benchmarks.' + i + '.lat', b.lat == null ? '' : b.lat, { aria: 'عرض جغرافیایی', ph: 'خودکار', re: true, dis: bmLocked(b) }) + '</td>' +
+          '<td>' + inp('benchmarks.' + i + '.lon', b.lon == null ? '' : b.lon, { aria: 'طول جغرافیایی', ph: 'خودکار', re: true, dis: bmLocked(b) }) + '</td>' +
           '<td>' + inp('benchmarks.' + i + '.desc', b.desc || '', { t: 'text', aria: 'توضیح' }) + '</td>' +
-          '<td><button class="btn icon danger sm" data-act="delBM" data-i="' + i + '" aria-label="حذف بنچ‌مارک">×</button></td></tr>';
+          '<td>' + (b.calc ? '<span class="bn-tag">محاسباتی</span><button class="btn icon sm" data-act="bmGps" data-id="' + esc(b.id) + '" aria-label="ثبت موقعیت فعلی من" title="ثبت موقعیت فعلی من">◎</button>' : (bmCanLock(b) ? '<button class="btn icon sm" data-act="bmLock" data-id="' + esc(b.id) + '" aria-label="قفل مختصات" title="' + (bmLocked(b) ? 'مختصات قفل است؛ باز کردن' : 'قفل کردن مجدد') + '">' + (bmLocked(b) ? '🔒' : '🔓') + '</button>' : '<button class="btn icon sm" data-act="bmCalc" data-id="' + esc(b.id) + '" title="علامت‌گذاری به‌عنوان بنچ‌مارک محاسباتی" aria-label="محاسباتی کن">⚙</button>')) + '<button class="btn icon danger sm" data-act="delBM" data-i="' + i + '" aria-label="حذف بنچ‌مارک">×</button></td></tr>';
       });
       h += '</tbody></table></div>';
     }
@@ -6382,6 +6488,7 @@ select.inp, .inp, .cell { background: var(--card); }
   function newoLive() {
     const p = P(), st = p.settings, su = newoSetup(p), info = C.computeSetup(su, p.benchmarks);
     const hi = $('#nwHi'); if (hi) hi.textContent = info.ok ? fx(info.hi) : '—';
+    nwLive();
     const m = $('#stfMsg');
     if (m) m.innerHTML = st.staffLength > 0 ? '' : '<div class="msg err">طول شاخص باید عددی بزرگ‌تر از صفر باشد.</div>';
   }
@@ -8679,6 +8786,15 @@ select.inp, .inp, .cell { background: var(--card); }
       markDirty(); return;
     }
     if (el.dataset.pmf) { S.pm[el.dataset.pmf] = el.value; render(); return; }
+    if (el.dataset.pmv) {
+      const c = pmInit(P()).permitCfg, a = el.dataset.pmv.split('.'), q = c.vars[+a[0]]; if (!q) return;
+      if (a[1] === 'k') {
+        const k = el.value.replace(/[{}]/g, '').trim();
+        if (k && (PM_SYS.indexOf(k) >= 0 || c.vars.some(function (o, i) { return i !== +a[0] && o.k === k; }))) { toast('این نام قبلاً هست یا نام سیستمی است.', 'err'); el.value = q.k; return; }
+        q.k = k;
+      } else q.v = el.value.trim();
+      markDirty(); return;
+    }
     if (el.dataset.pmc) { const c = pmInit(P()).permitCfg, k = el.dataset.pmc; if (k === 'counter') { const n = parseInt(C.normalizeDigits(el.value), 10); c.counter = fin(n) && n >= 0 ? n : 0; } else c[k] = el.value.trim(); markDirty(); return; }
     if (el.dataset.pms) { const x = P().permits.find(function (y) { return y.id === el.dataset.pms; }); if (x) { x.status = el.value; x.history.push({ at: new Date().toISOString(), ev: 'تغییر وضعیت به «' + PM_ST[x.status][0] + '»', reason: '' }); markDirty(); render(); } return; }
     if (el.dataset.pmph) {
@@ -8692,12 +8808,13 @@ select.inp, .inp, .cell { background: var(--card); }
       })();
       return;
     }
-    if (S.pn && (el.dataset.pnform || el.dataset.pnd || el.dataset.pno !== undefined || el.dataset.pnn !== undefined || el.dataset.pnt || el.dataset.pnf !== undefined)) {
+    if (S.pn && (el.dataset.pnform || el.dataset.pnd || el.dataset.pno !== undefined || el.dataset.pnn !== undefined || el.dataset.pnt || el.dataset.bmsel || el.dataset.pnf !== undefined)) {
       const p = pmInit(P()), d = S.pn, form = d.editForm || pmForm(p, d.formId);
       if (el.dataset.pnform) { S.pn = pmDraft(p, pmForm(p, el.value), { date: d.date }); render(); return; }
       if (el.dataset.pnd) { d.date = el.value; return; }
       if (el.dataset.pno !== undefined) { d.other[el.dataset.pno] = el.value; return; }
       if (el.dataset.pnn !== undefined) { d.names[el.dataset.pnn] = el.value.trim(); return; }
+      if (el.dataset.bmsel) { const a = el.dataset.bmsel.split('|'), sel = d.bmSel[a[0]] || (d.bmSel[a[0]] = []), k = sel.indexOf(a[1]); if (el.checked && k < 0) sel.push(a[1]); else if (!el.checked && k >= 0) sel.splice(k, 1); return; }
       if (el.dataset.pnt) { const a = el.dataset.pnt.split('.'), rows = d.tables[a[0]] || (d.tables[a[0]] = []); (rows[+a[1]] || (rows[+a[1]] = []))[+a[2]] = el.value; return; }
       const f = form.fields.find(function (x) { return x.key === el.dataset.pnf; }); if (!f) return;
       if (f.type === 'check') d.vals[f.key] = el.checked;
@@ -8720,7 +8837,7 @@ select.inp, .inp, .cell { background: var(--card); }
         x[a[1]] = el.value; return;
       }
       if (ds.pffk) { const a = sp(ds.pffk), x = F.fields[+a[0]]; if (x) x[a[1]] = el.checked; return; }
-      if (ds.pfb) { const a = sp(ds.pfb), bl = F.blocks[+a[0]]; if (bl) bl[a[1]] = a[1] === 'minRows' ? Math.max(0, parseInt(C.normalizeDigits(el.value), 10) || 0) : el.value; return; }
+      if (ds.pfb) { const a = sp(ds.pfb), bl = F.blocks[+a[0]]; if (bl) bl[a[1]] = a[1] === 'minRows' ? Math.max(0, parseInt(C.normalizeDigits(el.value), 10) || 0) : a[1] === 'h' ? Math.max(8, Math.min(40, parseInt(C.normalizeDigits(el.value), 10) || 16)) : a[1] === 'cols' ? Math.max(1, Math.min(3, parseInt(el.value, 10) || 2)) : a[1] === 'tol' ? (fin(C.toNumber(el.value)) ? Math.max(0, C.toNumber(el.value)) : 3) : el.value; if (a[1] === 'mode') render(); if (a[1] === 'h') el.value = bl.h; return; }
       if (ds.pfbk) { const a = sp(ds.pfbk), bl = F.blocks[+a[0]]; if (bl) bl[a[1]] = el.checked; return; }
       if (ds.pfbs) { const a = sp(ds.pfbs); F.blocks[+a[0]].signers[+a[1]].title = el.value.trim(); return; }
       if (ds.pfbso) { const a = sp(ds.pfbso); F.blocks[+a[0]].signers[+a[1]].op = el.checked; return; }
@@ -8817,6 +8934,11 @@ select.inp, .inp, .cell { background: var(--card); }
     if (el.id === 'npCs') { const u = el.value === 'UTM'; ['npZone', 'npHem'].forEach(function (i) { $('#' + i).disabled = !u; }); $('#npDatum').disabled = !el.value; return; }
     if (el.id === 'tbLayer') { S.tbLayer = el.value; S.tPage = 0; render(); return; }
     if (el.id === 'qaModel') { qaModelUi(); return; }
+    if (el.id === 'ckBm') { S.ck.bm = el.value; nwLive(); return; }
+    if (el.id === 'ckFs') { S.ck.fs = el.value.trim(); nwLive(); return; }
+    if (el.id === 'nwFs') { S.nw.fs = el.value.trim(); nwLive(); return; }
+    if (el.id === 'nwName') { S.nw.name = el.value.trim(); return; }
+    if (el.id === 'nwUse') { S.nw.use = el.checked; return; }
     if (el.id === 'nwBm') { P().newoBm = el.value; structural(); return; }
     if (el.id === 'nwBs') { P().newoBs = el.value.trim(); structural(); return; }
     if (el.dataset.nav) { try { localStorage.setItem(NAV_APP_KEY, el.dataset.nav); } catch (e) { /* ignore */ } return; }
@@ -8888,6 +9010,8 @@ select.inp, .inp, .cell { background: var(--card); }
     if (path === 'settings.decimals' && typeof v === 'number' && !Number.isNaN(v)) v = Math.min(6, Math.max(3, v));
     if (path === 'settings.utmZone' && typeof v === 'number' && !Number.isNaN(v)) v = Math.min(60, Math.max(1, v));
     setPath(path, v);
+    { const lm = /^benchmarks\.(\d+)\.(lat|lon)$/.exec(path); if (lm && P().benchmarks[+lm[1]]) { const bb = P().benchmarks[+lm[1]]; delete bb.llSrc; delete bb.llAcc; delete S.bmUnl[bb.id]; } }
+    { const xm = /^benchmarks\.(\d+)\.(x|y)$/.exec(path); if (xm && P().benchmarks[+xm[1]]) delete S.bmUnl[P().benchmarks[+xm[1]].id]; }
     const pgm = /^points\.(\d+)\.(id|station|x|y|z)$/.exec(path); if (pgm && P().points[+pgm[1]]) delete P().points[+pgm[1]].peg;
     if (/^sections\.\d+\.(mode|wL|wR|sL|sR)$/.test(path)) { const row = P().sections[parseInt(path.split('.')[1], 10)]; if (row && row.auto) row.auto = false; }
     const sm = /^streets\.(\d+)\.survey\.(\d+)\.(reading|bs)$/.exec(path);
@@ -9348,7 +9472,7 @@ select.inp, .inp, .cell { background: var(--card); }
       case 'bmFromPt': {
         const v = $('#bmFromPt').value.split(':'), r = calc();
         const q = r.sections[parseInt(v[0], 10)][v[1]];
-        p.benchmarks.push({ id: C.uid('bm'), name: 'TBM-' + q.name, x: q.x, y: q.y, z: q.z, desc: 'از نقطه‌ی ' + q.name + ' (' + activeStreet().name + ')' });
+        p.benchmarks.push({ id: C.uid('bm'), name: 'TBM-' + q.name, x: q.x, y: q.y, z: q.z, desc: 'از نقطه‌ی ' + q.name + ' (' + activeStreet().name + ')', calc: true });
         structural(); toast('بنچ‌مارک از نقطه‌ی ' + q.name + ' ساخته شد.');
         break;
       }
@@ -9357,8 +9481,51 @@ select.inp, .inp, .cell { background: var(--card); }
         if (await ask('بنچ‌مارک «' + esc(bm.name) + '» حذف شود؟' + (used ? ' <b>این بنچ‌مارک برای نیوو انتخاب شده؛ انتخاب آن خالی می‌شود.</b>' : ''), { danger: true, ok: 'حذف' })) { if (used) p.newoBm = ''; if (S.bmTarget === bm.id) S.bmTarget = ''; p.benchmarks.splice(i, 1); structural(); }
         break;
       }
+      case 'nwChk': {
+        const k = ckCalc(); if (!k.ok) { toast(k.info && !k.info.ok ? 'ابتدا بنچ‌مارک و BS نیوو را درست کنید.' : 'بنچ‌مارک و FS را وارد کنید.', 'err'); break; }
+        if (k.bm.chk && !(await ask('برای «' + esc(k.bm.name) + '» کنترل قبلی ثبت شده است. جایگزین شود؟', { ok: 'جایگزین' }))) break;
+        k.bm.chk = { z: k.z, date: todayIso() }; S.ck.fs = '';
+        structural(); toast('کنترل «' + k.bm.name + '» ثبت شد: Z=' + fx(k.z) + ' (اختلاف ' + (fin(k.diff) ? k.diff.toFixed(1) : '—') + ' mm).');
+        break;
+      }
+      case 'nwMake': {
+        const r = nwCalc(); if (!r.ok) { toast(r.msg || 'قرائت جلو (FS) را وارد کنید.', 'err'); break; }
+        const name = (S.nw.name || nwDefName(p)).trim();
+        if (p.benchmarks.some(function (q) { return String(q.name).trim().toLowerCase() === name.toLowerCase(); }) && !(await ask('بنچ‌مارکی با نام «' + esc(name) + '» وجود دارد. باز هم یک بنچ‌مارک جدید با همین نام ساخته شود؟', { ok: 'ساخته شود' }))) break;
+        if (r.warn && !(await ask(esc(r.warn) + ' بنچ‌مارک با ارتفاع <b>' + fx(r.z) + '</b> ثبت شود؟', { ok: 'ثبت' }))) break;
+        const bm = { id: C.uid('bm'), name: name, x: null, y: null, z: r.z, lat: null, lon: null, calc: true, desc: 'از ' + (r.bm.name || 'BM') + ' با BS=' + fx(C.toNumber(newoSetup(p).bs)) + ' و FS=' + fx(r.fs) };
+        p.benchmarks.push(bm);
+        if (S.nw.use) { p.newoBm = bm.id; p.newoBs = ''; }
+        S.nw.fs = ''; S.nw.name = '';
+        structural(); toast('بنچ‌مارک «' + name + '» با ارتفاع ' + fx(r.z) + ' ایجاد شد؛ برای ثبت موقعیت، در لیست دکمه‌ی GPS را بزنید.');
+        break;
+      }
+      case 'bmGps': {
+        const bm = p.benchmarks.find(function (q) { return q.id === b.dataset.id; }); if (!bm) break;
+        if (!bm.calc) { toast('ثبت موقعیت فقط برای بنچ‌مارک‌های محاسباتی است.', 'err'); break; }
+        if (!navigator.geolocation) { toast('این دستگاه GPS ندارد.', 'err'); break; }
+        toast('در حال دریافت موقعیت…');
+        const fresh = S.bmPos && S.bmWatch !== null && Date.now() - S.bmPos.t < 15000 ? { coords: { latitude: S.bmPos.lat, longitude: S.bmPos.lon, accuracy: S.bmPos.acc } } : null;
+        const g = fresh || await new Promise(function (res) { navigator.geolocation.getCurrentPosition(function (x) { res(x); }, function (er) { res(er); }, { enableHighAccuracy: true, timeout: 20000, maximumAge: 3000 }); });
+        if (!g || !g.coords) { toast(g && g.code === 1 ? 'اجازه‌ی دسترسی به موقعیت داده نشد.' : 'موقعیت دریافت نشد.', 'err'); break; }
+        if (fin(C.toNumber(bm.lat)) && fin(C.toNumber(bm.lon)) && !(await ask('برای «' + esc(bm.name) + '» مختصات ثبت شده است. با موقعیت فعلی (دقت ±' + Math.round(g.coords.accuracy) + ' m) جایگزین شود؟', { ok: 'جایگزین' }))) break;
+        bm.lat = Math.round(g.coords.latitude * 1e7) / 1e7; bm.lon = Math.round(g.coords.longitude * 1e7) / 1e7; bm.llSrc = 'gps'; bm.llAcc = Math.round(g.coords.accuracy);
+        structural(); toast('موقعیت «' + bm.name + '» ثبت شد (حدودی، ±' + bm.llAcc + ' m).');
+        break;
+      }
+      case 'bmLock': {
+        const bm = p.benchmarks.find(function (q) { return q.id === b.dataset.id; }); if (!bm) break;
+        if (S.bmUnl[bm.id]) { delete S.bmUnl[bm.id]; render(); break; }
+        if (await ask('مختصات رسمی «' + esc(bm.name) + '» برای ویرایش باز شود؟ بعد از ویرایش دوباره قفل می‌شود.', { ok: 'باز شود' })) { S.bmUnl[bm.id] = true; render(); }
+        break;
+      }
+      case 'bmCalc': {
+        const bm = p.benchmarks.find(function (q) { return q.id === b.dataset.id; }); if (!bm) break;
+        if (await ask('«' + esc(bm.name) + '» به‌عنوان بنچ‌مارک محاسباتی (ساخته‌شده در پروژه) علامت بخورد؟ دکمه‌ی ثبت موقعیت GPS برایش فعال می‌شود.', { ok: 'علامت بخورد' })) { bm.calc = true; structural(); }
+        break;
+      }
       case 'bmNear': bmNavStart(); break;
-      case 'bmSel': if (!e.target.closest('[data-act=bmGo]')) { S.bmTarget = b.dataset.id; bmNavUpdate(); } break;
+      case 'bmSel': if (!e.target.closest('[data-act=bmGo],[data-act=bmGps]')) { S.bmTarget = b.dataset.id; bmNavUpdate(); } break;
       case 'bmGo': bmGo(b.dataset.id); break;
       case 'stkToggle': { const cx = stakeCtx(); if (cx.secs && cx.secs[S.stakeIdx]) stkToggle(cx.secs[S.stakeIdx]); break; }
       case 'stkSide': { const cx = stakeCtx(); if (cx.secs && cx.secs[S.stakeIdx]) stkSide(cx.secs[S.stakeIdx], b.dataset.side); break; }
@@ -9409,6 +9576,15 @@ select.inp, .inp, .cell { background: var(--card); }
         if (d.editId) { reason = await askText('ویرایش پرمیت', 'علت ویرایش'); if (!reason) break; }
         const disp = {}; form.fields.forEach(function (f) { disp[f.key] = pmDisp(p, form, f, d, cx); });
         const tables = {}; Object.keys(d.tables).forEach(function (k) { tables[k] = d.tables[k].filter(function (r) { return r.some(function (c) { return String(c || '').trim(); }); }); });
+        for (let i = 0; i < form.blocks.length; i++) {
+          const bb = form.blocks[i]; if (bb.type !== 'bms') continue;
+          if (d.bmSel[bb.id] !== undefined) {
+            const sel = d.bmSel[bb.id];
+            if (bb.mode !== 'check') { const miss = sel.map(function (id) { return p.benchmarks.find(function (x) { return x.id === id; }); }).filter(function (x) { return x && !bmHasXY(x); }); if (miss.length && !(await ask('این بنچ‌مارک‌ها X و Y ندارند: <b>' + miss.map(function (x) { return esc(x.name); }).join('، ') + '</b>. باز هم ثبت شود؟', { ok: 'ثبت' }))) return; }
+            tables[bb.id] = bmsRows(p, bb, sel);
+          }
+          if (!(tables[bb.id] || []).length) { toast('دست‌کم یک بنچ‌مارک برای جدول انتخاب کنید.', 'err'); return; }
+        }
         const rec = { formId: d.formId, formName: form.name || '', title: form.title, fm: d.editId ? (p.permits.find(function (y) { return y.id === d.editId; }) || {}).fm : pmFm(form), vals: JSON.parse(JSON.stringify(d.vals)), other: JSON.parse(JSON.stringify(d.other)), disp: disp, tables: tables, names: Object.assign({}, d.names), date: d.date || todayIso(),
           streetId: cx.s.id, streetName: cx.s.name, layerId: cx.L ? cx.L.id : '', layerName: cx.L ? cx.L.name : '', from: ft.mode === 'none' ? null : ft.from, to: ft.mode === 'none' ? null : ft.to, range: ft.mode };
         let x;
@@ -9453,8 +9629,18 @@ select.inp, .inp, .cell { background: var(--card); }
         x.history.push({ at: new Date().toISOString(), ev: 'ثبت اظهار نظر (' + out.length + ' مورد)', reason: '' }); markDirty(); render(); toast('ثبت شد.'); break;
       }
       case 'pmPhDel': { const x = p.permits.find(function (y) { return y.id === b.dataset.id; }); if (x) { x.photos = x.photos.filter(function (f) { return f.id !== b.dataset.pid; }); markDirty(); render(); } break; }
+      case 'pmBmsAll': S.bmsAll = !S.bmsAll; render(); break;
+      case 'pmBmsReset': S.pn.bmSel[b.dataset.b] = []; render(); break;
+      case 'pmFSeed': {
+        pmInit(p); let n = 0;
+        pmMinutes().forEach(function (f) { if (!p.permitForms.some(function (x) { return x.name === f.name; })) { p.permitForms.push(f); n++; } });
+        markDirty(); toast(n ? n + ' فرم صورتجلسه افزوده شد.' : 'فرم‌های صورتجلسه از قبل هست.'); render(); break;
+      }
       case 'pmTAdd': { (S.pn.tables[b.dataset.b] || (S.pn.tables[b.dataset.b] = [])).push([]); render(); break; }
       case 'pmTDel': { const r = S.pn.tables[b.dataset.b]; if (r) r.splice(parseInt(b.dataset.i, 10), 1); render(); break; }
+      case 'pmVAdd': { const c = pmInit(p).permitCfg; let n = 1; while (c.vars.some(function (q) { return q.k === 'متغیر ' + n; })) n++; c.vars.push({ k: 'متغیر ' + n, v: '' }); markDirty(); render(); break; }
+      case 'pmVDel': { const c = pmInit(p).permitCfg; c.vars.splice(parseInt(b.dataset.i, 10), 1); markDirty(); render(); break; }
+      case 'pmVSeed': { const c = pmInit(p).permitCfg; ['کارفرما', 'مشاور'].forEach(function (k) { if (!c.vars.some(function (q) { return q.k === k; })) c.vars.push({ k: k, v: '' }); }); markDirty(); render(); break; }
       case 'pmFNew': S.pf = pmBlank(); S.pm.view = 'form'; render(); break;
       case 'pmFEdit': { const f = pmForm(pmInit(p), b.dataset.id); if (f) { S.pf = JSON.parse(JSON.stringify(f)); S.pm.view = 'form'; render(); } break; }
       case 'pmFDup': { const f = pmForm(pmInit(p), b.dataset.id); if (f) { const c = JSON.parse(JSON.stringify(f)); c.id = pmId('pf'); c.name += ' (کپی)'; c.blocks.forEach(function (x) { x.id = pmId('bl'); (x.signers || []).forEach(function (g) { g.id = pmId('sg'); }); }); p.permitForms.push(c); markDirty(); render(); } break; }
@@ -9476,7 +9662,7 @@ select.inp, .inp, .cell { background: var(--card); }
       case 'pmBAdd': {
         const t = $('#pfNewB').value, nb = { id: pmId('bl'), type: t };
         if (t === 'text') Object.assign(nb, { title: '', text: '', box: true, soft: false }); else if (t === 'fields') nb.keys = ['دستگاه نظارت', 'پیمانکار']; else if (t === 'km') Object.assign(nb, { from: (pmRole(S.pf, 'from') || pmRole(S.pf, 'point') || { key: '' }).key, to: (pmRole(S.pf, 'to') || { key: '' }).key, len: true });
-        else if (t === 'sign') nb.signers = [pmSg('امضاکننده', false)]; else if (t === 'table') Object.assign(nb, { title: 'جدول', cols: [{ id: pmId('cl'), label: 'ردیف' }, { id: pmId('cl'), label: 'توضیح' }], minRows: 0 });
+        else if (t === 'bms') Object.assign(nb, { title: '', mode: 'deliver', tol: 3 }); else if (t === 'sign') { nb.signers = [pmSg('امضاکننده', false)]; nb.h = 16; nb.cols = 2; } else if (t === 'table') Object.assign(nb, { title: 'جدول', cols: [{ id: pmId('cl'), label: 'ردیف' }, { id: pmId('cl'), label: 'توضیح' }], minRows: 0 });
         S.pf.blocks.push(nb); render(); break;
       }
       case 'pmBDel': S.pf.blocks.splice(parseInt(b.dataset.i, 10), 1); render(); break;
