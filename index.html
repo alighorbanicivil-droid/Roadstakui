@@ -834,6 +834,16 @@ select.inp, .inp, .cell { background: var(--card); }
 .bn-bt { display: flex; flex-direction: column; gap: 4px; } .bn-gps { color: #8a5a00 !important; }
 .bn-h { font-size: 12px; font-weight: 700; color: #0b2a43; margin: 6px 0 0; padding-bottom: 2px; border-bottom: 2px solid #d9a93b; }
 .bn-tag { display: inline-block; font-size: 10px; font-weight: 700; background: #fff3d6; color: #8a5a00; border: 1px solid #d9a93b; border-radius: 6px; padding: 0 5px; margin-inline-start: 4px; }
+
+.pm-pg .title small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.jdb { text-align: center; cursor: pointer; background: #fff; }
+
+.ctl-box { max-height: 90vh; overflow: auto; } .ctl-h { display: flex; gap: 6px; align-items: center; justify-content: space-between; font-size: 12px; padding: 3px 0; border-bottom: 1px dashed #d5dde4; } .ctl-box .ok { color: #1c7a3f; } .ctl-box .err { color: #b3261e; }
+
+.pm-pg .pmtb { table-layout: fixed; } .pm-pg .pmtb th { color: #0b2a43; font-weight: 700; } .pm-pg .pmtb th:first-child, .pm-pg .pmtb td:first-child { width: 6mm; padding-inline: 1pt; }
+.pm-pg .pmtb th, .pm-pg .pmtb td { overflow-wrap: anywhere; word-break: break-word; }
+.pm-pg .pmtb.wide { font-size: 6.6pt; } .pm-pg .pmtb.wide th, .pm-pg .pmtb.wide td { padding: 2pt 1.5pt; }
+.pm-pg .pmtb.wide th { font-size: 6pt; line-height: 1.25; } .pm-pg .pmtb.wide th:nth-child(2) { width: 20mm; } .pm-pg .pmtb.wide td { font-size: 6.6pt; }
 </style>
 </head>
 <body>
@@ -3146,6 +3156,20 @@ select.inp, .inp, .cell { background: var(--card); }
   /* ================================================================== *
    *  پشتیبان پروژه (JSON)
    * ================================================================== */
+  /** فایل فرم‌های مجوز (.rsform.json): فقط داده؛ با همان سالم‌ساز فرم‌های پروژه خوانده می‌شود */
+  function parseFormPack(text) {
+    let o;
+    try { o = JSON.parse(text); } catch (e) { throw new Error('فایل فرم معتبر نیست (JSON خراب).'); }
+    if (!o || o.app !== 'roadstake-forms' || !Array.isArray(o.forms)) throw new Error('این فایل، فرم‌های این برنامه نیست.');
+    const src = o.forms.filter(function (f) { return f && typeof f === 'object' && f.v === 2; }).slice(0, 40);
+    if (!src.length) throw new Error('در فایل فرمی نیست.');
+    const q = parseProjectBackup(JSON.stringify({ app: 'roadstake', project: { name: 'x', streets: [], permitForms: src } }));
+    const forms = (q.permitForms || []).filter(function (f) { return f.name; });
+    let dropped = 0; src.forEach(function (f, i) { const g = q.permitForms[i]; if (g) dropped += Math.max(0, (Array.isArray(f.blocks) ? f.blocks.length : 0) - g.blocks.length) + Math.max(0, (Array.isArray(f.fields) ? f.fields.length : 0) - g.fields.length); });
+    return { forms: forms, publisher: String(o.publisher || '').slice(0, 60), dropped: dropped, skipped: o.forms.length - src.length };
+  }
+  function formPackToJSON(forms, publisher) { return JSON.stringify({ app: 'roadstake-forms', schema: 1, publisher: publisher || 'RoadStake', forms: forms }, null, 1); }
+
   function projectToJSON(project) {
     return JSON.stringify({ app: 'roadstake', schema: 1, exportedAt: new Date().toISOString(), project: project }, null, 1);
   }
@@ -3274,7 +3298,10 @@ select.inp, .inp, .cell { background: var(--card); }
     base.benchmarks = (Array.isArray(p.benchmarks) ? p.benchmarks : []).map(function (b) {
       const o = { id: String(b.id || C.uid('bm')), name: String(b.name || ''), x: num(b.x), y: num(b.y), z: num(b.z), lat: num(b.lat), lon: num(b.lon), desc: String(b.desc == null ? '' : b.desc) };
       if (b.calc === true) o.calc = true;
-      if (b.chk && typeof b.chk === 'object') { const cz = num(b.chk.z); if (cz !== null) o.chk = { z: cz, date: String(b.chk.date || '').slice(0, 10) }; }
+      const ctr = [];
+      (Array.isArray(b.ctrl) ? b.ctrl : []).slice(0, 50).forEach(function (q) { if (!q || typeof q !== 'object') return; const cz = num(q.z); if (cz === null) return; ctr.push({ id: String(q.id || C.uid('ct')), date: String(q.date || '').slice(0, 10), method: String(q.method || '').slice(0, 30), x: num(q.x), y: num(q.y), z: cz, note: String(q.note == null ? '' : q.note).slice(0, 200) }); });
+      if (!ctr.length && b.chk && typeof b.chk === 'object') { const cz = num(b.chk.z); if (cz !== null) ctr.push({ id: C.uid('ct'), date: String(b.chk.date || '').slice(0, 10), method: 'نیوو', x: null, y: null, z: cz, note: 'ثبت‌شده با نسخه‌ی قبلی' }); }
+      if (ctr.length) o.ctrl = ctr;
       if (b.llSrc === 'gps' && o.lat !== null && o.lon !== null) { o.llSrc = 'gps'; const ac = Number(b.llAcc); if (isFinite(ac) && ac >= 0) o.llAcc = Math.round(ac); }
       return o;
     });
@@ -3282,6 +3309,7 @@ select.inp, .inp, .cell { background: var(--card); }
       return { id: String(s.id || C.uid('su')), name: String(s.name || ''), bmId: s.bmId || null, bs: num(s.bs), from: num(s.from), to: num(s.to) };
     });
     base.activeSetupId = p.activeSetupId || null;
+    { const tz = num(p.tolZ), th = num(p.tolH); if (tz !== null && tz >= 0 && tz < 10000) base.tolZ = tz; if (th !== null && th >= 0 && th < 100000) base.tolH = th; }
     if (typeof p.newoBm === 'string') base.newoBm = p.newoBm.slice(0, 80);
     if (typeof p.newoBs === 'string' || typeof p.newoBs === 'number') base.newoBs = String(p.newoBs).slice(0, 20);
     base.importTemplates = normTpl(p.importTemplates, 'points').filter(function (t) { return t.roles; });
@@ -3294,7 +3322,7 @@ select.inp, .inp, .cell { background: var(--card); }
     const arr = function (v) { return Array.isArray(v) ? v : []; };
     const normFm = function (f) {
       const FT = ['text', 'num', 'date', 'list', 'km', 'street', 'layer', 'check'], BT = ['text', 'fields', 'km', 'sign', 'table', 'bms'];
-      const o = { id: String(f.id || C.uid('pf')), v: 2, name: str(f.name).slice(0, 80), title: str(f.title).slice(0, 80), paper: f.paper === 'A4' ? 'A4' : 'A5', overlap: f.overlap === true,
+      const o = { id: String(f.id || C.uid('pf')), v: 2, name: str(f.name).slice(0, 80), title: str(f.title).slice(0, 80), paper: f.paper === 'A4' ? 'A4' : 'A5', h1: typeof f.h1 === 'string' ? f.h1.slice(0, 120) : undefined, h2: typeof f.h2 === 'string' ? f.h2.slice(0, 120) : undefined, overlap: f.overlap === true,
         copies: arr(f.copies).slice(0, 12).map(function (c) { return str(c).slice(0, 60); }),
         fields: arr(f.fields).slice(0, 40).map(function (x) {
           return { id: String((x && x.id) || C.uid('ff')), key: str(x && x.key).replace(/[{}]/g, '').slice(0, 40), type: FT.indexOf(x && x.type) >= 0 ? x.type : 'text', role: x && (x.role === 'from' || x.role === 'to' || x.role === 'point') ? x.role : '', req: !!(x && x.req), def: str(x && x.def).slice(0, 200), opts: arr(x && x.opts).slice(0, 80).map(function (q) { return str(q).slice(0, 100); }), nextOps: !!(x && x.nextOps) };
@@ -3305,7 +3333,7 @@ select.inp, .inp, .cell { background: var(--card); }
           else if (b.type === 'fields') { r.title = str(b.title).slice(0, 100); r.keys = arr(b.keys).slice(0, 30).map(function (k) { return str(k).slice(0, 40); }); }
           else if (b.type === 'km') { r.from = str(b.from).slice(0, 40); r.to = str(b.to).slice(0, 40); r.len = !!b.len; }
           else if (b.type === 'sign') { r.h = Math.max(8, Math.min(40, Math.round(Number(b.h) || 16))); r.cols = Math.max(1, Math.min(3, Math.round(Number(b.cols) || 2))); r.signers = arr(b.signers).slice(0, 12).map(function (g) { return { id: String((g && g.id) || C.uid('sg')), title: str(g && g.title).slice(0, 60), op: !!(g && g.op) }; }); }
-          else if (b.type === 'bms') { r.title = str(b.title).slice(0, 100); r.mode = b.mode === 'check' ? 'check' : 'deliver'; const tl = Number(b.tol); r.tol = Number.isFinite(tl) && tl >= 0 ? Math.min(1000, tl) : 3; }
+          else if (b.type === 'bms') { r.title = str(b.title).slice(0, 100); r.mode = b.mode === 'check' ? 'check' : 'deliver'; r.dxy = b.dxy !== false; }
           else if (b.type === 'table') { r.title = str(b.title).slice(0, 100); r.minRows = Math.max(0, Math.min(40, Math.round(Number(b.minRows) || 0))); r.cols = arr(b.cols).slice(0, 8).map(function (c) { return { id: String((c && c.id) || C.uid('cl')), label: str(c && c.label).slice(0, 40) }; }); }
           return r;
         }) };
@@ -3374,7 +3402,7 @@ select.inp, .inp, .cell { background: var(--card); }
     COLS: COLS, BUILTIN_TEMPLATES: BUILTIN_TEMPLATES, customTable: customTable, expandTemplate: expandTemplate,
     pointsTable: pointsTable, newoTable: newoTable, toDelimited: toDelimited,
     writeXlsx: writeXlsx, readXlsx: readXlsx, zipStore: zipStore, unzip: unzip, crc32: crc32,
-    guessBenchmarkMapping: guessBenchmarkMapping, rowsToBenchmarks: rowsToBenchmarks, projectToJSON: projectToJSON, parseProjectBackup: parseProjectBackup, allToJSON: allToJSON, parseAnyBackup: parseAnyBackup
+    guessBenchmarkMapping: guessBenchmarkMapping, rowsToBenchmarks: rowsToBenchmarks, projectToJSON: projectToJSON, parseFormPack: parseFormPack, formPackToJSON: formPackToJSON, parseProjectBackup: parseProjectBackup, allToJSON: allToJSON, parseAnyBackup: parseAnyBackup
   };
 });
 </script>
@@ -3713,7 +3741,7 @@ select.inp, .inp, .cell { background: var(--card); }
   const PAGE_SIZE = 50;       // ردیف در هر صفحه‌ی جدول نقاط
   const TABLE_STATIONS = 30;  // مقطع در هر صفحه‌ی جدول سه‌نقطه‌ای
 
-  const APP_VERSION = 'UI-3.6.0 (بر پایه‌ی 1.22.1)';
+  const APP_VERSION = 'UI-3.7.0 (بر پایه‌ی 1.22.1)';
   const S = {
     project: null, dirty: false, rev: 0, calc: null, calcRev: -1,
     page: 'home', imp: null, ptPage: 0, tPage: 0, stakeIdx: 0, rawBad: {},
@@ -3969,6 +3997,7 @@ select.inp, .inp, .cell { background: var(--card); }
     if (!p.exportTemplates || typeof p.exportTemplates !== 'object') p.exportTemplates = {};
     ['points', 'survey'].forEach(function (k) { if (!Array.isArray(p.exportTemplates[k])) p.exportTemplates[k] = []; });
     p.streets.forEach(function (st) { (st.layers || []).forEach(function (l) { const n = String(l.name || '').trim(); if (n && p.layerNames.indexOf(n) < 0) p.layerNames.push(n); }); });
+    p.benchmarks.forEach(function (b) { if (b.chk && !(b.ctrl && b.ctrl.length)) { if (fin(C.toNumber(b.chk.z))) b.ctrl = [{ id: C.uid('ct'), date: String(b.chk.date || ''), method: 'نیوو', x: null, y: null, z: C.toNumber(b.chk.z), note: 'ثبت‌شده با نسخه‌ی قبلی' }]; } delete b.chk; });
     S.project = p; S.stakeLayer = ''; S.bmImp = null; S.sv = { idx: 0, bmId: '', bs: '', layer: '', reads: { left: '', axis: '', right: '' }, all: false, page: 0, st: -1, key: null, bsInit: false }; S.svPage = 0; S.exp.fmt = {}; S.exp.fmtSel = {}; S.exp.newoSel = null; S.exp.layer = 'all'; S.exp.svLayer = 'all'; S.dirty = restored; S.rev++; S.rawBad = {}; S.imp = null;
     S.ptPage = 0; S.tPage = 0; S.stakeIdx = 0;
     ST.setLast(id);
@@ -4015,7 +4044,7 @@ select.inp, .inp, .cell { background: var(--card); }
   };
   const NAV_L = [['home', 'پروژه‌ها'], ['newo', 'بنچ‌مارک']];
   const NAV_R = [['stake', 'پیاده'], ['survey', 'برداشت']];
-  const NAV_ALL = [['home', 'شروع'], ['projects', 'پروژه‌ها و پشتیبان'], ['points', 'محور و لبه‌ها'], ['slopes', 'شیب عرضی'], ['layers', 'لایه‌ها'], ['newo', 'بنچ‌مارک'], ['stake', 'پیاده‌سازی'], ['survey', 'برداشت'], ['permit', 'پرمیت'], ['mat', 'مصالح و تخلیه'], ['export', 'خروجی و گزارش'], ['security', 'کلید، قفل و اثرانگشت']];
+  const NAV_ALL = [['home', 'شروع'], ['projects', 'پروژه‌ها و پشتیبان'], ['points', 'محور و لبه‌ها'], ['slopes', 'شیب عرضی'], ['layers', 'لایه‌ها'], ['newo', 'بنچ‌مارک'], ['stake', 'پیاده‌سازی'], ['survey', 'برداشت'], ['permit', 'مجوز'], ['mat', 'مصالح و تخلیه'], ['export', 'خروجی و گزارش'], ['security', 'کلید، قفل و اثرانگشت']];
   const MENU_GROUPS = [['اجرا', ['points', 'slopes', 'layers', 'newo', 'stake', 'survey']], ['محاسبه و تحویل', ['mat', 'export', 'permit', 'projects']], ['امنیت', ['security']]];
   const MENU_NAME = {}; NAV_ALL.forEach(function (n) { MENU_NAME[n[0]] = n[1]; });
   ICONS.home = ICONS.projects;
@@ -4049,7 +4078,7 @@ select.inp, .inp, .cell { background: var(--card); }
   }
   function closeMenu() { const d = document.getElementById('menuSheet'); if (d) d.remove(); }
 
-  const PAGE_TITLE = { home: 'پروژه‌ها', preport: 'گزارش پروژه', projects: 'ساخت پروژه و پشتیبان', points: 'محور و لبه‌ها', slopes: 'شیب عرضی', layers: 'لایه‌ها', mat: 'مصالح و تخلیه', newo: 'بنچ‌مارک', stake: 'پیاده‌سازی', survey: 'برداشت', permit: 'پرمیت', export: 'خروجی و گزارش', security: 'امنیت' };
+  const PAGE_TITLE = { home: 'پروژه‌ها', preport: 'گزارش پروژه', projects: 'ساخت پروژه و پشتیبان', points: 'محور و لبه‌ها', slopes: 'شیب عرضی', layers: 'لایه‌ها', mat: 'مصالح و تخلیه', newo: 'بنچ‌مارک', stake: 'پیاده‌سازی', survey: 'برداشت', permit: 'مجوز', export: 'خروجی و گزارش', security: 'امنیت' };
   function renderTop() {
     const p = S.project, ttl = PAGE_TITLE[S.page] || 'RoadStake';
     let sub;
@@ -4251,7 +4280,7 @@ select.inp, .inp, .cell { background: var(--card); }
     if (pg.undated) h += '<p class="muted small"><b class="num">' + pg.undated + '</b> میخ پیاده‌شده تاریخ ثبت ندارد (پیش از افزودن تاریخ علامت خورده) و در نمودار روزانه نیامده.</p>';
     return h + '</section>';
   }
-  /* ============================== پرمیت (فرم‌ساز کامل: فقط سربرگ ثابت است) ============================== */
+  /* ============================== مجوز (فرم‌ساز کامل: فقط سربرگ ثابت است) ============================== */
   const PM_TESTS = ['تراکم (دانسیته)', 'CBR', 'دانه‌بندی', 'حدود اتربرگ', 'پروکتور'];
   const PM_ST = { wait: ['در انتظار', 'wait'], ok: ['تأییدشده', 'ok'], rej: ['ردشده', 'rej'], del: ['حذف‌شده', 'del'] };
   const PM_REPLY = 'نظر به کنترل عملیات انجام‌شده و مطابقت با دستور کار و نقشه‌های اجرایی، ادامه‌ی کار و شروع عملیات بعدی بلامانع است.';
@@ -4260,21 +4289,20 @@ select.inp, .inp, .cell { background: var(--card); }
   const PM_FT = [['text', 'متن'], ['num', 'عدد'], ['date', 'تاریخ'], ['list', 'لیست انتخابی'], ['km', 'کیلومتر'], ['street', 'خیابان'], ['layer', 'لایه'], ['check', 'تیک (بله/خیر)']];
   const PM_BT = [['text', 'متن (درخواست / نظر)'], ['fields', 'کارت مشخصات'], ['km', 'کارت کیلومتر'], ['sign', 'امضاها'], ['table', 'جدول'], ['bms', 'جدول بنچ‌مارک (صورتجلسه)']];
   const pmId = function (k) { return C.uid(k); };
-  const pmNo = function (n) { return 'P-' + String(n).padStart(3, '0'); };
+  const pmNo = function (n) { return 'M-' + String(n).padStart(3, '0'); };
   const pmKm = function (v) { return fin(v) ? C.formatStation(v, 3) : '—'; };
   const pmFld = function (key, type, o) { return Object.assign({ id: pmId('ff'), key: key, type: type, role: '', req: false, def: '', opts: [], nextOps: false }, o || {}); };
   const pmSg = function (title, op) { return { id: pmId('sg'), title: title, op: op }; };
   const pmCopies = function () { return ['پیمانکار', 'نقشه‌بردار پیمانکار', 'نقشه‌بردار کارفرما', 'کارفرما']; };
-  const BMS_COLS = { deliver: ['نام بنچ‌مارک', 'X', 'Y', 'Z', 'توضیح'], check: ['نام بنچ‌مارک', 'Z کارفرما', 'Z اندازه‌گیری', 'اختلاف (mm)', 'وضعیت', 'پاسخ کارفرما'] };
-  const bmsAsTable = function (b) { return { id: b.id, type: 'table', title: b.title || (b.mode === 'check' ? 'بررسی بنچ‌مارک‌های کارفرما' : 'بنچ‌مارک‌های تحویلی'), cols: (BMS_COLS[b.mode] || BMS_COLS.deliver).map(function (l, i) { return { id: 'c' + i, label: l }; }), minRows: 0 }; };
+  const bmsCols = function (b) { return b.mode === 'check' ? ['نام بنچ‌مارک', 'Z کارفرما', 'Z اندازه‌گیری', 'ΔZ (mm)'].concat(b.dxy === false ? [] : ['ΔX (mm)', 'ΔY (mm)']).concat(['وضعیت', 'پاسخ کارفرما']) : ['نام بنچ‌مارک', 'X', 'Y', 'Z', 'توضیح']; };
+  const bmsAsTable = function (b) { return { id: b.id, type: 'table', title: b.title || (b.mode === 'check' ? 'کنترل بنچ‌مارک‌های کارفرما' : 'بنچ‌مارک‌های تحویلی'), cols: bmsCols(b).map(function (l, i) { return { id: 'c' + i, label: l }; }), minRows: 0 }; };
   /** ردیف‌های جدول بنچ‌مارک: مقدارها در لحظه‌ی ثبت به‌صورت متن ذخیره می‌شوند */
   function bmsRows(p, b, ids) {
-    const tol = fin(Number(b.tol)) ? Number(b.tol) : 3;
     return ids.map(function (id) { return p.benchmarks.find(function (x) { return x.id === id; }); }).filter(Boolean).map(function (bm) {
       const z = C.toNumber(bm.z);
       if (b.mode === 'check') {
-        const m = bm.chk ? C.toNumber(bm.chk.z) : NaN, dd = fin(m) && fin(z) ? (m - z) * 1000 : NaN;
-        return [bm.name || '', fin(z) ? fx(z) : '—', fin(m) ? fx(m) : '—', fin(dd) ? (dd > 0 ? '+' : '') + dd.toFixed(1) : '—', !fin(dd) ? 'اندازه‌گیری نشده' : Math.abs(dd) <= tol + 1e-9 ? 'در حد مجاز' : 'خارج از حد مجاز (' + tol + ' mm)', ''];
+        const c = ctlLast(bm), r = c ? ctlRes(bm, c, p) : null;
+        return [bm.name || '', fin(z) ? fx(z) : '—', c ? fx(c.z) : '—', r ? ctlMm(r.dz) : '—'].concat(b.dxy === false ? [] : [r ? ctlMm(r.dx) : '—', r ? ctlMm(r.dy) : '—']).concat([r ? ctlSt(r, p) : 'کنترل نشده', '']);
       }
       const x = C.toNumber(bm.x), y = C.toNumber(bm.y);
       return [bm.name || '', fin(x) ? fx(x) : '—', fin(y) ? fx(y) : '—', fin(z) ? fx(z) : '—', bm.desc || ''];
@@ -4283,16 +4311,16 @@ select.inp, .inp, .cell { background: var(--card); }
   /** دو فرم آماده‌ی صورتجلسه */
   function pmMinutes() {
     const mk = function (name, title, mode, text) {
-      return { id: pmId('pf'), v: 2, name: name, title: title, paper: 'A5', overlap: false, copies: pmCopies(), fields: [],
+      return { id: pmId('pf'), v: 2, name: name, title: title, h1: PM_H1, h2: 'مجوز شماره‌ی {شماره}', paper: 'A5', overlap: false, copies: pmCopies(), fields: [],
         blocks: [{ id: pmId('bl'), type: 'fields', title: '', keys: ['دستگاه نظارت', 'پیمانکار', 'کد پروژه', 'شماره قرارداد', 'تاریخ قرارداد', 'منطقه', 'محل اجرا'] },
           { id: pmId('bl'), type: 'text', title: 'دستگاه محترم نظارت', text: text, box: true, soft: false },
-          { id: pmId('bl'), type: 'bms', title: '', mode: mode, tol: 3 },
+          { id: pmId('bl'), type: 'bms', title: '', mode: mode, dxy: true },
           { id: pmId('bl'), type: 'sign', h: 16, cols: 2, signers: [pmSg('سرپرست کارگاه پیمانکار', false), pmSg('نقشه‌بردار پیمانکار', false)] },
           { id: pmId('bl'), type: 'text', title: mode === 'check' ? 'نظر کارفرما' : 'نظر دستگاه نظارت', text: '', box: true, soft: true },
           { id: pmId('bl'), type: 'sign', h: 22, cols: 2, signers: [pmSg('نقشه‌بردار کارفرما', true), pmSg('کارفرما', true)] }] };
     };
-    return [mk('صورتجلسه‌ی تحویل بنچ‌مارک', 'صورتجلسه‌ی تحویل بنچ‌مارک', 'deliver', 'با احترام، بنچ‌مارک‌های زیر با مختصات رسمی در تاریخ {تاریخ} توسط {پیمانکار} تحویل {دستگاه نظارت} می‌شود.'),
-      mk('صورتجلسه‌ی بررسی بنچ‌مارک کارفرما', 'صورتجلسه‌ی بررسی بنچ‌مارک', 'check', 'با احترام، بنچ‌مارک‌های ابلاغی کارفرما در تاریخ {تاریخ} توسط {پیمانکار} کنترل شد و نتیجه به شرح زیر است. خواهشمند است نظر خود را اعلام فرمایید.')];
+    return [mk('تحویل بنچ‌مارک', 'صورتجلسه‌ی تحویل بنچ‌مارک', 'deliver', 'با احترام، بنچ‌مارک‌های زیر با مختصات رسمی در تاریخ {تاریخ} توسط {پیمانکار} تحویل {دستگاه نظارت} می‌شود.'),
+      mk('کنترل بنچ‌مارک', 'صورتجلسه‌ی کنترل بنچ‌مارک', 'check', 'با احترام، بنچ‌مارک‌های ابلاغی کارفرما در تاریخ {تاریخ} توسط {پیمانکار} کنترل شد و نتیجه به شرح زیر است. خواهشمند است نظر خود را اعلام فرمایید.')];
   }
   function pmDefaults() {
     const base = function (name, title, extra, text, reply) {
@@ -4377,6 +4405,51 @@ select.inp, .inp, .cell { background: var(--card); }
     if (same.length) { out.last = Math.max.apply(null, same.map(function (x) { return x.to; })); if (fin(ft.from) && ft.from > out.last + 1e-6) out.gap = [out.last, ft.from]; }
     return out;
   }
+  /** سربرگ: هر بخش میان «•» که متغیرش خالی باشد حذف می‌شود */
+  function pmHdr(tpl, v, bold) {
+    return String(tpl || '').split('•').map(function (seg) {
+      let empty = false;
+      const t = esc(seg.trim()).replace(/\{([^{}]+)\}/g, function (m, k) { const x = v[k.trim()]; if (x === undefined || x === '') { empty = true; return ''; } return bold ? '<b' + (/^(شماره|تاریخ)$/.test(k.trim()) ? ' class="ltr"' : '') + '>' + esc(x) + '</b>' : esc(x); });
+      return empty || !t.trim() ? '' : t;
+    }).filter(Boolean).join(' • ');
+  }
+  /* ---------- تاریخ شمسی: نمایش و انتخابگر داخلی (ذخیره‌ی داخلی همان میلادی) ---------- */
+  const JF = (function () { try { return new Intl.DateTimeFormat('en-u-ca-persian-nu-latn', { timeZone: 'UTC', year: 'numeric', month: 'numeric', day: 'numeric' }); } catch (e) { return null; } })();
+  const JMON = ['فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور', 'مهر', 'آبان', 'آذر', 'دی', 'بهمن', 'اسفند'];
+  const faDig = function (t) { return String(t).replace(/\d/g, function (d) { return '۰۱۲۳۴۵۶۷۸۹'[d]; }); };
+  function jOf(dt) {
+    if (!JF) return null; const o = {};
+    JF.formatToParts(dt).forEach(function (q) { if (q.type === 'year' || q.type === 'relatedYear') o.y = parseInt(q.value, 10); else if (q.type === 'month') o.m = parseInt(q.value, 10); else if (q.type === 'day') o.d = parseInt(q.value, 10); });
+    return o.y && o.m && o.d ? [o.y, o.m, o.d] : null;
+  }
+  function g2j(iso) { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || ''); return m ? jOf(new Date(Date.UTC(+m[1], +m[2] - 1, +m[3], 12))) : null; }
+  function j2g(jy, jm, jd) {
+    const t0 = Date.UTC(jy + 621, 2, 8, 12);
+    for (let i = 0; i < 400; i++) { const dt = new Date(t0 + i * 86400000), j = jOf(dt); if (j && j[0] === jy && j[1] === jm && j[2] === jd) return dt.toISOString().slice(0, 10); }
+    return '';
+  }
+  function pmDate(iso) { const j = g2j(iso); return j ? faDig(j[0] + '/' + String(j[1]).padStart(2, '0') + '/' + String(j[2]).padStart(2, '0')) : String(iso || ''); }
+  let jdN = 0;
+  /** فیلد تاریخ: ورودی پنهان میلادی (برای کنترل‌کننده‌های موجود) + دکمه‌ی نمایش شمسی */
+  function jdField(attrs, iso) { const id = 'jd' + (++jdN); return '<input type="date" hidden id="' + id + '"' + attrs + ' value="' + esc(iso || '') + '"><button type="button" class="inp jdb" data-act="jdOpen" data-for="' + id + '">' + esc(iso ? pmDate(iso) : 'انتخاب تاریخ') + '</button>'; }
+  function jdPick(inp, btn, cb) {
+    const m = $('#modal'), cur = g2j(inp.value) || g2j(todayIso()) || [1405, 1, 1];
+    let y = cur[0], mo = cur[1], d = cur[2];
+    const dim = function (yy, mm) { return mm <= 6 ? 31 : mm <= 11 ? 30 : (j2g(yy, 12, 30) ? 30 : 29); };
+    const done = function (v) { m.classList.remove('on'); m.innerHTML = ''; m.onclick = null; m.onchange = null; if (v) { inp.value = v; btn.textContent = pmDate(v); inp.dispatchEvent(new Event('change', { bubbles: true })); } if (cb) cb(); };
+    const draw = function () {
+      d = Math.min(d, dim(y, mo));
+      const ys = []; for (let i = y - 12; i <= y + 12; i++) ys.push(i);
+      m.innerHTML = '<div class="box"><h3>انتخاب تاریخ (شمسی)</h3><div class="row"><select class="inp" id="jdY">' + ys.map(function (v) { return '<option value="' + v + '"' + (v === y ? ' selected' : '') + '>' + faDig(v) + '</option>'; }).join('') + '</select>' +
+        '<select class="inp" id="jdM">' + JMON.map(function (n, i) { return '<option value="' + (i + 1) + '"' + (i + 1 === mo ? ' selected' : '') + '>' + n + '</option>'; }).join('') + '</select>' +
+        '<select class="inp" id="jdD">' + Array.from({ length: dim(y, mo) }, function (_, i) { return '<option value="' + (i + 1) + '"' + (i + 1 === d ? ' selected' : '') + '>' + faDig(i + 1) + '</option>'; }).join('') + '</select></div>' +
+        '<div class="acts"><button class="btn" data-v="0">انصراف</button><button class="btn" data-v="t">امروز</button><button class="btn primary" data-v="1">تأیید</button></div></div>';
+    };
+    m.onchange = function (e) { const t = e.target; if (t.id === 'jdY') y = +t.value; else if (t.id === 'jdM') mo = +t.value; else if (t.id === 'jdD') d = +t.value; else return; draw(); };
+    m.onclick = function (e) { const b = e.target.closest('[data-v]'); if (b) { if (b.dataset.v === 'T' || b.dataset.v === 't') { const j = g2j(todayIso()); if (j) { y = j[0]; mo = j[1]; d = j[2]; draw(); } } else done(b.dataset.v === '1' ? j2g(y, mo, d) : ''); } else if (e.target === m) done(''); };
+    draw(); m.classList.add('on');
+  }
+  const PM_H1 = '{پروژه}', PM_H2 = 'خیابان: {خیابان} • مجوز شماره‌ی {شماره}';
   function pmFill(raw, v, mark) {
     return esc(String(raw || '')).replace(/\{([^{}]+)\}/g, function (m, k) {
       k = k.trim(); const val = v[k]; if (val === undefined || val === '') return m;
@@ -4389,12 +4462,12 @@ select.inp, .inp, .cell { background: var(--card); }
     if (f.type === 'street') return cx.s.name;
     if (f.type === 'layer') { const l = cx.ls.find(function (x) { return x.id === v; }); return l ? l.name : ''; }
     if (f.type === 'km') return fin(v) ? pmKm(v) : '';
-    if (f.type === 'date') return v ? pgDate(v) : '';
+    if (f.type === 'date') return v ? pmDate(v) : '';
     if (f.type === 'check') return v ? 'بله' : 'خیر';
     if (f.type === 'list') return v === '__other' ? String(d.other[f.key] || '') : String(v || '');
     return String(v == null ? '' : v);
   }
-  const pmFm = function (form) { return JSON.parse(JSON.stringify({ name: form.name, title: form.title, paper: form.paper, overlap: !!form.overlap, blocks: form.blocks, fields: form.fields, copies: form.copies })); };
+  const pmFm = function (form) { return JSON.parse(JSON.stringify({ name: form.name, title: form.title, h1: form.h1, h2: form.h2, paper: form.paper, overlap: !!form.overlap, blocks: form.blocks, fields: form.fields, copies: form.copies })); };
   const pmSigners = function (fm) { const o = []; (fm.blocks || []).forEach(function (b) { if (b.type === 'sign') (b.signers || []).forEach(function (g) { o.push(g); }); }); return o; };
   function pmSnap(p, x) {
     const c = p.permitCfg || {};
@@ -4404,7 +4477,7 @@ select.inp, .inp, .cell { background: var(--card); }
   }
   const pmCode = function (snap) { return C.controlCode(C.sha256Text(JSON.stringify(snap))); };
   function pmVars2(snap) {
-    const c = snap.cfg || {}, v = { 'پروژه': snap.projName, 'شماره': pmNo(snap.no), 'تاریخ': pgDate(snap.date) };
+    const c = snap.cfg || {}, v = { 'پروژه': snap.projName, 'شماره': pmNo(snap.no), 'تاریخ': pmDate(snap.date), 'خیابان': snap.streetName || '' };
     Object.keys(PM_CFGK).forEach(function (k) { v[k] = c[PM_CFGK[k]] || ''; });
     (c.vars || []).forEach(function (q) { if (q && q.k && PM_SYS.indexOf(q.k) < 0) v[q.k] = String(q.v || ''); });
     Object.keys(snap.disp || {}).forEach(function (k) { v[k] = snap.disp[k]; });
@@ -4431,7 +4504,7 @@ select.inp, .inp, .cell { background: var(--card); }
       if (b.type === 'sign') return '<div class="pmsg" style="--sgc:' + Math.max(1, Math.min(3, b.cols || 2)) + ';--sgh:' + Math.max((b.signers || []).some(function (g) { return g.op; }) ? 20 : 8, Math.min(40, b.h || 16)) + 'mm">' + (b.signers || []).map(function (g) { const nm = (snap.names || {})[g.id]; return '<div><b>' + esc(g.title) + '</b>' + (nm ? '<i class="nm">' + esc(nm) + '</i>' : '') + (g.op ? '<small>اظهار نظر:</small>' : '') + '<em>نام و امضا</em></div>'; }).join('') + '</div>';
       if (b.type === 'table') {
         const rows = ((snap.tables || {})[b.id] || []).filter(function (r) { return r.some(function (c) { return String(c).trim(); }); }), n = Math.max(rows.length, b.minRows || 0), cols = b.cols || [];
-        let h = '<div class="req nz">' + (b.title ? '<h4>' + esc(b.title) + '</h4>' : '') + '<table class="pmtb"><thead><tr><th>#</th>' + cols.map(function (c) { return '<th>' + esc(c.label) + '</th>'; }).join('') + '</tr></thead><tbody>';
+        let h = '<div class="req nz">' + (b.title ? '<h4>' + esc(b.title) + '</h4>' : '') + '<table class="pmtb' + (cols.length > 6 ? ' wide' : '') + '"><thead><tr><th>#</th>' + cols.map(function (c) { return '<th>' + esc(c.label) + '</th>'; }).join('') + '</tr></thead><tbody>';
         for (let i = 0; i < n; i++) h += '<tr><td>' + (i + 1) + '</td>' + cols.map(function (c, j) { return '<td>' + esc((rows[i] || [])[j] || '') + '</td>'; }).join('') + '</tr>';
         return h + '</tbody></table></div>';
       }
@@ -4440,15 +4513,15 @@ select.inp, .inp, .cell { background: var(--card); }
     return cp.map(function (name, i) {
       const dist = cp.map(function (n, j) { return '<span' + (j === i ? ' class="on"' : '') + '>' + esc(n) + '</span>'; }).join('');
       return '<section class="pm-pg' + (a4 ? ' a4' : '') + '"><div class="cover"><div class="l"><div class="brand">RoadStake</div><div class="sub">' + esc(fm.title) + '</div></div>' +
-        '<div class="title">' + esc(snap.projName) + '<small>خیابان: <b>' + esc(snap.streetName || '—') + '</b> • پرمیت شماره‌ی <b class="ltr">' + esc(pmNo(snap.no)) + '</b></small></div>' +
-        '<div class="r"><div>' + esc(pgDate(snap.date)) + '</div><div>کد کنترل</div><div class="ltr"><b>' + esc(code) + '</b></div></div></div>' +
+        '<div class="title">' + (pmHdr(fm.h1 === undefined ? PM_H1 : fm.h1, v, false) || esc(snap.projName)) + '<small>' + pmHdr(fm.h2 === undefined ? PM_H2 : fm.h2, v, true) + '</small></div>' +
+        '<div class="r"><div>' + esc(pmDate(snap.date)) + '</div><div>کد کنترل</div><div class="ltr"><b>' + esc(code) + '</b></div></div></div>' +
         '<div class="copy"><i>نسخه‌ی</i><b>' + esc(name) + '</b></div>' + body +
         '<div class="foot"><div class="dist">توزیع: ' + dist + '</div><div class="fl"><span>RoadStake • کد کنترل: <b class="ltr">' + esc(code) + '</b></span><span>برگ ' + (i + 1) + ' از ' + cp.length + '</span></div></div></section>';
     }).join('');
   }
-  /** پرمیت‌های قدیمی (۳٫۲) */
+  /** مجوزهای قدیمی (۳٫۲) */
   function pmPagesV1(snap, code) {
-    const vv = { 'لایه': snap.layerName || '', 'خیابان': snap.streetName || '', 'از': pmKm(snap.from), 'تا': pmKm(snap.to), 'طول': fin(snap.from) && fin(snap.to) ? fmtN(snap.to - snap.from, 1) + ' m' : '', 'عملیات بعدی': (snap.vals && snap.vals.next) || '', 'نوع تست': (snap.vals && snap.vals.testType) || '', 'تاریخ': pgDate(snap.date), 'شماره': pmNo(snap.no) };
+    const vv = { 'لایه': snap.layerName || '', 'خیابان': snap.streetName || '', 'از': pmKm(snap.from), 'تا': pmKm(snap.to), 'طول': fin(snap.from) && fin(snap.to) ? fmtN(snap.to - snap.from, 1) + ' m' : '', 'عملیات بعدی': (snap.vals && snap.vals.next) || '', 'نوع تست': (snap.vals && snap.vals.testType) || '', 'تاریخ': pmDate(snap.date), 'شماره': pmNo(snap.no) };
     Object.keys((snap.vals && snap.vals.custom) || {}).forEach(function (k) { vv[k] = snap.vals.custom[k]; });
     const fm = { title: snap.title, paper: 'A5', copies: snap.copies, fields: [{ key: 'از', type: 'km', role: 'from' }, { key: 'تا', type: 'km', role: 'to' }], blocks: [] };
     const sg1 = (snap.signers || []).filter(function (g) { return !g.op; }), sg2 = (snap.signers || []).filter(function (g) { return g.op; });
@@ -4462,7 +4535,7 @@ select.inp, .inp, .cell { background: var(--card); }
   function pmPrint(snap, code) {
     const pa = $('#printArea'), oldTitle = document.title;
     pa.className = 'rp permit' + (snap.fm && snap.fm.paper === 'A4' ? ' a4' : ''); pa.innerHTML = pmPages(snap, code);
-    document.title = 'Permite_' + slugFa(snap.streetName || 'form') + '_' + pmNo(snap.no);
+    document.title = 'Mojavez_' + slugFa(snap.streetName || (snap.fm && snap.fm.name) || 'form') + '_' + pmNo(snap.no);
     window.print();
     setTimeout(function () { pa.innerHTML = ''; pa.className = ''; document.title = oldTitle; }, 1000);
   }
@@ -4538,7 +4611,7 @@ select.inp, .inp, .cell { background: var(--card); }
   /* ---------- صفحه‌ها ---------- */
   function permitPage() {
     const p = pmInit(P()), v = S.pm.view;
-    const tabs = [['list', 'بایگانی'], ['new', 'صدور پرمیت'], ['forms', 'فرم‌ها'], ['cfg', 'مشخصات']];
+    const tabs = [['list', 'بایگانی'], ['new', 'صدور مجوز'], ['forms', 'فرم‌ها'], ['cfg', 'مشخصات']];
     let h = '<div class="seg">' + tabs.map(function (t) { return '<button class="btn sm' + (v === t[0] || (v === 'detail' && t[0] === 'list') || (v === 'form' && t[0] === 'forms') ? ' primary' : '') + '" data-act="pmView" data-v="' + t[0] + '">' + t[1] + '</button>'; }).join('') + '</div>';
     if (v === 'new') return h + pmNewView(p);
     if (v === 'forms') return h + pmFormsView(p);
@@ -4552,18 +4625,18 @@ select.inp, .inp, .cell { background: var(--card); }
     const list = p.permits.slice().sort(function (a, b) { return b.no - a.no; }).filter(function (x) {
       return (!f.fForm || x.formId === f.fForm) && (!f.fStreet || x.streetId === f.fStreet) && (!f.fStatus || x.status === f.fStatus) && (!q || (x.streetName + ' ' + x.layerName + ' ' + x.formName + ' ' + pmNo(x.no) + ' ' + Object.keys(x.disp || {}).map(function (k) { return x.disp[k]; }).join(' ') + ' ' + (x.opinions || []).map(function (o) { return o.text; }).join(' ')).indexOf(q) >= 0);
     });
-    let h = '<section class="card"><h3>بایگانی پرمیت‌ها (' + p.permits.length + ')</h3><div class="row">' +
+    let h = '<section class="card"><h3>بایگانی مجوزها (' + p.permits.length + ')</h3><div class="row">' +
       '<select class="inp grow" data-pmf="fForm"><option value="">همه‌ی فرم‌ها</option>' + pmOpt(p.permitForms.map(function (x) { return [x.id, x.name]; }), f.fForm) + '</select>' +
       '<select class="inp grow" data-pmf="fStreet"><option value="">همه‌ی خیابان‌ها</option>' + pmOpt(p.streets.map(function (x) { return [x.id, x.name]; }), f.fStreet) + '</select></div>' +
       '<div class="row" style="margin-top:6px"><select class="inp grow" data-pmf="fStatus"><option value="">همه‌ی وضعیت‌ها</option>' + pmOpt(Object.keys(PM_ST).map(function (k) { return [k, PM_ST[k][0]]; }), f.fStatus) + '</select>' +
       '<input class="inp grow" data-pmf="q" placeholder="جست‌وجو در نام و اظهار نظر" value="' + esc(f.q) + '"></div></section>';
-    if (!list.length) return h + '<p class="muted">پرمیتی نیست. از «صدور پرمیت» بسازید.</p>';
+    if (!list.length) return h + '<p class="muted">مجوزی نیست. از «صدور مجوز» بسازید.</p>';
     list.forEach(function (x) {
       const st = PM_ST[x.status] || PM_ST.wait;
       h += '<section class="card pm-it" data-act="pmOpen" data-id="' + esc(x.id) + '" role="button" tabindex="0"><div class="row" style="justify-content:space-between"><b class="num">' + esc(pmNo(x.no)) + '</b><span class="pm-st ' + st[1] + '">' + st[0] + '</span></div>' +
         '<div class="small">' + esc(x.formName) + (x.streetName ? ' • ' + esc(x.streetName) : '') + (x.layerName ? ' • ' + esc(x.layerName) : '') + '</div>' +
         (fin(x.from) ? '<div class="small num" dir="ltr">' + esc(pmKm(x.from)) + (x.to > x.from ? ' → ' + esc(pmKm(x.to)) : '') + '</div>' : '') +
-        '<div class="muted small">' + esc(pgDate(x.date)) + ((x.versions || []).length ? ' • ' + x.versions.length + ' نسخه‌ی چاپی' : '') + ((x.photos || []).length ? ' • ' + x.photos.length + ' عکس' : '') + '</div></section>';
+        '<div class="muted small">' + esc(pmDate(x.date)) + ((x.versions || []).length ? ' • ' + x.versions.length + ' نسخه‌ی چاپی' : '') + ((x.photos || []).length ? ' • ' + x.photos.length + ' عکس' : '') + '</div></section>';
     });
     return h;
   }
@@ -4582,16 +4655,16 @@ select.inp, .inp, .cell { background: var(--card); }
         (v === '__other' ? '<label class="field"><span>' + esc(f.key) + ' (متن دلخواه)</span><input class="inp" data-pno="' + esc(f.key) + '" value="' + esc(d.other[f.key] || '') + '"></label>' : '');
     }
     if (f.type === 'check') return '<label class="chk"><input type="checkbox"' + a + (v ? ' checked' : '') + '> ' + esc(f.key) + '</label>';
-    if (f.type === 'date') return '<label class="field">' + lbl + '<input class="inp ltr" type="date" dir="ltr"' + a + ' value="' + esc(v || '') + '"></label>';
+    if (f.type === 'date') return '<label class="field">' + lbl + jdField(a, v) + '</label>';
     return '<label class="field">' + lbl + '<input class="inp"' + a + (f.type === 'num' ? ' inputmode="decimal"' : '') + ' value="' + esc(v == null ? '' : v) + '"></label>';
   }
   function pmNewView(p) {
     if (!S.pn || !pmForm(p, S.pn.formId)) S.pn = pmDraft(p, p.permitForms[0]);
     const d = S.pn, form = d.editForm || pmForm(p, d.formId), cx = pmCtx(p, form, d);
-    let h = '<section class="card"><h3>' + (d.editId ? 'ویرایش پرمیت ' + esc(pmNo((p.permits.find(function (x) { return x.id === d.editId; }) || {}).no)) : 'صدور پرمیت جدید') + '</h3>' +
+    let h = '<section class="card"><h3>' + (d.editId ? 'ویرایش مجوز ' + esc(pmNo((p.permits.find(function (x) { return x.id === d.editId; }) || {}).no)) : 'صدور مجوز جدید') + '</h3>' +
       '<label class="field"><span>فرم</span><select class="inp" data-pnform="1"' + (d.editId ? ' disabled' : '') + '>' + pmOpt(p.permitForms.map(function (x) { return [x.id, x.name]; }), d.formId) + '</select></label>' +
       form.fields.map(function (f) { return pmFieldHtml(p, form, d, f, cx); }).join('') +
-      '<label class="field"><span>تاریخ پرمیت</span><input class="inp ltr" type="date" dir="ltr" data-pnd="1" value="' + esc(d.date) + '"></label>';
+      '<label class="field"><span>تاریخ مجوز</span>' + jdField(' data-pnd="1"', d.date) + '</label>';
     form.blocks.filter(function (b) { return b.type === 'table'; }).forEach(function (b) {
       const rows = d.tables[b.id] || (d.tables[b.id] = []); while (rows.length < Math.max(1, b.minRows || 0)) rows.push([]);
       h += '<div class="pm-tb"><b>' + esc(b.title || 'جدول') + '</b>' + rows.map(function (r, i) { return '<div class="row">' + (b.cols || []).map(function (c, j) { return '<input class="inp grow" placeholder="' + esc(c.label) + '" data-pnt="' + esc(b.id) + '.' + i + '.' + j + '" value="' + esc(r[j] || '') + '">'; }).join('') + '<button class="btn sm danger" data-act="pmTDel" data-b="' + esc(b.id) + '" data-i="' + i + '">×</button></div>'; }).join('') + '<button class="btn sm" data-act="pmTAdd" data-b="' + esc(b.id) + '">افزودن ردیف</button></div>';
@@ -4601,10 +4674,10 @@ select.inp, .inp, .cell { background: var(--card); }
       h += '<div class="pm-tb"><b>' + esc(b.title || (chk ? 'بنچ‌مارک‌های مورد بررسی' : 'بنچ‌مارک‌های تحویلی')) + '</b>';
       if (sel === undefined && exist.length) h += '<p class="muted small">' + exist.length + ' ردیف ثبت شده است. برای تغییر، انتخاب را دوباره انجام دهید.</p><button class="btn sm" data-act="pmBmsReset" data-b="' + esc(b.id) + '">انتخاب مجدد</button>';
       else {
-        const all = !!S.bmsAll, list = p.benchmarks.filter(function (bm) { return all || (chk ? !!bm.chk : bmHasXY(bm)); }), cur = sel || [];
-        h += '<p class="muted small">' + (chk ? 'فقط بنچ‌مارک‌هایی که «کنترل» شده‌اند.' : 'فقط بنچ‌مارک‌های دارای X و Y.') + '</p>' + (list.length ? list.map(function (bm) {
-          return '<label class="chk"><input type="checkbox" data-bmsel="' + esc(b.id) + '|' + esc(bm.id) + '"' + (cur.indexOf(bm.id) >= 0 ? ' checked' : '') + '> <b>' + esc(bm.name || 'بدون نام') + '</b> <span class="muted small num">Z=' + esc(fx(C.toNumber(bm.z))) + (chk && bm.chk ? ' • اندازه‌گیری ' + esc(fx(C.toNumber(bm.chk.z))) : '') + '</span></label>';
-        }).join('') : '<div class="msg warn small">' + (chk ? 'هنوز بنچ‌مارکی کنترل نشده؛ در تب بنچ‌مارک «کنترل بنچ‌مارک» را بزنید.' : 'بنچ‌مارکی با X و Y نیست.') + '</div>') +
+        const all = !!S.bmsAll, list = p.benchmarks.filter(function (bm) { return all || (chk ? !!ctlLast(bm) : bmHasXY(bm)); }), cur = sel || [];
+        h += '<p class="muted small">' + (chk ? 'فقط بنچ‌مارک‌هایی که کنترل کامل (X، Y، Z) دارند.' : 'فقط بنچ‌مارک‌های دارای X و Y.') + '</p>' + (list.length ? list.map(function (bm) {
+          return '<label class="chk"><input type="checkbox" data-bmsel="' + esc(b.id) + '|' + esc(bm.id) + '"' + (cur.indexOf(bm.id) >= 0 ? ' checked' : '') + '> <b>' + esc(bm.name || 'بدون نام') + '</b> <span class="muted small num">Z=' + esc(fx(C.toNumber(bm.z))) + (chk && ctlLast(bm) ? ' • کنترل ' + esc(pmDate(ctlLast(bm).date)) : '') + '</span></label>';
+        }).join('') : '<div class="msg warn small">' + (chk ? 'هنوز بنچ‌مارکی کنترل نشده؛ در تب بنچ‌مارک دکمه‌ی «کنترل» کنار بنچ‌مارک کارفرما را بزنید.' : 'بنچ‌مارکی با X و Y نیست.') + '</div>') +
           '<div class="row"><button class="btn sm" data-act="pmBmsAll">' + (all ? 'فقط واجد شرایط' : 'نمایش همه‌ی بنچ‌مارک‌ها') + '</button></div>';
       }
       h += '</div>';
@@ -4613,8 +4686,8 @@ select.inp, .inp, .cell { background: var(--card); }
     if (sg.length) h += '<h4 style="margin:10px 0 4px">نام امضاکنندگان (اختیاری؛ زیر عنوان چاپ می‌شود)</h4>' + sg.map(function (g) { return '<label class="field"><span>' + esc(g.title) + '</span><input class="inp" data-pnn="' + esc(g.id) + '" value="' + esc(d.names[g.id] || '') + '"></label>'; }).join('');
     const chk = pmCheck(p, form, d, cx);
     chk.over.forEach(function (x) { h += '<div class="msg warn">این بخش قبلاً در <b>' + esc(pmNo(x.no)) + '</b> (' + esc(pmKm(x.from)) + ' تا ' + esc(pmKm(x.to)) + ') ثبت شده است.</div>'; });
-    if (chk.gap) h += '<div class="msg warn">یادآوری: بازه‌ی ' + esc(pmKm(chk.gap[0])) + ' تا ' + esc(pmKm(chk.gap[1])) + ' هنوز پرمیت ندارد.</div>';
-    if (fin(chk.last) && !chk.over.length && !chk.gap) h += '<p class="muted small">آخرین پرمیت فعال این لایه تا ' + esc(pmKm(chk.last)) + ' ثبت شده است.</p>';
+    if (chk.gap) h += '<div class="msg warn">یادآوری: بازه‌ی ' + esc(pmKm(chk.gap[0])) + ' تا ' + esc(pmKm(chk.gap[1])) + ' هنوز مجوز ندارد.</div>';
+    if (fin(chk.last) && !chk.over.length && !chk.gap) h += '<p class="muted small">آخرین مجوز فعال این لایه تا ' + esc(pmKm(chk.last)) + ' ثبت شده است.</p>';
     h += '<div class="row" style="margin-top:8px"><button class="btn primary grow" data-act="pmSave">' + (d.editId ? 'ثبت ویرایش' : 'ثبت و پیش‌نمایش چاپ') + '</button>' + (d.editId ? '<button class="btn" data-act="pmCancel">انصراف</button>' : '') + '</div></section>';
     return h;
   }
@@ -4625,8 +4698,8 @@ select.inp, .inp, .cell { background: var(--card); }
     let h = '<section class="card"><div class="row" style="justify-content:space-between"><h3>' + esc(pmNo(x.no)) + ' • ' + esc(x.formName) + '</h3><span class="pm-st ' + st[1] + '">' + st[0] + '</span></div><div class="kv">' +
       (x.fm ? Object.keys(x.disp || {}).filter(function (k) { return x.disp[k] !== ''; }).map(function (k) { return '<b>' + esc(k) + '</b><span>' + esc(x.disp[k]) + '</span>'; }).join('') :
         '<b>خیابان</b><span>' + esc(x.streetName) + '</span><b>لایه</b><span>' + esc(x.layerName || '—') + '</span><b>کیلومتر</b><span class="num" dir="ltr">' + (fin(x.from) ? esc(pmKm(x.from)) + (x.to > x.from ? ' → ' + esc(pmKm(x.to)) : '') : '—') + '</span>') +
-      '<b>تاریخ</b><span>' + esc(pgDate(x.date)) + '</span></div>' + (dead ? '<div class="msg warn">حذف‌شده — علت: ' + esc(x.delReason || '') + '</div>' : '') +
-      (dead ? '<div class="row"><button class="btn danger grow" data-act="pmPurge" data-id="' + esc(x.id) + '">حذف دائمی</button></div>' : '') + '<div class="row"><button class="btn primary grow" data-act="pmPrintNow" data-id="' + esc(x.id) + '"' + (dead ? ' disabled' : '') + '>چاپ</button><button class="btn" data-act="pmEdit" data-id="' + esc(x.id) + '"' + (dead || !x.fm ? ' disabled' : '') + '>ویرایش</button><button class="btn danger" data-act="pmDel" data-id="' + esc(x.id) + '"' + (dead ? ' disabled' : '') + '>حذف</button></div>' + (!x.fm ? '<p class="muted small">این پرمیت با نسخه‌ی قدیمی ساخته شده و ویرایش مقادیرش ممکن نیست.</p>' : '') + '</section>';
+      '<b>تاریخ</b><span>' + esc(pmDate(x.date)) + '</span></div>' + (dead ? '<div class="msg warn">حذف‌شده — علت: ' + esc(x.delReason || '') + '</div>' : '') +
+      (dead ? '<div class="row"><button class="btn danger grow" data-act="pmPurge" data-id="' + esc(x.id) + '">حذف دائمی</button></div>' : '') + '<div class="row"><button class="btn primary grow" data-act="pmPrintNow" data-id="' + esc(x.id) + '"' + (dead ? ' disabled' : '') + '>چاپ</button><button class="btn" data-act="pmEdit" data-id="' + esc(x.id) + '"' + (dead || !x.fm ? ' disabled' : '') + '>ویرایش</button><button class="btn danger" data-act="pmDel" data-id="' + esc(x.id) + '"' + (dead ? ' disabled' : '') + '>حذف</button></div>' + (!x.fm ? '<p class="muted small">این مجوز با نسخه‌ی قدیمی ساخته شده و ویرایش مقادیرش ممکن نیست.</p>' : '') + '</section>';
     h += '<section class="card"><h3>وضعیت و اظهار نظر</h3><label class="field"><span>وضعیت</span><select class="inp" data-pms="' + esc(x.id) + '"' + (dead ? ' disabled' : '') + '>' + pmOpt(['wait', 'ok', 'rej'].map(function (k) { return [k, PM_ST[k][0]]; }), x.status) + '</select></label>';
     signers.filter(function (g) { return g.op; }).forEach(function (g, i) {
       const o = (x.opinions || []).find(function (q) { return q.who === g.title; }) || { res: 'ok', text: '', date: '' }, nm = x.fm && x.names ? x.names[g.id] : '';
@@ -4639,18 +4712,54 @@ select.inp, .inp, .cell { background: var(--card); }
     h += '<section class="card"><h3>تاریخچه</h3>' + (x.history || []).slice().reverse().map(function (e) { return '<div class="small" style="margin:4px 0"><span class="muted">' + esc(new Date(e.at).toLocaleString('fa-IR')) + '</span> — ' + esc(e.ev) + (e.reason ? ' <span class="muted">(علت: ' + esc(e.reason) + ')</span>' : '') + '</div>'; }).join('') + '</section>';
     return h;
   }
-  function pmFormsView(p) {
-    return '<section class="card"><h3>فرم‌های پرمیت</h3><p class="muted small">فقط سربرگ ثابت است؛ بقیه‌ی برگه از بلوک‌ها و فیلدهایی ساخته می‌شود که خودتان تعریف می‌کنید. پرمیت‌های صادرشده متن زمان صدور را نگه می‌دارند.</p>' +
-      p.permitForms.map(function (f) { return '<div class="row" style="justify-content:space-between;margin:6px 0"><b>' + esc(f.name) + '</b><span><button class="btn sm" data-act="pmFEdit" data-id="' + esc(f.id) + '">ویرایش</button> <button class="btn sm" data-act="pmFDup" data-id="' + esc(f.id) + '">کپی</button> <button class="btn sm danger" data-act="pmFDel" data-id="' + esc(f.id) + '">حذف</button></span></div>'; }).join('') +
-      '<div class="row"><button class="btn primary" data-act="pmFNew">فرم خالی جدید</button><button class="btn" data-act="pmFSeed">افزودن فرم‌های صورتجلسه‌ی بنچ‌مارک</button></div></section>';
+  /** بارگذاری فرم از فایل: انتخاب فرم‌ها و تعیین تکلیف هم‌نام‌ها */
+  async function pmLoadForms(text) {
+    let r; try { r = IO.parseFormPack(text); } catch (e) { toast(e.message, 'err'); return; }
+    const p = pmInit(P()), m = $('#modal');
+    const pick = await new Promise(function (resolve) {
+      m.innerHTML = '<div class="box"><h3>بارگذاری فرم' + (r.publisher ? ' (' + esc(r.publisher) + ')' : '') + '</h3><p class="muted small">فرم‌هایی که می‌خواهید اضافه شوند را تیک بزنید.</p>' +
+        r.forms.map(function (f, i) { return '<label class="chk"><input type="checkbox" data-pk="' + i + '" checked> <b>' + esc(f.name) + '</b> <span class="muted small">' + esc(f.paper) + ' • ' + f.fields.length + ' فیلد • ' + f.blocks.length + ' بلوک' + (p.permitForms.some(function (x) { return x.name === f.name; }) ? ' • هم‌نام دارد' : '') + '</span></label>'; }).join('') +
+        (r.dropped || r.skipped ? '<div class="msg warn small">بخشی از فایل نامعتبر یا ناشناخته بود و نادیده گرفته شد.</div>' : '') +
+        '<div class="acts"><button class="btn" data-v="0">انصراف</button><button class="btn primary" data-v="1">افزودن</button></div></div>';
+      m.classList.add('on');
+      const done = function (v) { m.classList.remove('on'); m.innerHTML = ''; m.onclick = null; resolve(v); };
+      m.onclick = function (e) { const b = e.target.closest('[data-v]'); if (b) done(b.dataset.v === '1' ? [].slice.call(m.querySelectorAll('[data-pk]')).filter(function (c) { return c.checked; }).map(function (c) { return +c.dataset.pk; }) : null); else if (e.target === m) done(null); };
+    });
+    if (!pick || !pick.length) return;
+    let n = 0;
+    for (let k = 0; k < pick.length; k++) {
+      const f = r.forms[pick[k]]; f.id = pmId('pf');
+      const ex = p.permitForms.find(function (x) { return x.name === f.name; });
+      if (ex) {
+        const ch = await new Promise(function (resolve) {
+          m.innerHTML = '<div class="box"><h3>فرم هم‌نام</h3><p>فرمی با نام «' + esc(f.name) + '» هست. چه شود؟</p><div class="acts"><button class="btn" data-v="0">رد کردن</button><button class="btn" data-v="n">اضافه با نام جدید</button><button class="btn danger" data-v="r">جایگزین شود</button></div></div>';
+          m.classList.add('on');
+          m.onclick = function (e) { const b = e.target.closest('[data-v]'); if (b) { m.classList.remove('on'); m.innerHTML = ''; m.onclick = null; resolve(b.dataset.v); } };
+        });
+        if (ch === '0') continue;
+        if (ch === 'r') { ex.v = f.v; Object.keys(ex).forEach(function (key) { delete ex[key]; }); Object.assign(ex, f, { id: ex.id }); n++; continue; }
+        let t = 2; while (p.permitForms.some(function (x) { return x.name === f.name + ' (' + t + ')'; })) t++; f.name += ' (' + t + ')';
+      }
+      p.permitForms.push(f); n++;
+    }
+    markDirty(); render(); toast(n ? n + ' فرم افزوده شد.' : 'فرمی افزوده نشد.');
   }
-  const pmVarList = function (f) { return f.fields.map(function (x) { return x.key; }).concat(((P().permitCfg || {}).vars || []).map(function (q) { return q.k; })).concat(['طول', 'شماره', 'تاریخ', 'پروژه', 'دستگاه نظارت', 'پیمانکار', 'کد پروژه', 'شماره قرارداد', 'تاریخ قرارداد', 'منطقه', 'محل اجرا']).filter(function (k, i, a) { return k && a.indexOf(k) === i; }); };
+  function pmFormsView(p) {
+    return '<section class="card"><h3>فرم‌های مجوز</h3><p class="muted small">فقط سربرگ ثابت است؛ بقیه‌ی برگه از بلوک‌ها و فیلدهایی ساخته می‌شود که خودتان تعریف می‌کنید. مجوزهای صادرشده متن زمان صدور را نگه می‌دارند.</p>' +
+      p.permitForms.map(function (f) { return '<div class="row" style="justify-content:space-between;margin:6px 0"><b>' + esc(f.name) + '</b><span><button class="btn sm" data-act="pmFEdit" data-id="' + esc(f.id) + '">ویرایش</button> <button class="btn sm" data-act="pmFDup" data-id="' + esc(f.id) + '">کپی</button> <button class="btn sm danger" data-act="pmFDel" data-id="' + esc(f.id) + '">حذف</button></span></div>'; }).join('') +
+      '<div class="row"><button class="btn primary" data-act="pmFNew">فرم خالی جدید</button><button class="btn" data-act="pmFLoad">بارگذاری فرم از فایل</button></div><input type="file" id="pmFFile" accept=".json,.rsform,application/json" hidden></section>';
+  }
+  const pmVarList = function (f) { return f.fields.map(function (x) { return x.key; }).concat(((P().permitCfg || {}).vars || []).map(function (q) { return q.k; })).concat(['طول', 'شماره', 'تاریخ', 'پروژه', 'خیابان', 'دستگاه نظارت', 'پیمانکار', 'کد پروژه', 'شماره قرارداد', 'تاریخ قرارداد', 'منطقه', 'محل اجرا']).filter(function (k, i, a) { return k && a.indexOf(k) === i; }); };
   function pmFormEdit(p) {
     const f = S.pf; if (!f) { S.pm.view = 'forms'; return pmFormsView(p); }
     const kmKeys = f.fields.filter(function (x) { return x.type === 'km'; }).map(function (x) { return x.key; });
     const iq = function (attr, val, l, cls) { return '<label class="field"><span>' + l + '</span><input class="inp ' + (cls || '') + '" ' + attr + ' value="' + esc(val) + '"></label>'; };
     let h = '<section class="card"><h3>تعریف فرم</h3><p class="muted small">سربرگ (نام اپ، عنوان فرم، پروژه، خیابان، شماره، تاریخ و کد کنترل) ثابت است.</p>' +
       iq('data-pfm="name"', f.name, 'نام فرم') + iq('data-pfm="title"', f.title, 'عنوان چاپی (در سربرگ)') +
+      '<h4 style="margin:8px 0 2px">متن وسط سربرگ</h4><p class="muted small">چیدمان و رنگ سربرگ ثابت است؛ فقط متن دو خط وسط را تعیین می‌کنید. هر بخش بین «•» که متغیرش خالی باشد چاپ نمی‌شود. حداکثر حدود ۶۰ نویسه برای هر خط.</p>' +
+      iq('data-pfm="h1" id="pfh1"', f.h1 === undefined ? PM_H1 : f.h1, 'خط اول') + '<div class="pm-chips">' + pmVarList(f).map(function (k) { return '<button class="btn sm" data-act="pmHVar" data-w="h1" data-k="' + esc(k) + '">{' + esc(k) + '}</button>'; }).join('') + '</div>' +
+      iq('data-pfm="h2" id="pfh2"', f.h2 === undefined ? PM_H2 : f.h2, 'خط دوم') + '<div class="pm-chips">' + pmVarList(f).map(function (k) { return '<button class="btn sm" data-act="pmHVar" data-w="h2" data-k="' + esc(k) + '">{' + esc(k) + '}</button>'; }).join('') + '</div>' +
+      ((f.h1 === undefined ? PM_H1 : f.h1).length > 60 || (f.h2 === undefined ? PM_H2 : f.h2).length > 60 ? '<div class="msg warn small">متن سربرگ بلند است و ممکن است در چاپ بریده شود.</div>' : '') +
       '<label class="field"><span>اندازه‌ی کاغذ</span><select class="inp" data-pfm="paper">' + pmOpt(['A5', 'A4'], f.paper) + '</select></label>' +
       '<label class="chk"><input type="checkbox" data-pfmk="overlap"' + (f.overlap ? ' checked' : '') + '> جلوگیری از بازه‌ی تکراری (فقط وقتی فیلد کیلومتر از/تا دارد)</label></section>';
     h += '<section class="card"><h3>فیلدها (' + f.fields.length + ')</h3>' + f.fields.map(function (x, i) {
@@ -4671,7 +4780,7 @@ select.inp, .inp, .cell { background: var(--card); }
       else if (b.type === 'km') body = '<label class="field"><span>از (فیلد کیلومتر)</span><select class="inp" data-pfb="' + i + '.from">' + pmOpt(kmKeys, b.from) + '</select></label><label class="field"><span>تا (اختیاری)</span><select class="inp" data-pfb="' + i + '.to"><option value="">—</option>' + pmOpt(kmKeys, b.to) + '</select></label><label class="chk"><input type="checkbox" data-pfbk="' + i + '.len"' + (b.len ? ' checked' : '') + '> نمایش طول بازه</label>';
       else if (b.type === 'sign') body = (b.signers || []).map(function (g, j) { return '<div class="row"><input class="inp grow" data-pfbs="' + i + '.' + j + '" value="' + esc(g.title) + '" placeholder="عنوان امضاکننده"><label class="chk"><input type="checkbox" data-pfbso="' + i + '.' + j + '"' + (g.op ? ' checked' : '') + '> نظر دارد</label><button class="btn sm danger" data-act="pmBSDel" data-i="' + i + '" data-j="' + j + '">×</button></div>'; }).join('') + '<button class="btn sm" data-act="pmBSAdd" data-i="' + i + '">افزودن امضاکننده</button>' +
         '<div class="row"><label class="field grow"><span>ارتفاع کادر (mm، ۸ تا ۴۰)</span><input class="inp ltr" dir="ltr" inputmode="numeric" data-pfb="' + i + '.h" value="' + esc(b.h || 16) + '"></label><label class="field"><span>ستون‌ها</span><select class="inp" data-pfb="' + i + '.cols">' + pmOpt([['1', '۱'], ['2', '۲'], ['3', '۳']], String(b.cols || 2)) + '</select></label></div>';
-      else if (b.type === 'bms') body = iq('data-pfb="' + i + '.title"', b.title || '', 'عنوان جدول (اختیاری)') + '<label class="field"><span>نوع صورتجلسه</span><select class="inp" data-pfb="' + i + '.mode">' + pmOpt([['deliver', 'تحویل بنچ‌مارک (نام، X، Y، Z، توضیح)'], ['check', 'بررسی بنچ‌مارک کارفرما (Z کارفرما، Z اندازه‌گیری، اختلاف، وضعیت، پاسخ)']], b.mode || 'deliver') + '</select></label>' + (b.mode === 'check' ? iq('data-pfb="' + i + '.tol"', b.tol == null ? 3 : b.tol, 'حد مجاز اختلاف (mm)', 'ltr') : '') + '<p class="muted small">ستون «نام بنچ‌مارک» همیشه هست. بنچ‌مارک‌ها هنگام صدور پرمیت انتخاب می‌شوند و مقدارشان همان لحظه ثبت می‌شود.</p>';
+      else if (b.type === 'bms') body = iq('data-pfb="' + i + '.title"', b.title || '', 'عنوان جدول (اختیاری)') + '<label class="field"><span>نوع صورتجلسه</span><select class="inp" data-pfb="' + i + '.mode">' + pmOpt([['deliver', 'تحویل بنچ‌مارک (نام، X، Y، Z، توضیح)'], ['check', 'کنترل بنچ‌مارک کارفرما (Z کارفرما، Z اندازه‌گیری، ΔZ، ΔX، ΔY، وضعیت، پاسخ)']], b.mode || 'deliver') + '</select></label>' + (b.mode === 'check' ? '<label class="chk"><input type="checkbox" data-pfbk="' + i + '.dxy"' + (b.dxy !== false ? ' checked' : '') + '> ستون‌های ΔX و ΔY</label>' : '') + '<p class="muted small">ستون «نام بنچ‌مارک» همیشه هست. بنچ‌مارک‌ها هنگام صدور مجوز انتخاب می‌شوند و مقدارشان همان لحظه ثبت می‌شود.</p>';
       else if (b.type === 'table') body = iq('data-pfb="' + i + '.title"', b.title || '', 'عنوان جدول') + (b.cols || []).map(function (c, j) { return '<div class="row"><input class="inp grow" data-pfbcl="' + i + '.' + j + '" value="' + esc(c.label) + '" placeholder="عنوان ستون"><button class="btn sm danger" data-act="pmBCDel" data-i="' + i + '" data-j="' + j + '">×</button></div>'; }).join('') + '<button class="btn sm" data-act="pmBCAdd" data-i="' + i + '">افزودن ستون</button>' + iq('data-pfb="' + i + '.minRows" inputmode="numeric"', b.minRows || 0, 'حداقل ردیف چاپی', 'ltr');
       return '<div class="pm-fc"><b>' + (i + 1) + '. ' + esc(nm) + '</b>' + body + '<div class="row"><button class="btn sm" data-act="pmBUp" data-i="' + i + '">▲</button><button class="btn sm" data-act="pmBDn" data-i="' + i + '">▼</button><button class="btn sm" data-act="pmBDup" data-i="' + i + '">کپی</button><button class="btn sm danger" data-act="pmBDel" data-i="' + i + '">حذف بلوک</button></div></div>';
     }).join('') + '<div class="row"><select class="inp grow" id="pfNewB">' + pmOpt(PM_BT, 'text') + '</select><button class="btn" data-act="pmBAdd">افزودن بلوک</button></div></section>';
@@ -4681,9 +4790,9 @@ select.inp, .inp, .cell { background: var(--card); }
   }
   function pmCfgView(p) {
     const c = p.permitCfg, f = function (k, l) { return '<label class="field"><span>' + l + '</span><input class="inp" data-pmc="' + k + '" value="' + esc(c[k] || '') + '"></label>'; };
-    return '<section class="card"><h3>مشخصات ثابت پروژه برای پرمیت</h3><p class="muted small">این مقدارها در فرم‌ها به‌صورت متغیر ({دستگاه نظارت} و مانند آن) و در کارت مشخصات می‌آیند. خالی‌ها چاپ نمی‌شوند.</p>' + f('supervisor', 'دستگاه نظارت') + f('contractor', 'پیمانکار') + f('projCode', 'کد پروژه') + f('contractNo', 'شماره‌ی قرارداد') + f('contractDate', 'تاریخ قرارداد') + f('region', 'منطقه') + f('site', 'محل اجرا') +
-      '<h4 style="margin:12px 0 4px">متغیرهای دلخواه پروژه (مثل کارفرما، مشاور)</h4><p class="muted small">هر متغیر را در متن بلوک‌ها با {نام} صدا بزنید. پرمیت صادرشده مقدار زمان صدور را نگه می‌دارد.</p>' + (c.vars || []).map(function (q, i) { return '<div class="row"><input class="inp" data-pmv="' + i + '.k" value="' + esc(q.k) + '" placeholder="نام متغیر"><input class="inp grow" data-pmv="' + i + '.v" value="' + esc(q.v) + '" placeholder="مقدار"><button class="btn sm danger" data-act="pmVDel" data-i="' + i + '">×</button></div>'; }).join('') + '<div class="row"><button class="btn sm" data-act="pmVAdd">افزودن متغیر</button><button class="btn sm" data-act="pmVSeed">افزودن کارفرما، مشاور</button></div>' +
-      '<label class="field"><span>آخرین شماره‌ی پرمیت صادرشده (شماره‌ی بعدی یکی بیشتر)</span><input class="inp ltr" dir="ltr" data-pmc="counter" inputmode="numeric" value="' + esc(c.counter || 0) + '"></label></section>';
+    return '<section class="card"><h3>مشخصات ثابت پروژه برای مجوز</h3><p class="muted small">این مقدارها در فرم‌ها به‌صورت متغیر ({دستگاه نظارت} و مانند آن) و در کارت مشخصات می‌آیند. خالی‌ها چاپ نمی‌شوند.</p>' + f('supervisor', 'دستگاه نظارت') + f('contractor', 'پیمانکار') + f('projCode', 'کد پروژه') + f('contractNo', 'شماره‌ی قرارداد') + f('contractDate', 'تاریخ قرارداد') + f('region', 'منطقه') + f('site', 'محل اجرا') +
+      '<h4 style="margin:12px 0 4px">متغیرهای دلخواه پروژه (مثل کارفرما، مشاور)</h4><p class="muted small">هر متغیر را در متن بلوک‌ها با {نام} صدا بزنید. مجوز صادرشده مقدار زمان صدور را نگه می‌دارد.</p>' + (c.vars || []).map(function (q, i) { return '<div class="row"><input class="inp" data-pmv="' + i + '.k" value="' + esc(q.k) + '" placeholder="نام متغیر"><input class="inp grow" data-pmv="' + i + '.v" value="' + esc(q.v) + '" placeholder="مقدار"><button class="btn sm danger" data-act="pmVDel" data-i="' + i + '">×</button></div>'; }).join('') + '<div class="row"><button class="btn sm" data-act="pmVAdd">افزودن متغیر</button><button class="btn sm" data-act="pmVSeed">افزودن کارفرما، مشاور</button></div>' +
+      '<label class="field"><span>آخرین شماره‌ی مجوز صادرشده (شماره‌ی بعدی یکی بیشتر)</span><input class="inp ltr" dir="ltr" data-pmc="counter" inputmode="numeric" value="' + esc(c.counter || 0) + '"></label></section>';
   }
   /** تغییر نام یک فیلد (یا حذف آن با نام تهی) در همه‌ی متن‌ها و بلوک‌های فرم */
   function pmRenameKey(f, oldK, newK) {
@@ -4717,10 +4826,10 @@ select.inp, .inp, .cell { background: var(--card); }
     f.fields.forEach(function (x) {
       let v = 'نمونه', dsp = 'نمونه';
       if (x.type === 'street') { v = 's'; dsp = 'نام خیابان'; } else if (x.type === 'layer') { v = 'l'; dsp = 'نام لایه'; } else if (x.type === 'km') { v = x.role === 'to' ? 310 : 210; dsp = pmKm(v); }
-      else if (x.type === 'list') { v = x.opts[0] || 'گزینه'; dsp = v; } else if (x.type === 'date') { v = todayIso(); dsp = pgDate(v); } else if (x.type === 'check') { v = true; dsp = 'بله'; } else if (x.type === 'num') { v = '12'; dsp = '12'; }
+      else if (x.type === 'list') { v = x.opts[0] || 'گزینه'; dsp = v; } else if (x.type === 'date') { v = todayIso(); dsp = pmDate(v); } else if (x.type === 'check') { v = true; dsp = 'بله'; } else if (x.type === 'num') { v = '12'; dsp = '12'; }
       vals[x.key] = v; disp[x.key] = dsp;
     });
-    f.blocks.forEach(function (b) { if (b.type === 'table') tables[b.id] = [(b.cols || []).map(function () { return 'نمونه'; })]; else if (b.type === 'bms') tables[b.id] = [(BMS_COLS[b.mode] || BMS_COLS.deliver).map(function (l, i) { return i === 0 ? 'BM-01' : (b.mode === 'check' && i === 5 ? '' : '1200.000'); })]; });
+    f.blocks.forEach(function (b) { if (b.type === 'table') tables[b.id] = [(b.cols || []).map(function () { return 'نمونه'; })]; else if (b.type === 'bms') tables[b.id] = [(bmsCols(b)).map(function (l, i, a) { return i === 0 ? 'BM-01' : (b.mode === 'check' && i === a.length - 1 ? '' : '1200.000'); })]; });
     const c = pmInit(p).permitCfg;
     return { v: 2, no: 1, projName: p.name, cfg: Object.assign({ supervisor: c.supervisor || 'دستگاه نظارت', contractor: c.contractor || 'پیمانکار', site: c.site, region: c.region, contractNo: c.contractNo, contractDate: c.contractDate, projCode: c.projCode }, c.vars && c.vars.length ? { vars: c.vars.map(function (q) { return { k: q.k, v: q.v }; }) } : {}), fm: JSON.parse(JSON.stringify(Object.assign({}, f, { name: f.name }))), vals: vals, disp: disp, tables: tables, names: {}, date: todayIso(), streetName: 'نام خیابان' };
   }
@@ -6186,7 +6295,7 @@ select.inp, .inp, .cell { background: var(--card); }
     }
     return { id: '_', name: 'نیوو', bmId: p.newoBm || '', bs: p.newoBs || '', from: null, to: null };
   }
-  S.nw = { fs: '', name: '', use: false }; S.ck = { bm: '', fs: '' };
+  S.nw = { fs: '', name: '', use: false };
   function nwDefName(p) { let n = 1; const used = {}; p.benchmarks.forEach(function (b) { used[String(b.name).trim().toLowerCase()] = 1; }); while (used['nbm-' + n]) n++; return 'NBM-' + n; }
   /** ارتفاع بنچ‌مارک جدید = HI − FS */
   function nwCalc() {
@@ -6196,15 +6305,7 @@ select.inp, .inp, .cell { background: var(--card); }
     const z = Math.round((info.hi - fs) * Math.pow(10, p.settings.decimals)) / Math.pow(10, p.settings.decimals);
     return { ok: true, z: z, hi: info.hi, fs: fs, bm: info.bm, warn: z < -500 || z > 9000 ? 'ارتفاع به‌دست‌آمده غیرعادی است؛ FS و BS را بررسی کنید.' : (fs < 0 ? 'FS منفی است.' : '') };
   }
-  function ckCalc() {
-    const p = P(), info = C.computeSetup(newoSetup(p), p.benchmarks), bm = p.benchmarks.find(function (x) { return x.id === S.ck.bm; }), fs = C.toNumber(S.ck.fs);
-    if (!info.ok || !bm || !fin(fs)) return { ok: false, info: info, bm: bm };
-    const d = p.settings.decimals, z = Math.round((info.hi - fs) * Math.pow(10, d)) / Math.pow(10, d), bz = C.toNumber(bm.z);
-    return { ok: true, z: z, diff: fin(bz) ? (z - bz) * 1000 : NaN, bm: bm };
-  }
   function nwLive() {
-    const k = ckCalc(), cz = $('#ckZ'), cd = $('#ckD'), cw = $('#ckW');
-    if (cz) { cz.textContent = k.ok ? fx(k.z) : '—'; cd.textContent = k.ok && fin(k.diff) ? (k.diff > 0 ? '+' : '') + k.diff.toFixed(1) : '—'; if (cw) cw.innerHTML = k.ok && Math.abs(k.diff) > 50 ? '<div class="msg warn small">اختلاف بیش از ۵۰ میلی‌متر است؛ BS و FS را بررسی کنید.</div>' : ''; }
     const r = nwCalc(), z = $('#nwNz'), w = $('#nwNw'); if (!z) return;
     z.textContent = r.ok ? fx(r.z) : '—';
     if (w) w.innerHTML = r.warn ? '<div class="msg warn small">' + esc(r.warn) + '</div>' : (!r.ok && r.msg ? '<div class="muted small">' + esc(r.msg) + '</div>' : '');
@@ -6220,12 +6321,7 @@ select.inp, .inp, .cell { background: var(--card); }
       field('نام بنچ‌مارک جدید', '<input class="inp" id="nwName" autocomplete="off" value="' + esc(S.nw.name) + '" placeholder="' + esc(nwDefName(p)) + '">') +
       '<div class="small">ارتفاع بنچ‌مارک جدید: <b class="num" id="nwNz">—</b></div><div id="nwNw"></div>' +
       '<label class="small" style="display:flex;gap:6px;align-items:center;margin:6px 0"><input type="checkbox" id="nwUse"' + (S.nw.use ? ' checked' : '') + '> از این به بعد روی بنچ‌مارک جدید کار کنم (BM نیوو = جدید، BS خالی)</label>' +
-      '<button class="btn primary" data-act="nwMake">ایجاد بنچ‌مارک</button></div>' +
-      '<div class="nw-mk"><h3>کنترل بنچ‌مارک کارفرما</h3><p class="muted small">قرائت جلو روی بنچ‌مارکی که می‌خواهید کنترل کنید؛ ارتفاع اندازه‌گیری‌شده = HI − FS. فقط ثبت می‌شود و Z اصلی بنچ‌مارک عوض نمی‌شود.</p>' +
-      field('بنچ‌مارک مورد کنترل', '<select class="inp" id="ckBm"><option value="">— انتخاب کنید —</option>' + p.benchmarks.filter(function (b) { return b.id !== su.bmId; }).map(function (b) { return '<option value="' + esc(b.id) + '"' + (b.id === S.ck.bm ? ' selected' : '') + '>' + esc((b.name || 'بدون نام') + ' (Z=' + fx(C.toNumber(b.z)) + ')') + '</option>'; }).join('') + '</select>') +
-      field('قرائت جلو FS (' + unitL() + ')', '<input class="inp ltr" id="ckFs" dir="ltr" inputmode="decimal" value="' + esc(S.ck.fs) + '">') +
-      '<div class="small">Z اندازه‌گیری: <b class="num" id="ckZ">—</b> • اختلاف: <b class="num" id="ckD">—</b> mm</div><div id="ckW"></div>' +
-      '<button class="btn primary" data-act="nwChk">ثبت کنترل</button></div></section>';
+      '<button class="btn primary" data-act="nwMake">ایجاد بنچ‌مارک</button></div></section>';
     return h;
   }
   /* ---------- مختصات جغرافیایی و مسیریابی ---------- */
@@ -6281,7 +6377,7 @@ select.inp, .inp, .cell { background: var(--card); }
         '<span class="bn-n"><b>' + esc(x.b.name || 'بدون نام') + (x.b.calc ? ' <span class="bn-tag">محاسباتی</span>' : '') + '</b><small class="num" dir="ltr">Z=' + esc(fx(C.toNumber(x.b.z))) + (x.ll ? ' • ' + esc(llTxt(x.ll)) : '') + '</small>' + (x.ll && x.ll.src === 'gps' ? '<small class="bn-gps">GPS حدودی ±' + (x.ll.acc || '?') + ' m</small>' : '') +
         (x.ll ? '' : '<small class="muted">بدون طول/عرض جغرافیایی (' + (p.settings.coordSystem === 'UTM' ? 'X و Y یا' : '') + ' ستون‌های Lat/Lon را پر کنید)</small>') + '</span>' +
         (fin(x.d) ? '<span class="bn-d num">' + distTxt(x.d) + '<small>' + dirName(x.br) + '</small></span>' : '') +
-        '<span class="bn-bt"><button class="btn sm primary" data-act="bmGo" data-id="' + esc(x.b.id) + '"' + (x.ll ? '' : ' disabled') + '>مسیریابی</button>' + (x.b.calc ? '<button class="btn sm" data-act="bmGps" data-id="' + esc(x.b.id) + '">ثبت موقعیت من</button>' : '') + '</span></div>';
+        '<span class="bn-bt">' + (!x.b.calc && bmHasXY(x.b) ? '<button class="btn sm" data-act="bmCtl" data-id="' + esc(x.b.id) + '">' + (ctlLast(x.b) ? 'کنترل ✓' : 'کنترل') + '</button>' : '') + '<button class="btn sm primary" data-act="bmGo" data-id="' + esc(x.b.id) + '"' + (x.ll ? '' : ' disabled') + '>مسیریابی</button>' + (x.b.calc ? '<button class="btn sm" data-act="bmGps" data-id="' + esc(x.b.id) + '">ثبت موقعیت من</button>' : '') + '</span></div>';
     });
     h += '</div>';
     const t = S.bmTarget && list.find(function (x) { return x.b.id === S.bmTarget; });
@@ -6345,6 +6441,86 @@ select.inp, .inp, .cell { background: var(--card); }
     location.href = 'geo:' + c + '?q=' + c + '(' + encodeURIComponent(b.name || 'BM') + ')';
   }
 
+
+  /* ============================== کنترل بنچ‌مارک کارفرما ============================== */
+  const CTL_METHODS = ['نیوو', 'توتال استیشن', 'GPS ژئودتیک', 'سایر'];
+  const tolZ = function (p) { return fin(p.tolZ) ? p.tolZ : 3; }, tolH = function (p) { return fin(p.tolH) ? p.tolH : 20; };
+  const ctlDone = function (c) { return c && fin(c.x) && fin(c.y) && fin(c.z); };
+  /** نتیجه‌ی کنترل نسبت به مقدار کارفرما؛ ΔX/ΔY/ΔZ و فاصله‌ی افقی به میلی‌متر */
+  function ctlRes(bm, c, p) {
+    const x = C.toNumber(bm.x), y = C.toNumber(bm.y), z = C.toNumber(bm.z);
+    if (!c || !fin(c.z) || !fin(z)) return null;
+    const r = { dz: (c.z - z) * 1000, dx: fin(c.x) && fin(x) ? (c.x - x) * 1000 : NaN, dy: fin(c.y) && fin(y) ? (c.y - y) * 1000 : NaN };
+    r.dh = fin(r.dx) && fin(r.dy) ? Math.hypot(r.dx, r.dy) : NaN;
+    r.okZ = Math.abs(r.dz) <= tolZ(p) + 1e-9; r.okH = fin(r.dh) ? r.dh <= tolH(p) + 1e-9 : false;
+    r.ok = r.okZ && r.okH;
+    return r;
+  }
+  /** آخرین کنترل کامل (X،Y،Z) */
+  function ctlLast(bm) {
+    const l = (bm.ctrl || []).filter(ctlDone); let best = null;
+    l.forEach(function (c) { if (!best || String(c.date) >= String(best.date)) best = c; });
+    return best;
+  }
+  const ctlSt = function (r, p) { return !r ? '—' : r.ok ? 'در حد مجاز' : 'خارج از حد (' + (!r.okZ ? 'ارتفاع ' + tolZ(p) + ' mm' : '') + (!r.okZ && !r.okH ? ' و ' : '') + (!r.okH ? 'افقی ' + tolH(p) + ' mm' : '') + ')'; };
+  const ctlMm = function (v) { return fin(v) ? '\u200E' + (v > 0 ? '+' : '') + v.toFixed(1) + '\u200E' : '—'; };
+  S.ctl = null;
+  function ctlDraw() {
+    const m = $('#modal'), c = S.ctl, p = P(), bm = p.benchmarks.find(function (x) { return x.id === c.id; }); if (!bm) { ctlClose(); return; }
+    const hist = (bm.ctrl || []).map(function (q, i) {
+      const r = ctlRes(bm, q, p);
+      return '<div class="ctl-h"><span>' + esc(pmDate(q.date)) + ' • ' + esc(q.method || '') + (ctlDone(q) ? '' : ' • <i>ناقص</i>') + '</span><span class="num" dir="ltr">' + (r ? 'ΔZ ' + ctlMm(r.dz) + (fin(r.dh) ? ' | Δh ' + r.dh.toFixed(1) : '') : '—') + '</span>' +
+        (c.del === i ? '<button class="btn sm danger" data-ctl="delok" data-i="' + i + '">تأیید حذف</button>' : '<button class="btn sm" data-ctl="del" data-i="' + i + '" aria-label="حذف کنترل">×</button>') + '</div>';
+    }).join('');
+    m.innerHTML = '<div class="box ctl-box"><h3>کنترل بنچ‌مارک «' + esc(bm.name) + '»</h3>' +
+      '<p class="muted small num" dir="ltr">مقدار کارفرما: X=' + esc(fx(C.toNumber(bm.x))) + ' Y=' + esc(fx(C.toNumber(bm.y))) + ' Z=' + esc(fx(C.toNumber(bm.z))) + '</p>' +
+      '<div class="grid2"><label class="field"><span>X اندازه‌گیری‌شده *</span><input class="inp ltr" dir="ltr" inputmode="decimal" id="ctlX" value="' + esc(c.x) + '"></label><label class="field"><span>Y اندازه‌گیری‌شده *</span><input class="inp ltr" dir="ltr" inputmode="decimal" id="ctlY" value="' + esc(c.y) + '"></label></div>' +
+      '<label class="field"><span>Z اندازه‌گیری‌شده *</span><input class="inp ltr" dir="ltr" inputmode="decimal" id="ctlZ" value="' + esc(c.z) + '"></label>' +
+      '<div class="grid2"><label class="field"><span>تاریخ</span><button type="button" class="inp jdb" data-ctl="date">' + esc(pmDate(c.date)) + '</button></label><label class="field"><span>روش</span><select class="inp" id="ctlM">' + CTL_METHODS.map(function (x) { return '<option' + (x === c.method ? ' selected' : '') + '>' + esc(x) + '</option>'; }).join('') + '</select></label></div>' +
+      '<label class="field"><span>یادداشت (اختیاری)</span><input class="inp" id="ctlN" value="' + esc(c.note) + '"></label>' +
+      '<div class="grid2"><label class="field"><span>حد مجاز ارتفاع (mm)</span><input class="inp ltr" dir="ltr" id="ctlTZ" value="' + esc(c.tz) + '"></label><label class="field"><span>حد مجاز افقی (mm)</span><input class="inp ltr" dir="ltr" id="ctlTH" value="' + esc(c.th) + '"></label></div>' +
+      '<div id="ctlRes" class="small"></div>' + (hist ? '<h4 style="margin:8px 0 2px">سوابق کنترل</h4>' + hist : '') +
+      '<div class="acts"><button class="btn" data-ctl="x">بستن</button><button class="btn primary" data-ctl="ok" id="ctlOk">ثبت کنترل</button></div></div>';
+    ctlLive();
+  }
+  function ctlVals() {
+    const c = S.ctl, g = function (id, k) { const e = $('#' + id); if (e) c[k] = e.value.trim(); };
+    g('ctlX', 'x'); g('ctlY', 'y'); g('ctlZ', 'z'); g('ctlN', 'note'); g('ctlTZ', 'tz'); g('ctlTH', 'th'); const me = $('#ctlM'); if (me) c.method = me.value;
+  }
+  function ctlLive() {
+    const c = S.ctl, p = P(), bm = p.benchmarks.find(function (x) { return x.id === c.id; }), o = $('#ctlRes'), ok = $('#ctlOk'); if (!bm || !o) return;
+    const q = { x: C.toNumber(c.x), y: C.toNumber(c.y), z: C.toNumber(c.z) }, full = ctlDone(q), tz = C.toNumber(c.tz), th = C.toNumber(c.th);
+    const pp = { tolZ: fin(tz) ? tz : tolZ(p), tolH: fin(th) ? th : tolH(p) }, r = ctlRes(bm, q, pp);
+    ok.disabled = !full;
+    o.innerHTML = full && r ? '<div class="num" dir="ltr">ΔX ' + ctlMm(r.dx) + ' • ΔY ' + ctlMm(r.dy) + ' • ΔZ ' + ctlMm(r.dz) + ' • Δh ' + r.dh.toFixed(1) + ' mm</div><div class="' + (r.ok ? 'ok' : 'err') + '"><b>' + esc(ctlSt(r, pp)) + '</b></div>' + (Math.abs(r.dz) > 50 || r.dh > 1000 ? '<div class="msg warn small">اختلاف زیاد است؛ مقدارها را بررسی کنید.</div>' : '') : '<div class="muted">X و Y و Z هر سه الزامی است.</div>';
+  }
+  function ctlClose() { const m = $('#modal'); m.classList.remove('on'); m.innerHTML = ''; m.onclick = null; m.oninput = null; m.onchange = null; S.ctl = null; }
+  function ctlOpen(id) {
+    const p = P(), bm = p.benchmarks.find(function (x) { return x.id === id; }); if (!bm) return;
+    if (!bmHasXY(bm)) { toast('برای کنترل، بنچ‌مارک باید X و Y رسمی داشته باشد.', 'err'); return; }
+    S.ctl = { id: id, x: '', y: '', z: '', date: todayIso(), method: CTL_METHODS[1], note: '', tz: String(tolZ(p)), th: String(tolH(p)), del: -1 };
+    const m = $('#modal');
+    m.oninput = function () { ctlVals(); ctlLive(); };
+    m.onchange = function () { ctlVals(); ctlLive(); };
+    m.onclick = function (e) {
+      const b = e.target.closest('[data-ctl]'); if (!b) { if (e.target === m) ctlClose(); return; }
+      const a = b.dataset.ctl, c = S.ctl; ctlVals();
+      if (a === 'x') ctlClose();
+      else if (a === 'date') { m.oninput = null; const t = document.createElement('input'); t.value = c.date; t.addEventListener('change', function () { c.date = t.value || c.date; }); jdPick(t, document.createElement('button'), function () { m.onclick = ctlClick; m.oninput = ctlIn; m.onchange = ctlIn; ctlDraw(); m.classList.add('on'); }); }
+      else if (a === 'del') { c.del = parseInt(b.dataset.i, 10); ctlDraw(); }
+      else if (a === 'delok') { const bb = P().benchmarks.find(function (x) { return x.id === c.id; }); if (bb) { bb.ctrl.splice(parseInt(b.dataset.i, 10), 1); markDirty(); } c.del = -1; ctlDraw(); render(); }
+      else if (a === 'ok') {
+        const bb = P().benchmarks.find(function (x) { return x.id === c.id; }), q = { x: C.toNumber(c.x), y: C.toNumber(c.y), z: C.toNumber(c.z) };
+        if (!bb || !ctlDone(q)) { toast('X و Y و Z را کامل وارد کنید.', 'err'); return; }
+        const tz = C.toNumber(c.tz), th = C.toNumber(c.th); if (fin(tz) && tz >= 0) P().tolZ = tz; if (fin(th) && th >= 0) P().tolH = th;
+        (bb.ctrl || (bb.ctrl = [])).push({ id: C.uid('ct'), date: c.date, method: c.method, x: q.x, y: q.y, z: q.z, note: c.note });
+        const r = ctlRes(bb, q, P()); ctlClose(); structural(); toast('کنترل «' + bb.name + '» ثبت شد: ' + ctlSt(r, P()));
+      }
+    };
+    const ctlClick = m.onclick, ctlIn = m.oninput;
+    ctlDraw(); m.classList.add('on');
+  }
+
   function bmCards() {
     const p = P(), r = calc();
     let h = '<section class="card"><h2>افزودن بنچ‌مارک</h2><div class="grid2">' +
@@ -6366,7 +6542,7 @@ select.inp, .inp, .cell { background: var(--card); }
           '<td>' + inp('benchmarks.' + i + '.lat', b.lat == null ? '' : b.lat, { aria: 'عرض جغرافیایی', ph: 'خودکار', re: true, dis: bmLocked(b) }) + '</td>' +
           '<td>' + inp('benchmarks.' + i + '.lon', b.lon == null ? '' : b.lon, { aria: 'طول جغرافیایی', ph: 'خودکار', re: true, dis: bmLocked(b) }) + '</td>' +
           '<td>' + inp('benchmarks.' + i + '.desc', b.desc || '', { t: 'text', aria: 'توضیح' }) + '</td>' +
-          '<td>' + (b.calc ? '<span class="bn-tag">محاسباتی</span><button class="btn icon sm" data-act="bmGps" data-id="' + esc(b.id) + '" aria-label="ثبت موقعیت فعلی من" title="ثبت موقعیت فعلی من">◎</button>' : (bmCanLock(b) ? '<button class="btn icon sm" data-act="bmLock" data-id="' + esc(b.id) + '" aria-label="قفل مختصات" title="' + (bmLocked(b) ? 'مختصات قفل است؛ باز کردن' : 'قفل کردن مجدد') + '">' + (bmLocked(b) ? '🔒' : '🔓') + '</button>' : '<button class="btn icon sm" data-act="bmCalc" data-id="' + esc(b.id) + '" title="علامت‌گذاری به‌عنوان بنچ‌مارک محاسباتی" aria-label="محاسباتی کن">⚙</button>')) + '<button class="btn icon danger sm" data-act="delBM" data-i="' + i + '" aria-label="حذف بنچ‌مارک">×</button></td></tr>';
+          '<td>' + (b.calc ? '<span class="bn-tag">محاسباتی</span><button class="btn icon sm" data-act="bmGps" data-id="' + esc(b.id) + '" aria-label="ثبت موقعیت فعلی من" title="ثبت موقعیت فعلی من">◎</button>' : (bmCanLock(b) ? '<button class="btn icon sm" data-act="bmCtl" data-id="' + esc(b.id) + '" title="کنترل بنچ‌مارک" aria-label="کنترل بنچ‌مارک">' + (ctlLast(b) ? '✓' : '⊕') + '</button><button class="btn icon sm" data-act="bmLock" data-id="' + esc(b.id) + '" aria-label="قفل مختصات" title="' + (bmLocked(b) ? 'مختصات قفل است؛ باز کردن' : 'قفل کردن مجدد') + '">' + (bmLocked(b) ? '🔒' : '🔓') + '</button>' : '<button class="btn icon sm" data-act="bmCalc" data-id="' + esc(b.id) + '" title="علامت‌گذاری به‌عنوان بنچ‌مارک محاسباتی" aria-label="محاسباتی کن">⚙</button>')) + '<button class="btn icon danger sm" data-act="delBM" data-i="' + i + '" aria-label="حذف بنچ‌مارک">×</button></td></tr>';
       });
       h += '</tbody></table></div>';
     }
@@ -8801,7 +8977,7 @@ select.inp, .inp, .cell { background: var(--card); }
       const x = P().permits.find(function (y) { return y.id === el.dataset.pmph; }), fl = Array.prototype.slice.call(el.files || []); if (!x) return;
       (async function () {
         for (let i = 0; i < fl.length; i++) {
-          if ((x.photos || []).length >= 8) { toast('حداکثر ۸ عکس برای هر پرمیت.', 'err'); break; }
+          if ((x.photos || []).length >= 8) { toast('حداکثر ۸ عکس برای هر مجوز.', 'err'); break; }
           try { const d = await pmCompress(fl[i]); x.photos.push({ id: pmId('ph'), name: fl[i].name.slice(0, 60), data: d }); } catch (e) { toast(e.message, 'err'); }
         }
         x.history.push({ at: new Date().toISOString(), ev: 'افزودن عکس', reason: '' }); markDirty(); render();
@@ -8837,7 +9013,7 @@ select.inp, .inp, .cell { background: var(--card); }
         x[a[1]] = el.value; return;
       }
       if (ds.pffk) { const a = sp(ds.pffk), x = F.fields[+a[0]]; if (x) x[a[1]] = el.checked; return; }
-      if (ds.pfb) { const a = sp(ds.pfb), bl = F.blocks[+a[0]]; if (bl) bl[a[1]] = a[1] === 'minRows' ? Math.max(0, parseInt(C.normalizeDigits(el.value), 10) || 0) : a[1] === 'h' ? Math.max(8, Math.min(40, parseInt(C.normalizeDigits(el.value), 10) || 16)) : a[1] === 'cols' ? Math.max(1, Math.min(3, parseInt(el.value, 10) || 2)) : a[1] === 'tol' ? (fin(C.toNumber(el.value)) ? Math.max(0, C.toNumber(el.value)) : 3) : el.value; if (a[1] === 'mode') render(); if (a[1] === 'h') el.value = bl.h; return; }
+      if (ds.pfb) { const a = sp(ds.pfb), bl = F.blocks[+a[0]]; if (bl) bl[a[1]] = a[1] === 'minRows' ? Math.max(0, parseInt(C.normalizeDigits(el.value), 10) || 0) : a[1] === 'h' ? Math.max(8, Math.min(40, parseInt(C.normalizeDigits(el.value), 10) || 16)) : a[1] === 'cols' ? Math.max(1, Math.min(3, parseInt(el.value, 10) || 2)) : el.value; if (a[1] === 'mode') render(); if (a[1] === 'h') el.value = bl.h; return; }
       if (ds.pfbk) { const a = sp(ds.pfbk), bl = F.blocks[+a[0]]; if (bl) bl[a[1]] = el.checked; return; }
       if (ds.pfbs) { const a = sp(ds.pfbs); F.blocks[+a[0]].signers[+a[1]].title = el.value.trim(); return; }
       if (ds.pfbso) { const a = sp(ds.pfbso); F.blocks[+a[0]].signers[+a[1]].op = el.checked; return; }
@@ -8920,6 +9096,13 @@ select.inp, .inp, .cell { background: var(--card); }
     }
     if (el.id === 'impFile') { const f = el.files && el.files[0]; el.value = ''; if (f) loadImportFile(f); else toast('فایلی انتخاب نشد.', 'err'); return; }
     if (el.id === 'restoreFile') { const f = el.files && el.files[0]; if (f) restoreBackup(f); return; }
+    if (el.id === 'pmFFile') {
+      const f = el.files && el.files[0]; el.value = ''; if (!f) return;
+      const rd = new FileReader();
+      rd.onload = function () { pmLoadForms(String(rd.result || '')); };
+      rd.onerror = function () { toast('فایل خوانده نشد.', 'err'); };
+      rd.readAsText(f); return;
+    }
     if (el.id === 'bmFile') { const f = el.files && el.files[0]; el.value = ''; if (f) loadBmFile(f); else toast('فایلی انتخاب نشد.', 'err'); return; }
     if (el.dataset.bmi) {
       const im = S.bmImp; if (!im) return;
@@ -8934,8 +9117,6 @@ select.inp, .inp, .cell { background: var(--card); }
     if (el.id === 'npCs') { const u = el.value === 'UTM'; ['npZone', 'npHem'].forEach(function (i) { $('#' + i).disabled = !u; }); $('#npDatum').disabled = !el.value; return; }
     if (el.id === 'tbLayer') { S.tbLayer = el.value; S.tPage = 0; render(); return; }
     if (el.id === 'qaModel') { qaModelUi(); return; }
-    if (el.id === 'ckBm') { S.ck.bm = el.value; nwLive(); return; }
-    if (el.id === 'ckFs') { S.ck.fs = el.value.trim(); nwLive(); return; }
     if (el.id === 'nwFs') { S.nw.fs = el.value.trim(); nwLive(); return; }
     if (el.id === 'nwName') { S.nw.name = el.value.trim(); return; }
     if (el.id === 'nwUse') { S.nw.use = el.checked; return; }
@@ -9481,13 +9662,6 @@ select.inp, .inp, .cell { background: var(--card); }
         if (await ask('بنچ‌مارک «' + esc(bm.name) + '» حذف شود؟' + (used ? ' <b>این بنچ‌مارک برای نیوو انتخاب شده؛ انتخاب آن خالی می‌شود.</b>' : ''), { danger: true, ok: 'حذف' })) { if (used) p.newoBm = ''; if (S.bmTarget === bm.id) S.bmTarget = ''; p.benchmarks.splice(i, 1); structural(); }
         break;
       }
-      case 'nwChk': {
-        const k = ckCalc(); if (!k.ok) { toast(k.info && !k.info.ok ? 'ابتدا بنچ‌مارک و BS نیوو را درست کنید.' : 'بنچ‌مارک و FS را وارد کنید.', 'err'); break; }
-        if (k.bm.chk && !(await ask('برای «' + esc(k.bm.name) + '» کنترل قبلی ثبت شده است. جایگزین شود؟', { ok: 'جایگزین' }))) break;
-        k.bm.chk = { z: k.z, date: todayIso() }; S.ck.fs = '';
-        structural(); toast('کنترل «' + k.bm.name + '» ثبت شد: Z=' + fx(k.z) + ' (اختلاف ' + (fin(k.diff) ? k.diff.toFixed(1) : '—') + ' mm).');
-        break;
-      }
       case 'nwMake': {
         const r = nwCalc(); if (!r.ok) { toast(r.msg || 'قرائت جلو (FS) را وارد کنید.', 'err'); break; }
         const name = (S.nw.name || nwDefName(p)).trim();
@@ -9524,6 +9698,7 @@ select.inp, .inp, .cell { background: var(--card); }
         if (await ask('«' + esc(bm.name) + '» به‌عنوان بنچ‌مارک محاسباتی (ساخته‌شده در پروژه) علامت بخورد؟ دکمه‌ی ثبت موقعیت GPS برایش فعال می‌شود.', { ok: 'علامت بخورد' })) { bm.calc = true; structural(); }
         break;
       }
+      case 'bmCtl': ctlOpen(b.dataset.id); break;
       case 'bmNear': bmNavStart(); break;
       case 'bmSel': if (!e.target.closest('[data-act=bmGo],[data-act=bmGps]')) { S.bmTarget = b.dataset.id; bmNavUpdate(); } break;
       case 'bmGo': bmGo(b.dataset.id); break;
@@ -9573,7 +9748,7 @@ select.inp, .inp, .cell { background: var(--card); }
         const cx = pmCtx(p, form, d), chk = pmCheck(p, form, d, cx);
         if (chk.over.length && !(await ask('این بازه با ' + chk.over.map(function (x) { return esc(pmNo(x.no)); }).join('، ') + ' همپوشانی دارد. با این حال ثبت شود؟', { ok: 'ثبت' }))) break;
         let reason = '';
-        if (d.editId) { reason = await askText('ویرایش پرمیت', 'علت ویرایش'); if (!reason) break; }
+        if (d.editId) { reason = await askText('ویرایش مجوز', 'علت ویرایش'); if (!reason) break; }
         const disp = {}; form.fields.forEach(function (f) { disp[f.key] = pmDisp(p, form, f, d, cx); });
         const tables = {}; Object.keys(d.tables).forEach(function (k) { tables[k] = d.tables[k].filter(function (r) { return r.some(function (c) { return String(c || '').trim(); }); }); });
         for (let i = 0; i < form.blocks.length; i++) {
@@ -9607,14 +9782,14 @@ select.inp, .inp, .cell { background: var(--card); }
       }
       case 'pmDel': {
         const x = p.permits.find(function (y) { return y.id === b.dataset.id; }); if (!x) break;
-        const r = await askText('حذف پرمیت ' + pmNo(x.no), 'علت حذف'); if (!r) break;
+        const r = await askText('حذف مجوز ' + pmNo(x.no), 'علت حذف'); if (!r) break;
         x.status = 'del'; x.delReason = r; x.history.push({ at: new Date().toISOString(), ev: 'حذف', reason: r }); markDirty(); render(); break;
       }
       case 'pmPurge': {
         const x = p.permits.find(function (y) { return y.id === b.dataset.id; }); if (!x || x.status !== 'del') break;
-        if (!(await askType('حذف دائمی ' + pmNo(x.no), 'این پرمیت با همه‌ی عکس‌ها، اظهار نظرها و نسخه‌های چاپی برای همیشه پاک می‌شود و برگشت ندارد. شماره‌ی آن دوباره استفاده نمی‌شود.', pmNo(x.no)))) break;
+        if (!(await askType('حذف دائمی ' + pmNo(x.no), 'این مجوز با همه‌ی عکس‌ها، اظهار نظرها و نسخه‌های چاپی برای همیشه پاک می‌شود و برگشت ندارد. شماره‌ی آن دوباره استفاده نمی‌شود.', pmNo(x.no)))) break;
         p.permitCfg.counter = Math.max(parseInt(p.permitCfg.counter, 10) || 0, x.no);
-        p.permits = p.permits.filter(function (y) { return y.id !== x.id; }); S.pm.view = 'list'; S.pm.id = ''; markDirty(); render(); toast('پرمیت برای همیشه حذف شد.'); break;
+        p.permits = p.permits.filter(function (y) { return y.id !== x.id; }); S.pm.view = 'list'; S.pm.id = ''; markDirty(); render(); toast('مجوز برای همیشه حذف شد.'); break;
       }
       case 'pmOpSave': {
         const x = p.permits.find(function (y) { return y.id === b.dataset.id; }); if (!x) break;
@@ -9629,13 +9804,11 @@ select.inp, .inp, .cell { background: var(--card); }
         x.history.push({ at: new Date().toISOString(), ev: 'ثبت اظهار نظر (' + out.length + ' مورد)', reason: '' }); markDirty(); render(); toast('ثبت شد.'); break;
       }
       case 'pmPhDel': { const x = p.permits.find(function (y) { return y.id === b.dataset.id; }); if (x) { x.photos = x.photos.filter(function (f) { return f.id !== b.dataset.pid; }); markDirty(); render(); } break; }
+      case 'jdOpen': { const inp = $('#' + b.dataset.for); if (inp) jdPick(inp, b); break; }
+      case 'pmHVar': { const w = b.dataset.w, F = S.pf; F[w] = (F[w] === undefined ? (w === 'h1' ? PM_H1 : PM_H2) : F[w]) + (F[w] === '' || F[w] === undefined ? '' : ' ') + '{' + b.dataset.k + '}'; render(); break; }
       case 'pmBmsAll': S.bmsAll = !S.bmsAll; render(); break;
       case 'pmBmsReset': S.pn.bmSel[b.dataset.b] = []; render(); break;
-      case 'pmFSeed': {
-        pmInit(p); let n = 0;
-        pmMinutes().forEach(function (f) { if (!p.permitForms.some(function (x) { return x.name === f.name; })) { p.permitForms.push(f); n++; } });
-        markDirty(); toast(n ? n + ' فرم صورتجلسه افزوده شد.' : 'فرم‌های صورتجلسه از قبل هست.'); render(); break;
-      }
+      case 'pmFLoad': $('#pmFFile').click(); break;
       case 'pmTAdd': { (S.pn.tables[b.dataset.b] || (S.pn.tables[b.dataset.b] = [])).push([]); render(); break; }
       case 'pmTDel': { const r = S.pn.tables[b.dataset.b]; if (r) r.splice(parseInt(b.dataset.i, 10), 1); render(); break; }
       case 'pmVAdd': { const c = pmInit(p).permitCfg; let n = 1; while (c.vars.some(function (q) { return q.k === 'متغیر ' + n; })) n++; c.vars.push({ k: 'متغیر ' + n, v: '' }); markDirty(); render(); break; }
@@ -9646,7 +9819,7 @@ select.inp, .inp, .cell { background: var(--card); }
       case 'pmFDup': { const f = pmForm(pmInit(p), b.dataset.id); if (f) { const c = JSON.parse(JSON.stringify(f)); c.id = pmId('pf'); c.name += ' (کپی)'; c.blocks.forEach(function (x) { x.id = pmId('bl'); (x.signers || []).forEach(function (g) { g.id = pmId('sg'); }); }); p.permitForms.push(c); markDirty(); render(); } break; }
       case 'pmFDel': {
         pmInit(p); if (p.permitForms.length < 2) { toast('دست‌کم یک فرم باید بماند.', 'err'); break; }
-        const f = pmForm(p, b.dataset.id); if (f && await ask('فرم «' + esc(f.name) + '» حذف شود؟ پرمیت‌های صادرشده‌ی قبلی دست‌نخورده می‌مانند.', { danger: true, ok: 'حذف' })) { p.permitForms = p.permitForms.filter(function (x) { return x.id !== f.id; }); markDirty(); render(); }
+        const f = pmForm(p, b.dataset.id); if (f && await ask('فرم «' + esc(f.name) + '» حذف شود؟ مجوزهای صادرشده‌ی قبلی دست‌نخورده می‌مانند.', { danger: true, ok: 'حذف' })) { p.permitForms = p.permitForms.filter(function (x) { return x.id !== f.id; }); markDirty(); render(); }
         break;
       }
       case 'pmFSave': {
@@ -9662,7 +9835,7 @@ select.inp, .inp, .cell { background: var(--card); }
       case 'pmBAdd': {
         const t = $('#pfNewB').value, nb = { id: pmId('bl'), type: t };
         if (t === 'text') Object.assign(nb, { title: '', text: '', box: true, soft: false }); else if (t === 'fields') nb.keys = ['دستگاه نظارت', 'پیمانکار']; else if (t === 'km') Object.assign(nb, { from: (pmRole(S.pf, 'from') || pmRole(S.pf, 'point') || { key: '' }).key, to: (pmRole(S.pf, 'to') || { key: '' }).key, len: true });
-        else if (t === 'bms') Object.assign(nb, { title: '', mode: 'deliver', tol: 3 }); else if (t === 'sign') { nb.signers = [pmSg('امضاکننده', false)]; nb.h = 16; nb.cols = 2; } else if (t === 'table') Object.assign(nb, { title: 'جدول', cols: [{ id: pmId('cl'), label: 'ردیف' }, { id: pmId('cl'), label: 'توضیح' }], minRows: 0 });
+        else if (t === 'bms') Object.assign(nb, { title: '', mode: 'deliver', dxy: true }); else if (t === 'sign') { nb.signers = [pmSg('امضاکننده', false)]; nb.h = 16; nb.cols = 2; } else if (t === 'table') Object.assign(nb, { title: 'جدول', cols: [{ id: pmId('cl'), label: 'ردیف' }, { id: pmId('cl'), label: 'توضیح' }], minRows: 0 });
         S.pf.blocks.push(nb); render(); break;
       }
       case 'pmBDel': S.pf.blocks.splice(parseInt(b.dataset.i, 10), 1); render(); break;
@@ -9915,7 +10088,7 @@ select.inp, .inp, .cell { background: var(--card); }
     route();
   })();
 
-  window.__RS = { S: S, calc: calc, render: render, printTable: printTable, lkRcptText: lkRcptText };
+  window.__RS = { pmDefaults: pmDefaults, pmMinutes: pmMinutes, S: S, calc: calc, render: render, printTable: printTable, lkRcptText: lkRcptText };
 })();
 
 </script>
