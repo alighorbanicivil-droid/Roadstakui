@@ -5169,11 +5169,11 @@ select.inp, .inp, .cell { background: var(--card); }
   }
   /* ============================== پلان کل خیابان‌ها ============================== */
   const PLAN_COL = ['#d62828', '#1d70b8', '#2a9d4a', '#e07a00', '#7b3fb3', '#00897b', '#c2185b', '#6d4c41', '#5c6bc0', '#9e9d24'];
-  S.plan = { vb: null, full: false, pid: '', b: null, ptrs: {}, moved: 0, tgt: null, t0: 0, n0: 0, pd: null, pn: false };
+  S.plan = { vb: null, full: false, pid: '', b: null, ptrs: {}, moved: 0, tgt: null, t0: 0, n0: 0, pd: null, pn: false, water: true, sel: null, mkEl: null };
   const planCol = function (i) { return PLAN_COL[i % PLAN_COL.length]; };
   function planData() {
     const p = P(), items = p.streets.map(function (s, i) {
-      const pts = (s.points || []).map(function (q) { return { x: C.toNumber(q.x), y: C.toNumber(q.y), st: C.toNumber(q.station) }; }).filter(function (q) { return fin(q.x) && fin(q.y); });
+      const pts = (s.points || []).map(function (q) { return { x: C.toNumber(q.x), y: C.toNumber(q.y), z: C.toNumber(q.z), st: C.toNumber(q.station) }; }).filter(function (q) { return fin(q.x) && fin(q.y); });
       if (pts.every(function (q) { return fin(q.st); })) pts.sort(function (a, b) { return a.st - b.st; });
       return { s: s, i: i, pts: pts };
     });
@@ -5204,21 +5204,40 @@ select.inp, .inp, .cell { background: var(--card); }
       let mx = null; prof.segments.forEach(function (g) { if (fin(g.slopePct) && (!mx || Math.abs(g.slopePct) > Math.abs(mx.slopePct))) mx = g; });
       o.mx = mx;
     }
+    const sg = prof.segments.filter(function (g) { return fin(g.slopePct) && Math.abs(g.slopePct) >= 0.02; }), lows = [], ridges = [];
+    for (let i = 1; i < sg.length; i++) {
+      const a = sg[i - 1], b = sg[i];
+      if (a.slopePct < 0 && b.slopePct > 0) lows.push(a.to); else if (a.slopePct > 0 && b.slopePct < 0) ridges.push(a.to);
+    }
+    const fw = sg.filter(function (g) { return g.slopePct < 0; }).length, bw = sg.length - fw;
+    o.flow = { n: sg.length, dir: !sg.length ? '' : !bw ? 'end' : !fw ? 'start' : 'both', lows: lows, ridges: ridges };
     const rows = (s.sections || []), nums = function (k) { return rows.map(function (r) { return C.toNumber(r[k]); }).filter(fin); };
     const rng = function (a) { return a.length ? { lo: Math.min.apply(null, a), hi: Math.max.apply(null, a) } : null; };
     o.cs = { n: rows.length, modes: Array.from(new Set(rows.map(function (r) { return r.mode; }).filter(Boolean))), sL: rng(nums('sL')), sR: rng(nums('sR')), wL: rng(nums('wL')), wR: rng(nums('wR')) };
     return o;
   }
+  const stnL = function (v) { return '<bdi dir="ltr">' + esc(stn(v)) + '</bdi>'; };
   function planPanel(s, col, p) {
     const o = planStats(s, p), ratio = p.settings.slopeUnit === 'ratio';
     const sl = function (pct) { return fin(pct) ? '‎' + (ratio ? (pct / 100).toFixed(4) : (+pct.toFixed(2)).toString()) + ' ' + o.kU + '‎' : '—'; };
     const rg = function (r, u) { return !r ? '—' : '‎' + (r.lo === r.hi ? C.fmt(r.lo, 2) : C.fmt(r.lo, 2) + ' – ' + C.fmt(r.hi, 2)) + (u ? ' ' + u : '') + '‎'; };
-    let h = '<h4><i style="background:' + col + '"></i>' + esc(s.name) + '<button class="btn sm" data-act="planPn" aria-label="بستن" style="min-height:0;height:24px;padding:0 9px;line-height:1">✕</button></h4><dl>';
+    let h = '<h4><i style="background:' + col + '"></i>' + esc(s.name) + '<button class="btn sm" data-act="planPn" aria-label="بستن" style="min-height:0;height:24px;padding:0 9px;line-height:1">✕</button></h4>';
+    const sel = S.plan.sel && S.plan.sel.sid === s.id ? S.plan.sel : null;
+    if (sel) h += '<div style="background:#e3f2fd;color:#0d47a1;border-radius:8px;padding:5px 8px;margin-bottom:6px;font-weight:700">' + (sel.kind === 'low' ? '💧 نقطه‌ی پست (تجمع آب)' : '⛰ خط‌الراس (تقسیم آب)') + '<br><small>' + (fin(sel.st) ? 'کیلومتراژ ' + stnL(sel.st) : '') + (fin(sel.z) ? ' • <span dir="ltr">Z = ' + C.fmt(sel.z, 3) + ' m</span>' : '') + '</small></div>';
+    h += '<dl>';
     h += '<dt>متراژ مسیر</dt><dd>' + (fin(o.len) ? '‎' + C.fmt(o.len, 1) + ' m‎' + (o.lenSrc === 'st' ? ' <small class="muted">(از کیلومتراژ)</small>' : '') : '—') + '</dd>';
     h += '<dt>جهت مسیر</dt><dd>' + (fin(o.brg) ? esc(dirName(o.brg)) + ' <span dir="ltr">(' + Math.round(o.brg) + '°)</span> <small class="muted">(جهت کیلومتراژ)</small>' : '—') + '</dd>';
     h += '<dt>صعود / نزول</dt><dd>' + (fin(o.dz) ? (o.dz > 0 ? '<span class="up">▲ بالارونده</span>' : o.dz < 0 ? '<span class="dn">▼ سرازیر</span>' : 'تراز') + ' <span dir="ltr">(' + (o.dz > 0 ? '+' : '') + C.fmt(o.dz, 2) + ' m)</span>' : '—') + '</dd>';
-    h += '<dt>شیب طولی</dt><dd>' + (fin(o.avg) ? 'متوسط ' + sl(o.avg) + (o.mx ? '<br><small>بیشترین ' + sl(o.mx.slopePct) + ' (' + esc(stn(o.mx.from)) + ')</small>' : '') : '—') + '</dd>';
+    h += '<dt>شیب طولی</dt><dd>' + (fin(o.avg) ? 'متوسط ' + sl(o.avg) + (o.mx ? '<br><small>بیشترین ' + sl(o.mx.slopePct) + ' (' + stnL(o.mx.from) + ')</small>' : '') : '—') + '</dd>';
+    if (o.flow.n) {
+      h += '<dt>جریان آب</dt><dd><span style="color:#1e88e5">💧</span> ' + (o.flow.dir === 'end' ? 'به سمت انتهای مسیر' : o.flow.dir === 'start' ? 'به سمت ابتدای مسیر' : 'دوطرفه (بسته به بازه)') +
+        (o.flow.lows.length ? '<br><small>پست (تجمع آب): ' + o.flow.lows.slice(0, 4).map(function (v) { return stnL(v); }).join('، ') + (o.flow.lows.length > 4 ? ' …' : '') + '</small>' : '') +
+        (o.flow.ridges.length ? '<br><small>خط‌الراس: ' + o.flow.ridges.slice(0, 4).map(function (v) { return stnL(v); }).join('، ') + (o.flow.ridges.length > 4 ? ' …' : '') + '</small>' : '') + '</dd>';
+    }
     if (o.cs.n) {
+      const CF = { crown: 'به هر دو لبه', oneway_left_low: 'به سمت چپ', oneway_right_low: 'به سمت راست', inverted: 'به سمت محور', flat: 'بدون جریان عرضی' };
+      const cf = o.cs.modes.map(function (m) { return CF[m]; }).filter(Boolean);
+      if (cf.length) h += '<dt>جریان عرضی</dt><dd>' + esc(cf.join('، ')) + '</dd>';
       h += '<dt>شیب عرضی</dt><dd>' + (o.cs.modes.length ? esc(o.cs.modes.map(function (m) { return C.MODE_FA[m] || m; }).join('، ')) + '<br>' : '') +
         '<small>چپ ' + rg(o.cs.sL, o.kU) + ' • راست ' + rg(o.cs.sR, o.kU) + '</small></dd>';
       h += '<dt>عرض</dt><dd><small>چپ ' + rg(o.cs.wL, 'm') + ' • راست ' + rg(o.cs.wR, 'm') + '</small></dd>';
@@ -5238,7 +5257,7 @@ select.inp, .inp, .cell { background: var(--card); }
           const pp = it.pts.map(function (q) { return X(q.x) + ',' + Y(q.y); }).join(' '), m = it.pts[Math.floor(it.pts.length / 2)];
           svg += '<g data-sid="' + esc(it.s.id) + '"><polyline class="pl-hit" vector-effect="non-scaling-stroke" stroke-width="26" points="' + pp + '"/>' +
             '<polyline fill="none" stroke="' + col + '" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke" stroke-width="' + (on ? 6 : 3.5) + '" opacity="' + op + '" points="' + pp + '"/>' +
-            '<text class="pl-t" data-fs="' + (on ? 13 : 11) + '" x="' + X(m.x) + '" y="' + Y(m.y) + '">' + esc(it.s.name) + '</text>' + planArrow(it, col, on, X, Y, op) + '</g>';
+            '<text class="pl-t" data-fs="' + (on ? 13 : 11) + '" x="' + X(m.x) + '" y="' + Y(m.y) + '">' + esc(it.s.name) + '</text>' + planArrow(it, col, on, X, Y, op) + (pl.water ? planWater(it, X, Y, Math.hypot(d.b.w, d.b.h)) : '') + '</g>';
         } else if (it.pts.length === 1) {
           const q = it.pts[0];
           svg += '<g data-sid="' + esc(it.s.id) + '"><circle class="pl-pt" data-r="' + (on ? 8 : 6) + '" cx="' + X(q.x) + '" cy="' + Y(q.y) + '" fill="' + col + '" opacity="' + op + '"/><text class="pl-t" data-fs="11" x="' + X(q.x) + '" y="' + Y(q.y) + '" dy="-10">' + esc(it.s.name) + '</text></g>';
@@ -5253,11 +5272,11 @@ select.inp, .inp, .cell { background: var(--card); }
       return '<button class="plan-chip' + (it.s.id === act.id ? ' on' : '') + '" data-act="planPick" data-id="' + esc(it.s.id) + '"><i style="background:' + planCol(it.i) + '"></i>' + esc(it.s.name) + (it.pts.length ? '' : ' <small class="muted">(بدون مختصات)</small>') + '</button>';
     }).join('');
     const ai = d.items.find(function (it) { return it.s.id === act.id; }), pts = act.points || [], withSt = pts.filter(function (q) { return fin(C.toNumber(q.station)); });
-    const info = '<div class="plan-info"><span><b>' + esc(act.name) + '</b> • ' + pts.length + ' نقطه' + (withSt.length ? ' • از ' + esc(stn(C.toNumber(withSt[0].station))) + ' تا ' + esc(stn(C.toNumber(withSt[withSt.length - 1].station))) : '') + (ai && ai.pts.length < 1 ? ' • مختصات X و Y ندارد' : '') + '</span>' +
+    const info = '<div class="plan-info"><span><b>' + esc(act.name) + '</b> • ' + pts.length + ' نقطه' + (withSt.length ? ' • از ' + stnL(C.toNumber(withSt[0].station)) + ' تا ' + stnL(C.toNumber(withSt[withSt.length - 1].station)) : '') + (ai && ai.pts.length < 1 ? ' • مختصات X و Y ندارد' : '') + (pl.water ? ' • <span style="color:#1565c0;white-space:nowrap">پست ●</span> <span style="color:#1565c0;white-space:nowrap">خط‌الراس ○</span>' : '') + '</span>' +
       '<button class="btn sm primary" data-act="planGo">ورود به جزئیات ◂</button></div>';
     return '<section class="card"><div class="plan-box' + (pl.full ? ' full' : '') + '"><div class="plan-tb"><h2 style="margin:0;flex:1;font-size:16px">پلان خیابان‌ها</h2>' +
       '<button class="btn sm" data-act="planZ" data-f="1.6" aria-label="بزرگ‌نمایی">＋</button><button class="btn sm" data-act="planZ" data-f="0.625" aria-label="کوچک‌نمایی">－</button>' +
-      '<button class="btn sm" data-act="planFit">نمایش همه</button><button class="btn sm" data-act="planFull">' + (pl.full ? 'بستن ✕' : 'تمام‌صفحه ⛶') + '</button></div>' +
+      '<button class="btn sm' + (pl.water ? ' primary' : '') + '" data-act="planWater" aria-pressed="' + (pl.water ? 'true' : 'false') + '">💧 جریان آب</button><button class="btn sm" data-act="planFit">نمایش همه</button><button class="btn sm" data-act="planFull">' + (pl.full ? 'بستن ✕' : 'تمام‌صفحه ⛶') + '</button></div>' +
       '<div class="plan-wrap">' + (d.b ? '<svg id="planSvg" class="plan-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet" role="img" aria-label="پلان خیابان‌ها">' + svg + '</svg>'
         : '<div class="msg info" style="flex:1">هیچ خیابانی نقطه‌ی دارای X و Y ندارد؛ برای رسم پلان مختصات نقاط محور را وارد کنید. می‌توانید خیابان را از فهرست زیر انتخاب کنید.</div>') +
       '<div class="plan-pn" id="planPn"' + (pl.pn ? '' : ' hidden') + '>' + (pl.pn ? planPanel(act, planCol(p.streets.indexOf(act)), p) : '') + '</div></div>' +
@@ -5270,6 +5289,46 @@ select.inp, .inp, .cell { background: var(--card); }
     if (!q) return '';
     const a = Math.atan2(-(e.y - q.y), e.x - q.x) * 180 / Math.PI;
     return '<path class="pl-arr" d="M1,0 L-1,.75 L-1,-.75Z" fill="' + col + '" stroke="var(--card)" stroke-width=".12" opacity="' + op + '" data-x="' + X(e.x) + '" data-y="' + Y(e.y) + '" data-a="' + a.toFixed(1) + '" data-s="' + (on ? 11 : 8) + '" style="pointer-events:none"/>';
+  }
+  /** پیکان‌های آبی جهت جریان آب روی محور: از Z نقاط، سمت سرازیری هر بازه */
+  function planWater(it, X, Y, diag) {
+    const P2 = it.pts, segs = [];
+    for (let i = 1; i < P2.length; i++) {
+      const a = P2[i - 1], b = P2[i]; if (!fin(a.z) || !fin(b.z)) continue;
+      const L = Math.hypot(b.x - a.x, b.y - a.y); if (L < 1e-6) continue;
+      const sl = (b.z - a.z) / L * 100;
+      segs.push(Math.abs(sl) < 0.02 ? { flat: true } : { a: a, b: b, L: L, sg: sl < 0 ? 1 : -1 });
+    }
+    let out = '', run = [];
+    let prv = null; const marks = [];
+    segs.forEach(function (g) { if (g.flat) return; if (prv && prv.sg !== g.sg) marks.push({ v: prv.b, low: prv.sg === 1 }); prv = g; });
+    const flush = function () {
+      if (!run.length) return;
+      const tot = run.reduce(function (t, g) { return t + g.L; }, 0), n = Math.max(1, Math.min(4, Math.round(tot / (Math.max(diag, 10) / 6))));
+      for (let k = 0; k < n; k++) {
+        const target = (k + .5) / n * tot; let acc = 0;
+        for (let j = 0; j < run.length; j++) {
+          const g = run[j];
+          if (acc + g.L >= target) {
+            const t = (target - acc) / g.L, x = g.a.x + (g.b.x - g.a.x) * t, y = g.a.y + (g.b.y - g.a.y) * t, ang = Math.atan2(-(g.b.y - g.a.y) * g.sg, (g.b.x - g.a.x) * g.sg) * 180 / Math.PI;
+            const d = 'M-1,-.8L.4,0L-1,.8M0,-.8L1.4,0L0,.8';
+            out += '<g class="pl-wt" data-x="' + X(x) + '" data-y="' + Y(y) + '" data-a="' + ang.toFixed(1) + '" style="pointer-events:none"><path d="' + d + '" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/><path d="' + d + '" fill="none" stroke="#1e88e5" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></g>';
+            break;
+          }
+          acc += g.L;
+        }
+      }
+      run = [];
+    };
+    segs.forEach(function (g) { if (g.flat) { flush(); return; } if (run.length && run[0].sg !== g.sg) flush(); run.push(g); });
+    flush();
+    marks.forEach(function (m) {
+      const cx = X(m.v.x), cy = Y(m.v.y), lab = (m.low ? 'پست ' : '') + (fin(m.v.st) ? '\u2066' + stn(m.v.st) + '\u2069' : '');
+      out += '<g class="pl-mkg" data-kind="' + (m.low ? 'low' : 'ridge') + '" data-st="' + (fin(m.v.st) ? m.v.st : '') + '" data-z="' + (fin(m.v.z) ? m.v.z : '') + '"><circle class="pl-pt" data-r="14" cx="' + cx + '" cy="' + cy + '" fill="transparent" style="cursor:pointer"/>' +
+        '<circle class="pl-mk" data-r="' + (m.low ? 6.5 : 4.5) + '" cx="' + cx + '" cy="' + cy + '" fill="' + (m.low ? '#1e88e5' : '#fff') + '" stroke="' + (m.low ? '#fff' : '#1e88e5') + '" stroke-width="2" vector-effect="non-scaling-stroke" style="pointer-events:none"/>' +
+        '<text class="pl-t" data-fs="10" data-dy="1" x="' + cx + '" y="' + cy + '" style="fill:#1565c0;font-weight:700">' + esc(lab) + '</text></g>';
+    });
+    return out;
   }
   function planFit() {
     const svg = $('#planSvg'), b = S.plan.b; if (!svg || !b) return;
@@ -5284,7 +5343,8 @@ select.inp, .inp, .cell { background: var(--card); }
     const k = vb[2] / (svg.clientWidth || 320);
     $$('#planSvg .pl-t').forEach(function (t) { t.style.fontSize = (+t.dataset.fs * k).toFixed(4) + 'px'; t.style.strokeWidth = (3 * k).toFixed(4) + 'px'; if (t.dataset.dy) t.setAttribute('dy', (-9 * k).toFixed(4)); });
     $$('#planSvg .pl-arr').forEach(function (a) { a.setAttribute('transform', 'translate(' + a.dataset.x + ',' + a.dataset.y + ') rotate(' + a.dataset.a + ') scale(' + (+a.dataset.s * k).toFixed(4) + ')'); });
-    $$('#planSvg .pl-pt').forEach(function (c) { c.setAttribute('r', (+c.dataset.r * k).toFixed(4)); });
+    $$('#planSvg .pl-wt').forEach(function (a) { a.setAttribute('transform', 'translate(' + a.dataset.x + ',' + a.dataset.y + ') rotate(' + a.dataset.a + ') scale(' + (5 * k).toFixed(4) + ')'); });
+    $$('#planSvg .pl-pt, #planSvg .pl-mk').forEach(function (c) { c.setAttribute('r', (+c.dataset.r * k).toFixed(4)); });
     $$('#planSvg .pl-bm').forEach(function (r) { const a = 8 * k, cx = +r.getAttribute('data-cx') || 0; r.setAttribute('width', a.toFixed(4)); r.setAttribute('height', a.toFixed(4)); r.setAttribute('transform', 'translate(' + (-a / 2).toFixed(4) + ',' + (-a / 2).toFixed(4) + ')'); });
   }
   function planZoomAt(f, cx, cy) {
@@ -5296,7 +5356,7 @@ select.inp, .inp, .cell { background: var(--card); }
     const pl = S.plan, svg = $('#planSvg');
     if (e.type === 'pointerdown') {
       if (!svg || !e.target.closest || !e.target.closest('#planSvg')) return;
-      pl.ptrs[e.pointerId] = { x: e.clientX, y: e.clientY }; pl.tgt = e.target.closest('[data-sid]');
+      pl.ptrs[e.pointerId] = { x: e.clientX, y: e.clientY }; pl.tgt = e.target.closest('[data-sid]'); pl.mkEl = e.target.closest('.pl-mkg');
       pl.n0 = Object.keys(pl.ptrs).length; if (pl.n0 === 1) { pl.moved = 0; pl.t0 = Date.now(); } else pl.moved = 99; pl.pd = null; return;
     }
     const prev = pl.ptrs[e.pointerId]; if (!prev || !svg) return;
@@ -5315,7 +5375,7 @@ select.inp, .inp, .cell { background: var(--card); }
       return;
     }
     delete pl.ptrs[e.pointerId]; pl.pd = null;
-    if (e.type === 'pointerup' && pl.n0 === 1 && pl.moved < 8 && Date.now() - pl.t0 < 700 && pl.tgt && !Object.keys(pl.ptrs).length) { const id = pl.tgt.dataset.sid; pl.tgt = null; pl.pn = true; switchStreet(id); }
+    if (e.type === 'pointerup' && pl.n0 === 1 && pl.moved < 8 && Date.now() - pl.t0 < 700 && pl.tgt && !Object.keys(pl.ptrs).length) { const id = pl.tgt.dataset.sid, mk = pl.mkEl; pl.tgt = null; pl.sel = mk ? { sid: id, kind: mk.dataset.kind, st: mk.dataset.st === '' ? NaN : +mk.dataset.st, z: mk.dataset.z === '' ? NaN : +mk.dataset.z } : null; pl.pn = true; switchStreet(id); }
   }
   function planWheel(e) {
     const svg = e.target.closest && e.target.closest('#planSvg'); if (!svg) return;
@@ -10035,8 +10095,9 @@ select.inp, .inp, .cell { background: var(--card); }
         break;
       }
       case 'bmCtl': ctlOpen(b.dataset.id); break;
-      case 'planPick': S.plan.pn = true; switchStreet(b.dataset.id); break;
+      case 'planPick': S.plan.pn = true; S.plan.sel = null; switchStreet(b.dataset.id); break;
       case 'planPn': S.plan.pn = false; render(); break;
+      case 'planWater': S.plan.water = !S.plan.water; render(); break;
       case 'planZ': { const sv = $('#planSvg'); if (sv) planZoomAt(+b.dataset.f, sv.clientWidth / 2, sv.clientHeight / 2); break; }
       case 'planFit': S.plan.vb = null; planApply(); break;
       case 'planFull': S.plan.full = !S.plan.full; S.plan.vb = null; render(); break;
