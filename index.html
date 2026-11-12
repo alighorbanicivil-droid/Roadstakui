@@ -3826,7 +3826,7 @@ select.inp, .inp, .cell { background: var(--card); }
   const PAGE_SIZE = 50;       // ردیف در هر صفحه‌ی جدول نقاط
   const TABLE_STATIONS = 30;  // مقطع در هر صفحه‌ی جدول سه‌نقطه‌ای
 
-  const APP_VERSION = 'UI-3.11.7 (بر پایه‌ی 1.22.1)';
+  const APP_VERSION = 'UI-3.11.8 (بر پایه‌ی 1.22.1)';
   try { const spv = document.getElementById('spVer'); if (spv) spv.innerHTML = 'نسخه <bdi dir="ltr">' + APP_VERSION + '</bdi>'; } catch (e) { /* ignore */ }
   const S = {
     project: null, dirty: false, rev: 0, calc: null, calcRev: -1,
@@ -5285,12 +5285,14 @@ select.inp, .inp, .cell { background: var(--card); }
       }
       return out;
     };
+    const blankSlope = function (v) { return v === undefined || v === null || v === '' || !isFinite(Number(v)); };
     const sideHits = function (X, Y) {
       const sx = secMap[X], sy = secMap[Y];
-      if (!sx.length || !sy.length) return { noSec: true, sides: {} };
+      const noFall = (its[X].s.sections || []).some(function (r) { return blankSlope(r.sL) || blankSlope(r.sR); });
+      if (!sx.length || !sy.length) return { noSec: true, noFall: noFall, sides: {} };
       const axisY = polyOf(sy, 'axis'), sides = {};
       ['left', 'axis', 'right'].forEach(function (k) { sides[k] = segHits(polyOf(sx, k), axisY); });
-      return { noSec: false, sides: sides };
+      return { noSec: false, noFall: noFall, sides: sides };
     };
     for (let i = 0; i < its.length; i++) for (let j = i + 1; j < its.length; j++) {
       const A = its[i], B = its[j], found = [];
@@ -5350,10 +5352,12 @@ select.inp, .inp, .cell { background: var(--card); }
       }).join('');
     };
     const block = function (name, st, z, H, otherName) {
+      const warnFall = H && H.noFall && !H.noSec ? '<small style="display:block;margin-top:4px;padding:4px 8px;border-radius:6px;background:#fff3e0;color:#b45f00">⚠ شیب عرضی «' + esc(name) + '» ثبت نشده؛ لبه‌ها روی ارتفاع محور فرض شده‌اند.</small>' : '';
       return '<div style="margin-top:8px;padding-top:6px;border-top:1px dashed var(--line, #d5d9df)"><div>«' + esc(name) + '» <small class="muted">• کیلومتراژ محور <bdi dir="ltr">' + (fin(st) ? stnL(st) : '—') + '</bdi></small></div>' +
-        (H ? lines(H, name, otherName) : '') + '</div>';
+        warnFall + (H ? lines(H, name, otherName) : '') + '</div>';
     };
-    return '<div class="plan-tip" id="planTip"><div class="wn-h"><b>ارتفاع تقاطع</b><button class="btn sm" data-act="planTipX" aria-label="بستن" style="min-height:0;height:24px;padding:0 9px;line-height:1">✕</button></div>' +
+    const unsure = (q.ea && q.ea.noFall) || (q.eb && q.eb.noFall);
+    return '<div class="plan-tip" id="planTip"><div class="wn-h"><b>ارتفاع تقاطع</b>' + (unsure ? ' <span style="font-size:11px;background:#fff3e0;color:#b45f00;border-radius:6px;padding:1px 6px">نامطمئن</span>' : '') + '<button class="btn sm" data-act="planTipX" aria-label="بستن" style="min-height:0;height:24px;padding:0 9px;line-height:1">✕</button></div>' +
       block(q.a.name, q.st1, q.z1, q.ea, q.b.name) + block(q.b.name, q.st2, q.z2, q.eb, q.a.name) +
       (fin(q.dz) ? '<div style="margin-top:8px">اختلاف محورها: <b>' + mm(q.dz) + '</b></div>' : '') + '</div>';
   }
