@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#0b2a43">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-title" content="Road Stake">
+  <meta name="apple-mobile-web-app-title" content="RoadStake UI">
   <title>RoadStake UI</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icon-192.png">
@@ -3826,7 +3826,7 @@ select.inp, .inp, .cell { background: var(--card); }
   const PAGE_SIZE = 50;       // ردیف در هر صفحه‌ی جدول نقاط
   const TABLE_STATIONS = 30;  // مقطع در هر صفحه‌ی جدول سه‌نقطه‌ای
 
-  const APP_VERSION = 'UI-3.11.4 (بر پایه‌ی 1.22.1)';
+  const APP_VERSION = 'UI-3.11.6 (بر پایه‌ی 1.22.1)';
   try { const spv = document.getElementById('spVer'); if (spv) spv.innerHTML = 'نسخه <bdi dir="ltr">' + APP_VERSION + '</bdi>'; } catch (e) { /* ignore */ }
   const S = {
     project: null, dirty: false, rev: 0, calc: null, calcRev: -1,
@@ -5265,6 +5265,16 @@ select.inp, .inp, .cell { background: var(--card); }
   function planCrossAll(d) {
     const res = [], its = d.items.filter(function (it) { return it.pts.length >= 2; });
     const lerp = function (p0, p1, k, key) { return fin(p0[key]) && fin(p1[key]) ? p0[key] + (p1[key] - p0[key]) * k : NaN; };
+    /* مقاطع هر خیابان (محور، لبه‌ی چپ و راست) برای نمایش لبه‌ها در کارت تقاطع؛ فقط کارت، نه شلوغیِ پلان */
+    const stg = P().settings, secMap = its.map(function (it) { try { return C.computeSections(it.s.points, it.s.sections, Object.assign({}, stg, { sectionMode: 'point' }, refOpts(it.s)), it.s.mids) || []; } catch (e) { return []; } });
+    const edgeAt = function (secs, st) {
+      if (!secs.length || !fin(st)) return null;
+      const L = secs.slice().filter(function (r) { return fin(r.station) && r.axis && fin(r.axis.z) && r.left && r.right; }).sort(function (a, b) { return a.station - b.station; });
+      for (let k = 0; k < L.length - 1; k++) { const u = L[k], v = L[k + 1]; if (st >= u.station - 1e-9 && st <= v.station + 1e-9) {
+        const t = v.station === u.station ? 0 : (st - u.station) / (v.station - u.station), mix = function (key) { return u[key].z + (v[key].z - u[key].z) * t; };
+        return { ax: mix('axis'), l: mix('left'), r: mix('right') }; } }
+      return null;
+    };
     for (let i = 0; i < its.length; i++) for (let j = i + 1; j < its.length; j++) {
       const A = its[i], B = its[j], found = [];
       for (let m = 1; m < A.pts.length; m++) for (let n = 1; n < B.pts.length; n++) {
@@ -5276,7 +5286,8 @@ select.inp, .inp, .cell { background: var(--card); }
         const x = a.x + t * r1x, y = a.y + t * r1y;
         if (found.some(function (q) { return Math.hypot(q.x - x, q.y - y) < 0.5; })) continue;
         const z1 = lerp(a, b, t, 'z'), z2 = lerp(c, e, u, 'z');
-        found.push({ a: A.s, b: B.s, x: x, y: y, z1: z1, z2: z2, st1: lerp(a, b, t, 'st'), st2: lerp(c, e, u, 'st'), dz: fin(z1) && fin(z2) ? z1 - z2 : NaN });
+        const st1 = lerp(a, b, t, 'st'), st2 = lerp(c, e, u, 'st');
+        found.push({ a: A.s, b: B.s, x: x, y: y, z1: z1, z2: z2, st1: st1, st2: st2, e1: edgeAt(secMap[i], st1), e2: edgeAt(secMap[j], st2), dz: fin(z1) && fin(z2) ? z1 - z2 : NaN });
       }
       found.forEach(function (q) { res.push(q); });
     }
@@ -5305,10 +5316,21 @@ select.inp, .inp, .cell { background: var(--card); }
     return w;
   }
   function planTipHtml(q) {
-    const zf = function (z) { return fin(z) ? '<bdi dir="ltr">' + C.fmt(z, 3) + ' m</bdi>' : '—'; };
+    const zf = function (z) { return fin(z) ? C.fmt(z, 3) : '—'; };
+    const mm = function (v) { return fin(v) ? '<bdi dir="ltr">' + (v > 0 ? '+' : '') + C.fmt(v * 1000, 0) + ' mm</bdi>' : '—'; };
+    const cell = function (lab, val) { return '<div style="flex:1;text-align:center"><small class="muted" style="display:block">' + lab + '</small><b dir="ltr" style="font-size:15px">' + val + '</b></div>'; };
+    const block = function (name, st, z, e, otherZ, otherName) {
+      const flat = e && Math.abs(e.l - e.ax) < 1e-9 && Math.abs(e.r - e.ax) < 1e-9;
+      let h = '<div style="margin-top:8px;padding-top:6px;border-top:1px dashed var(--line, #d5d9df)"><div>«' + esc(name) + '» <small class="muted">• کیلومتراژ تلاقی <bdi dir="ltr">' + (fin(st) ? stnL(st) : '—') + '</bdi></small></div>';
+      h += '<div style="display:flex;gap:6px;margin-top:4px">' + cell('لبه‌ی چپ', zf(e ? e.l : NaN)) + cell('محور', zf(z)) + cell('لبه‌ی راست', zf(e ? e.r : NaN)) + '</div>';
+      if (!e) h += '<small style="color:#b45f00;display:block;margin-top:3px">⚠ کیلومتراژ تلاقی خارج از مقاطع ثبت‌شده‌ی این خیابان است؛ لبه‌ها نامعلوم‌اند.</small>';
+      else if (flat) h += '<small style="color:#b45f00;display:block;margin-top:3px">⚠ عرض یا شیب عرضی این خیابان در این کیلومتراژ ثبت نشده است.</small>';
+      else h += '<small class="muted" style="display:block;margin-top:3px">لبه‌ها نسبت به محور «' + esc(otherName) + '»: چپ <b>' + mm(e.l - otherZ) + '</b> • راست <b>' + mm(e.r - otherZ) + '</b></small>';
+      return h + '</div>';
+    };
     return '<div class="plan-tip" id="planTip"><div class="wn-h"><b>ارتفاع تقاطع</b><button class="btn sm" data-act="planTipX" aria-label="بستن" style="min-height:0;height:24px;padding:0 9px;line-height:1">✕</button></div>' +
-      '«' + esc(q.a.name) + '»: <b>' + zf(q.z1) + '</b><br>«' + esc(q.b.name) + '»: <b>' + zf(q.z2) + '</b>' +
-      (fin(q.dz) ? '<br>اختلاف: <b><bdi dir="ltr">' + (q.dz > 0 ? '+' : '') + C.fmt(q.dz * 1000, 0) + ' mm</bdi></b>' : '') + '</div>';
+      block(q.a.name, q.st1, q.z1, q.e1, q.z2, q.b.name) + block(q.b.name, q.st2, q.z2, q.e2, q.z1, q.a.name) +
+      (fin(q.dz) ? '<div style="margin-top:8px">اختلاف محورها: <b>' + mm(q.dz) + '</b></div>' : '') + '</div>';
   }
   function planWnHtml(warns, lim) {
     const inpf = function (k, v) { return '<input class="inp" inputmode="decimal" dir="ltr" data-plim="' + k + '" value="' + v + '" style="width:56px;min-height:0;height:26px;padding:0 6px">'; };
