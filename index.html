@@ -3826,7 +3826,7 @@ select.inp, .inp, .cell { background: var(--card); }
   const PAGE_SIZE = 50;       // ردیف در هر صفحه‌ی جدول نقاط
   const TABLE_STATIONS = 30;  // مقطع در هر صفحه‌ی جدول سه‌نقطه‌ای
 
-  const APP_VERSION = 'UI-3.11.15 (بر پایه‌ی 1.22.1)';
+  const APP_VERSION = 'UI-3.11.16 (بر پایه‌ی 1.22.1)';
   try { const spv = document.getElementById('spVer'); if (spv) spv.innerHTML = 'نسخه <bdi dir="ltr">' + APP_VERSION + '</bdi>'; } catch (e) { /* ignore */ }
   const S = {
     project: null, dirty: false, rev: 0, calc: null, calcRev: -1,
@@ -8734,7 +8734,29 @@ select.inp, .inp, .cell { background: var(--card); }
   /* ============================== آزمایش تراکم خاک ============================== */
   const DENS_MAX_DIST = 5, DENS_MAX_ACC = 15;   // بیشترین فاصله از محور خیابان و دقت GPS برای ثبت خودکار کیلومتراژ (م)
   function densPts() { const p = P(); return p && Array.isArray(p.densityTests) ? p.densityTests : []; }
-  function densValid(r) { return r.src === 'manual' || (fin(r.dist) && r.dist <= DENS_MAX_DIST); }
+  function densValid(r) { return r.src === 'manual' || r.inside === true || (r.inside === undefined && fin(r.dist) && r.dist <= DENS_MAX_DIST); }
+  /** نیم‌عرض چپ و راست خیابان در کیلومتراژ داده‌شده (از مقاطع)؛ null اگر ثبت نشده باشد */
+  function densWidths(street, st) {
+    const rows = (street.sections || []).filter(function (r) { return r.wL !== '' && r.wR !== '' && r.wL !== undefined && r.wR !== undefined && fin(Number(r.station)) && fin(Number(r.wL)) && fin(Number(r.wR)); })
+      .map(function (r) { return { s: Number(r.station), l: Number(r.wL), r: Number(r.wR) }; }).sort(function (a, b) { return a.s - b.s; });
+    if (!rows.length || !fin(st)) return null;
+    if (st <= rows[0].s) return { l: rows[0].l, r: rows[0].r };
+    if (st >= rows[rows.length - 1].s) return { l: rows[rows.length - 1].l, r: rows[rows.length - 1].r };
+    for (let i = 1; i < rows.length; i++) if (st <= rows[i].s) {
+      const a = rows[i - 1], b = rows[i], k = (st - a.s) / (b.s - a.s || 1);
+      return { l: a.l + (b.l - a.l) * k, r: a.r + (b.r - a.r) * k };
+    }
+    return null;
+  }
+  /** آیا نقطه‌ی GPS داخل عرض مسیر است؛ و موقعیت آن (وسط/چپ/راست) */
+  function densPlace(n) {
+    const w = densWidths(n.it.s, n.st), tol = 1;
+    const half = w ? (n.side > 0 ? w.l : w.r) : 0;
+    const center = n.side === 0 || n.dist < 0.25 * (half || 1);
+    const txt = center ? 'وسط مسیر' : (n.side > 0 ? 'سمت چپ' : 'سمت راست');
+    if (!w) return { inside: n.dist <= DENS_MAX_DIST, place: txt + ' (عرض ثبت نشده)', off: n.dist };
+    return { inside: n.dist <= half + tol, place: txt, off: n.dist };
+  }
   function densPage() {
     if (!S.project) return '<div class="msg info small">برای ثبت آزمایش تراکم، یک پروژه باز کنید.</div>';
     const list = densPts(), st = S.project.settings || {}, streets = P().streets || [];
@@ -8756,7 +8778,7 @@ select.inp, .inp, .cell { background: var(--card); }
         '<thead><tr><th>زمان</th><th>خیابان</th><th>کیلومتراژ</th><th>یادداشت</th><th></th></tr></thead><tbody>' +
         list.map(function (r, i) {
           const tm = new Date(r.t); const ts = isNaN(tm.getTime()) ? '' : tm.toLocaleString('fa-IR');
-          const tag = r.src === 'manual' ? ' <small class="muted">(دستی)</small>' : (densValid(r) ? '' : ' <small style="color:#b42318">(حدسی—نامعتبر)</small>');
+          const tag = r.src === 'manual' ? ' <small class="muted">(دستی)</small>' : (densValid(r) ? (r.place ? ' <small class="muted">· ' + esc(r.place) + '</small>' : '') : ' <small style="color:#b42318">(حدسی—نامعتبر)</small>');
           return '<tr><td>' + esc(ts) + '</td><td>' + esc(r.street || '—') + '</td><td>' + (fin(r.station) ? '<bdi dir="ltr">' + esc(stn(r.station)) + '</bdi>' : '—') + tag +
             '</td><td>' + esc(r.note || '') + '</td>' +
             '<td><button class="btn sm" data-act="densDel" data-i="' + i + '">حذف</button></td></tr>';
@@ -8775,14 +8797,15 @@ select.inp, .inp, .cell { background: var(--card); }
       const r = llToUtm(g.coords.latitude, g.coords.longitude, parseInt(st.utmZone, 10), st.hemisphere === 'S');
       const n = planNearest(planData(), { x: r.x, y: r.y })[0];
       if (!n) { say('خیابانی با مختصات برای ثبت نیست.', true); return; }
-      if (!fin(n.st) || n.dist > DENS_MAX_DIST || acc > DENS_MAX_ACC) {
-        say('شما حدود ' + C.fmt(n.dist, 1) + ' متر از «' + n.it.s.name + '» فاصله دارید و دقت GPS ' + C.fmt(acc, 0) + ' متر است. کیلومتراژ حدسی ثبت نشد. کنار خیابان بایستید یا از «ثبت دستی» استفاده کنید.', true);
+      const pl = densPlace(n);
+      if (!fin(n.st) || !pl.inside || acc > DENS_MAX_ACC) {
+        say('شما ' + (pl.inside ? '' : 'بیرون از عرض «' + n.it.s.name + '» ') + 'و حدود ' + C.fmt(n.dist, 1) + ' متر از محور آن هستید؛ دقت GPS ' + C.fmt(acc, 0) + ' متر. کیلومتراژ حدسی ثبت نشد. داخل مسیر بایستید یا از «ثبت دستی» استفاده کنید.', true);
         return;
       }
       const note = (($('#densNote') || {}).value || '').trim();
-      p.densityTests = densPts().concat([{ id: 'dt' + Date.now().toString(36), t: new Date().toISOString(), src: 'gps', street: n.it.s.name, sid: n.it.s.id, station: n.st, dist: n.dist, acc: acc, x: r.x, y: r.y, note: note }]);
+      p.densityTests = densPts().concat([{ id: 'dt' + Date.now().toString(36), t: new Date().toISOString(), src: 'gps', street: n.it.s.name, sid: n.it.s.id, station: n.st, dist: n.dist, acc: acc, inside: true, place: pl.place, x: r.x, y: r.y, note: note }]);
       saveProject();
-      toast('ثبت شد: «' + n.it.s.name + '» ⁦' + stn(n.st) + '⁩');
+      toast('ثبت شد: «' + n.it.s.name + '» ⁦' + stn(n.st) + '⁩ — ' + pl.place);
       render();
     }, function (er) {
       say(er && er.code === 1 ? 'اجازه‌ی دسترسی به موقعیت داده نشد.' : 'موقعیت دریافت نشد؛ GPS را روشن کنید.', true);
@@ -8811,14 +8834,14 @@ select.inp, .inp, .cell { background: var(--card); }
       const way = r.src === 'manual' ? 'دستی' : 'GPS';
       const state = densValid(r) ? 'معتبر' : '<b style="color:#b42318">حدسی—نامعتبر</b>';
       return '<tr><td>' + (i + 1) + '</td><td>' + esc(ts) + '</td><td>' + esc(r.street || '—') + '</td><td>' + (fin(r.station) ? bd(stn(r.station)) : '—') +
-        '</td><td>' + way + '</td><td>' + (fin(r.dist) ? bd(C.fmt(r.dist, 1)) : '—') + '</td><td>' + (fin(r.acc) ? bd(C.fmt(r.acc, 0)) : '—') +
+        '</td><td>' + esc(r.place || '—') + '</td><td>' + way + '</td><td>' + (fin(r.dist) ? bd(C.fmt(r.dist, 1)) : '—') + '</td><td>' + (fin(r.acc) ? bd(C.fmt(r.acc, 0)) : '—') +
         '</td><td>' + esc(r.note || '') + '</td><td>' + state + '</td></tr>';
     }).join('');
     let h = '<div class="rp-page"><div class="rp-cover"><div class="rp-l"><div class="rp-brand">RoadStake</div><div class="rp-sub">گزارش آزمایش تراکم خاک</div></div>' +
       '<div class="rp-title">' + esc(p.name) + '</div><div class="rp-r"><div>' + esc(date) + '</div><div dir="ltr">' + esc(cs) + '</div></div></div>';
     h += '<div class="rp-cards">' + card('تعداد آزمایش', bd(String(list.length)), '') + card('معتبر', bd(String(ok.length)), 'دستی: ' + bd(String(man))) +
       card('نامعتبر (حدسی)', bd(String(bad)), bad ? 'باید دوباره ثبت شود' : '') + '</div>';
-    h += '<div class="rp-box"><h3>فهرست آزمایش‌ها</h3><table class="pt-tbl"><thead><tr><th>#</th><th>زمان</th><th>خیابان</th><th>کیلومتراژ</th><th>روش</th><th>فاصله (م)</th><th>دقت (م)</th><th>یادداشت</th><th>وضعیت</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
+    h += '<div class="rp-box"><h3>فهرست آزمایش‌ها</h3><table class="pt-tbl"><thead><tr><th>#</th><th>زمان</th><th>خیابان</th><th>کیلومتراژ</th><th>موقعیت</th><th>روش</th><th>فاصله از محور (م)</th><th>دقت (م)</th><th>یادداشت</th><th>وضعیت</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
     h += signBlock() + '<div class="pt-foot">RoadStake • ' + esc(p.name) + ' • ' + esc(date) + '</div></div>';
     const pa = $('#printArea'), oldTitle = document.title;
     pa.className = 'pt rp'; pa.innerHTML = h;
