@@ -3826,7 +3826,7 @@ select.inp, .inp, .cell { background: var(--card); }
   const PAGE_SIZE = 50;       // ردیف در هر صفحه‌ی جدول نقاط
   const TABLE_STATIONS = 30;  // مقطع در هر صفحه‌ی جدول سه‌نقطه‌ای
 
-  const APP_VERSION = 'UI-3.11.14 (بر پایه‌ی 1.22.1)';
+  const APP_VERSION = 'UI-3.11.15 (بر پایه‌ی 1.22.1)';
   try { const spv = document.getElementById('spVer'); if (spv) spv.innerHTML = 'نسخه <bdi dir="ltr">' + APP_VERSION + '</bdi>'; } catch (e) { /* ignore */ }
   const S = {
     project: null, dirty: false, rev: 0, calc: null, calcRev: -1,
@@ -8732,24 +8732,32 @@ select.inp, .inp, .cell { background: var(--card); }
   }
 
   /* ============================== آزمایش تراکم خاک ============================== */
+  const DENS_MAX_DIST = 5, DENS_MAX_ACC = 15;   // بیشترین فاصله از محور خیابان و دقت GPS برای ثبت خودکار کیلومتراژ (م)
   function densPts() { const p = P(); return p && Array.isArray(p.densityTests) ? p.densityTests : []; }
+  function densValid(r) { return r.src === 'manual' || (fin(r.dist) && r.dist <= DENS_MAX_DIST); }
   function densPage() {
     if (!S.project) return '<div class="msg info small">برای ثبت آزمایش تراکم، یک پروژه باز کنید.</div>';
-    const list = densPts(), st = S.project.settings || {};
+    const list = densPts(), st = S.project.settings || {}, streets = P().streets || [];
     let h = '<section class="card"><h3>ثبت نقطه‌ی آزمایش تراکم</h3>' +
-      '<div class="small muted">روی خیابان بایستید و دکمه را بزنید. خیابان نزدیک، کیلومتراژ و موقعیت ثبت می‌شود.</div>' +
+      '<div class="small muted">کنار خیابان بایستید و دکمه را بزنید. کیلومتراژ فقط وقتی ثبت می‌شود که فاصله‌ی شما از محور خیابان کمتر از ' + DENS_MAX_DIST + ' متر و دقت GPS بهتر از ' + DENS_MAX_ACC + ' متر باشد.</div>' +
       (st.coordSystem !== 'UTM' ? '<div class="msg warn small" style="margin-top:6px">سیستم مختصات پروژه UTM نیست؛ ثبت موقعیت GPS کار نمی‌کند.</div>' : '') +
       '<label class="field" style="margin-top:8px"><span>یادداشت (اختیاری)</span><input class="inp" id="densNote" placeholder="مثلاً شماره‌ی آزمایش یا لایه" autocomplete="off"></label>' +
       '<div class="row" style="margin-top:8px"><button class="btn primary" data-act="densRec">📍 ثبت موقعیت فعلی</button></div>' +
-      '<div id="densMsg" class="small muted" style="margin-top:6px"></div></section>';
-    h += '<section class="card"><h3>آزمایش‌های ثبت‌شده (' + list.length + ')</h3>';
-    if (!list.length) h += '<div class="small muted">هنوز آزمایشی ثبت نشده است.</div>';
+      '<div id="densMsg" class="small muted" style="margin-top:6px"></div>' +
+      '<details style="margin-top:10px"><summary class="small">کیلومتراژ را خودم وارد می‌کنم</summary>' +
+      '<label class="field" style="margin-top:6px"><span>خیابان</span><select class="inp" id="densMSt">' + streets.map(function (s) { return '<option value="' + esc(s.id) + '">' + esc(s.name) + '</option>'; }).join('') + '</select></label>' +
+      '<label class="field" style="margin-top:6px"><span>کیلومتراژ (مثلاً 0+140)</span><input class="inp ltr" id="densMKm" dir="ltr" placeholder="0+140" autocomplete="off"></label>' +
+      '<div class="row" style="margin-top:8px"><button class="btn" data-act="densManual">ثبت دستی</button></div></details></section>';
+    h += '<section class="card"><div class="row" style="justify-content:space-between;align-items:center"><h3 style="margin:0">آزمایش‌های ثبت‌شده (' + list.length + ')</h3>' +
+      (list.length ? '<button class="btn sm" data-act="densReport">📄 گزارش</button>' : '') + '</div>';
+    if (!list.length) h += '<div class="small muted" style="margin-top:8px">هنوز آزمایشی ثبت نشده است.</div>';
     else {
-      h += '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px;white-space:nowrap">' +
+      h += '<div style="overflow-x:auto;margin-top:8px"><table style="width:100%;border-collapse:collapse;font-size:12px;white-space:nowrap">' +
         '<thead><tr><th>زمان</th><th>خیابان</th><th>کیلومتراژ</th><th>یادداشت</th><th></th></tr></thead><tbody>' +
         list.map(function (r, i) {
           const tm = new Date(r.t); const ts = isNaN(tm.getTime()) ? '' : tm.toLocaleString('fa-IR');
-          return '<tr><td>' + esc(ts) + '</td><td>' + esc(r.street || '—') + '</td><td>' + (fin(r.station) ? stnL(r.station) : '—') +
+          const tag = r.src === 'manual' ? ' <small class="muted">(دستی)</small>' : (densValid(r) ? '' : ' <small style="color:#b42318">(حدسی—نامعتبر)</small>');
+          return '<tr><td>' + esc(ts) + '</td><td>' + esc(r.street || '—') + '</td><td>' + (fin(r.station) ? '<bdi dir="ltr">' + esc(stn(r.station)) + '</bdi>' : '—') + tag +
             '</td><td>' + esc(r.note || '') + '</td>' +
             '<td><button class="btn sm" data-act="densDel" data-i="' + i + '">حذف</button></td></tr>';
         }).join('') + '</tbody></table></div>';
@@ -8763,17 +8771,62 @@ select.inp, .inp, .cell { background: var(--card); }
     if (st.coordSystem !== 'UTM') { toast('ثبت موقعیت فقط با سیستم مختصات UTM کار می‌کند.', 'err'); return; }
     say('در حال دریافت موقعیت…');
     navigator.geolocation.getCurrentPosition(function (g) {
+      const acc = g.coords.accuracy || 0;
       const r = llToUtm(g.coords.latitude, g.coords.longitude, parseInt(st.utmZone, 10), st.hemisphere === 'S');
       const n = planNearest(planData(), { x: r.x, y: r.y })[0];
       if (!n) { say('خیابانی با مختصات برای ثبت نیست.', true); return; }
+      if (!fin(n.st) || n.dist > DENS_MAX_DIST || acc > DENS_MAX_ACC) {
+        say('شما حدود ' + C.fmt(n.dist, 1) + ' متر از «' + n.it.s.name + '» فاصله دارید و دقت GPS ' + C.fmt(acc, 0) + ' متر است. کیلومتراژ حدسی ثبت نشد. کنار خیابان بایستید یا از «ثبت دستی» استفاده کنید.', true);
+        return;
+      }
       const note = (($('#densNote') || {}).value || '').trim();
-      p.densityTests = densPts().concat([{ id: 'dt' + Date.now().toString(36), t: new Date().toISOString(), street: n.it.s.name, station: n.st, dist: n.dist, acc: g.coords.accuracy || 0, x: r.x, y: r.y, note: note }]);
+      p.densityTests = densPts().concat([{ id: 'dt' + Date.now().toString(36), t: new Date().toISOString(), src: 'gps', street: n.it.s.name, sid: n.it.s.id, station: n.st, dist: n.dist, acc: acc, x: r.x, y: r.y, note: note }]);
       saveProject();
-      toast('ثبت شد: «' + n.it.s.name + '» ' + (fin(n.st) ? '\u2066' + stn(n.st) + '\u2069' : '') + (n.dist > 30 ? ' (فاصله ' + C.fmt(n.dist, 0) + ' م؛ دقت پایین)' : ''));
+      toast('ثبت شد: «' + n.it.s.name + '» ⁦' + stn(n.st) + '⁩');
       render();
     }, function (er) {
       say(er && er.code === 1 ? 'اجازه‌ی دسترسی به موقعیت داده نشد.' : 'موقعیت دریافت نشد؛ GPS را روشن کنید.', true);
     }, { enableHighAccuracy: true, maximumAge: 0, timeout: 20000 });
+  }
+  function densManual() {
+    const p = P(), sid = ($('#densMSt') || {}).value, txt = (($('#densMKm') || {}).value || '');
+    const s = (p.streets || []).find(function (x) { return x.id === sid; });
+    const km = C.parseStation(txt);
+    if (!s) { toast('خیابان را انتخاب کنید.', 'err'); return; }
+    if (!fin(km)) { toast('کیلومتراژ را مثل 0+140 وارد کنید.', 'err'); return; }
+    const note = (($('#densNote') || {}).value || '').trim();
+    p.densityTests = densPts().concat([{ id: 'dt' + Date.now().toString(36), t: new Date().toISOString(), src: 'manual', street: s.name, sid: s.id, station: km, dist: null, acc: null, note: note }]);
+    saveProject(); toast('ثبت دستی انجام شد.'); render();
+  }
+  async function densReport() {
+    const p = P(), list = densPts(), st = p.settings || {};
+    if (!list.length) { toast('آزمایشی برای گزارش ثبت نشده است.', 'err'); return; }
+    if (!(await rptAsk())) return;
+    const bd = function (t) { return '<bdi dir="ltr">' + esc(t) + '</bdi>'; };
+    const date = new Date().toLocaleDateString('fa-IR'), cs = st.coordSystem === 'UTM' ? 'UTM ' + st.utmZone + (st.hemisphere === 'S' ? 'S' : 'N') + ' / ' + st.datum : 'محلی';
+    const ok = list.filter(densValid), bad = list.length - ok.length, man = list.filter(function (r) { return r.src === 'manual'; }).length;
+    const card = function (lab, val, sub) { return '<div class="rp-card"><span>' + lab + '</span><b>' + val + '</b>' + (sub ? '<small>' + sub + '</small>' : '') + '</div>'; };
+    const rows = list.map(function (r, i) {
+      const tm = new Date(r.t), ts = isNaN(tm.getTime()) ? '' : tm.toLocaleString('fa-IR');
+      const way = r.src === 'manual' ? 'دستی' : 'GPS';
+      const state = densValid(r) ? 'معتبر' : '<b style="color:#b42318">حدسی—نامعتبر</b>';
+      return '<tr><td>' + (i + 1) + '</td><td>' + esc(ts) + '</td><td>' + esc(r.street || '—') + '</td><td>' + (fin(r.station) ? bd(stn(r.station)) : '—') +
+        '</td><td>' + way + '</td><td>' + (fin(r.dist) ? bd(C.fmt(r.dist, 1)) : '—') + '</td><td>' + (fin(r.acc) ? bd(C.fmt(r.acc, 0)) : '—') +
+        '</td><td>' + esc(r.note || '') + '</td><td>' + state + '</td></tr>';
+    }).join('');
+    let h = '<div class="rp-page"><div class="rp-cover"><div class="rp-l"><div class="rp-brand">RoadStake</div><div class="rp-sub">گزارش آزمایش تراکم خاک</div></div>' +
+      '<div class="rp-title">' + esc(p.name) + '</div><div class="rp-r"><div>' + esc(date) + '</div><div dir="ltr">' + esc(cs) + '</div></div></div>';
+    h += '<div class="rp-cards">' + card('تعداد آزمایش', bd(String(list.length)), '') + card('معتبر', bd(String(ok.length)), 'دستی: ' + bd(String(man))) +
+      card('نامعتبر (حدسی)', bd(String(bad)), bad ? 'باید دوباره ثبت شود' : '') + '</div>';
+    h += '<div class="rp-box"><h3>فهرست آزمایش‌ها</h3><table class="pt-tbl"><thead><tr><th>#</th><th>زمان</th><th>خیابان</th><th>کیلومتراژ</th><th>روش</th><th>فاصله (م)</th><th>دقت (م)</th><th>یادداشت</th><th>وضعیت</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
+    h += signBlock() + '<div class="pt-foot">RoadStake • ' + esc(p.name) + ' • ' + esc(date) + '</div></div>';
+    const pa = $('#printArea'), oldTitle = document.title;
+    pa.className = 'pt rp'; pa.innerHTML = h;
+    document.title = slugFa(p.name) + '_density_report';
+    await new Promise(function (res) { setTimeout(res, 250); });
+    if (!(await rptSignOld(pa, document.title))) { pa.innerHTML = ''; pa.className = ''; document.title = oldTitle; return; }
+    window.print();
+    setTimeout(function () { pa.innerHTML = ''; pa.className = ''; document.title = oldTitle; }, 1000);
   }
   function surveyPage() {
     if (S.sf.src === 'file') return streetBar(false) + svSrcBar() + svFilePage();
@@ -11135,6 +11188,8 @@ select.inp, .inp, .cell { background: var(--card); }
       case 'planTipX': S.plan.xsel = null; render(); break;
       case 'planXRole': S.plan.xrole = b.dataset.k === 'b' ? 'b' : 'a'; render(); break;
       case 'densRec': densRecord(); break;
+      case 'densManual': densManual(); break;
+      case 'densReport': densReport(); break;
       case 'densDel': {
         const i = parseInt(b.dataset.i, 10), list = densPts();
         if (list[i] && await ask('آزمایش ردیف ' + (i + 1) + ' حذف شود؟', { danger: true, ok: 'حذف' })) { P().densityTests = list.filter(function (_, j) { return j !== i; }); saveProject(); render(); }

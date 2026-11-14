@@ -1,6 +1,6 @@
 /* RoadStake UI — سرویس‌ورکر ساده: ذخیره‌ی فایل‌های برنامه برای کار بدون اینترنت.
    با هر انتشار نسخه‌ی جدید، مقدار VERSION را عوض کنید تا حافظه‌ی قدیمی پاک شود. */
-const VERSION = 'roadstake-ui-3.11.14-r18';
+const VERSION = 'roadstake-ui-3.11.15-r19';
 const FILES = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', function (e) {
