@@ -3826,7 +3826,7 @@ select.inp, .inp, .cell { background: var(--card); }
   const PAGE_SIZE = 50;       // ردیف در هر صفحه‌ی جدول نقاط
   const TABLE_STATIONS = 30;  // مقطع در هر صفحه‌ی جدول سه‌نقطه‌ای
 
-  const APP_VERSION = 'UI-3.11.8 (بر پایه‌ی 1.22.1)';
+  const APP_VERSION = 'UI-3.11.14 (بر پایه‌ی 1.22.1)';
   try { const spv = document.getElementById('spVer'); if (spv) spv.innerHTML = 'نسخه <bdi dir="ltr">' + APP_VERSION + '</bdi>'; } catch (e) { /* ignore */ }
   const S = {
     project: null, dirty: false, rev: 0, calc: null, calcRev: -1,
@@ -4133,8 +4133,8 @@ select.inp, .inp, .cell { background: var(--card); }
   };
   const NAV_L = [['home', 'پروژه‌ها'], ['newo', 'بنچ‌مارک']];
   const NAV_R = [['stake', 'پیاده'], ['survey', 'برداشت']];
-  const NAV_ALL = [['home', 'شروع'], ['projects', 'پروژه‌ها و پشتیبان'], ['points', 'محور و لبه‌ها'], ['slopes', 'شیب عرضی'], ['layers', 'لایه‌ها'], ['newo', 'بنچ‌مارک'], ['stake', 'پیاده‌سازی'], ['survey', 'برداشت'], ['permit', 'مجوز'], ['mat', 'مصالح و تخلیه'], ['export', 'خروجی و گزارش'], ['flood', 'تحلیل آب‌گرفتگی'], ['security', 'کلید، قفل و اثرانگشت']];
-  const MENU_GROUPS = [['اجرا', ['points', 'slopes', 'layers', 'newo', 'stake', 'survey']], ['محاسبه و تحویل', ['mat', 'export', 'flood', 'permit', 'projects']], ['امنیت', ['security']]];
+  const NAV_ALL = [['home', 'شروع'], ['projects', 'پروژه‌ها و پشتیبان'], ['points', 'محور و لبه‌ها'], ['slopes', 'شیب عرضی'], ['layers', 'لایه‌ها'], ['newo', 'بنچ‌مارک'], ['stake', 'پیاده‌سازی'], ['survey', 'برداشت'], ['density', 'تراکم خاک'], ['permit', 'مجوز'], ['mat', 'مصالح و تخلیه'], ['export', 'خروجی و گزارش'], ['flood', 'تحلیل آب‌گرفتگی'], ['security', 'کلید، قفل و اثرانگشت']];
+  const MENU_GROUPS = [['اجرا', ['points', 'slopes', 'layers', 'newo', 'stake', 'survey', 'density']], ['محاسبه و تحویل', ['mat', 'export', 'flood', 'permit', 'projects']], ['امنیت', ['security']]];
   const MENU_NAME = {}; NAV_ALL.forEach(function (n) { MENU_NAME[n[0]] = n[1]; });
   ICONS.home = ICONS.projects;
   ICONS.security = '<circle cx="8" cy="15" r="4"/><path d="M11 12 20 3M16 7l3 3M14 9l2 2"/>';
@@ -4167,7 +4167,7 @@ select.inp, .inp, .cell { background: var(--card); }
   }
   function closeMenu() { const d = document.getElementById('menuSheet'); if (d) d.remove(); }
 
-  const PAGE_TITLE = { home: 'پروژه‌ها', flood: 'تحلیل آب‌گرفتگی', preport: 'گزارش پروژه', projects: 'ساخت پروژه و پشتیبان', points: 'محور و لبه‌ها', slopes: 'شیب عرضی', layers: 'لایه‌ها', mat: 'مصالح و تخلیه', newo: 'بنچ‌مارک', stake: 'پیاده‌سازی', survey: 'برداشت', permit: 'مجوز', export: 'خروجی و گزارش', security: 'امنیت' };
+  const PAGE_TITLE = { home: 'پروژه‌ها', flood: 'تحلیل آب‌گرفتگی', preport: 'گزارش پروژه', projects: 'ساخت پروژه و پشتیبان', points: 'محور و لبه‌ها', slopes: 'شیب عرضی', layers: 'لایه‌ها', mat: 'مصالح و تخلیه', newo: 'بنچ‌مارک', stake: 'پیاده‌سازی', survey: 'برداشت', density: 'تراکم خاک', permit: 'مجوز', export: 'خروجی و گزارش', security: 'امنیت' };
   function renderTop() {
     const p = S.project, ttl = PAGE_TITLE[S.page] || 'RoadStake';
     let sub;
@@ -5265,13 +5265,13 @@ select.inp, .inp, .cell { background: var(--card); }
   function planCrossAll(d) {
     const res = [], its = d.items.filter(function (it) { return it.pts.length >= 2; });
     const lerp = function (p0, p1, k, key) { return fin(p0[key]) && fin(p1[key]) ? p0[key] + (p1[key] - p0[key]) * k : NaN; };
-    /* مقاطع هر خیابان (محور، لبه‌ی چپ و راست) برای نمایش لبه‌ها در کارت تقاطع؛ فقط کارت، نه شلوغیِ پلان */
+    /* مقاطع هر خیابان (محور، لبه‌ی چپ و راست) برای کارت تقاطع؛ فقط کارت، نه شلوغیِ پلان */
     const stg = P().settings, secMap = its.map(function (it) { try { return C.computeSections(it.s.points, it.s.sections, Object.assign({}, stg, { sectionMode: 'point' }, refOpts(it.s)), it.s.mids) || []; } catch (e) { return []; } });
-    /* خطوط لبه و محور هر خیابان را با محور خیابان دیگر قطع می‌دهیم (کیلومتراژ و ارتفاع هر تلاقی) */
     const polyOf = function (secs, k) {
       return secs.filter(function (r) { return fin(r.station) && r[k] && fin(r[k].x) && fin(r[k].y) && fin(r[k].z); })
         .sort(function (a, b) { return a.station - b.station; }).map(function (r) { return { x: r[k].x, y: r[k].y, z: r[k].z, s: r.station }; });
     };
+    /* تقاطع دو پاره‌خط: کیلومتراژ و ارتفاع هر دو، و مختصات تقاطع */
     const segHits = function (PA, PB) {
       const out = [], eps = 1e-6;
       for (let m = 1; m < PA.length; m++) for (let n = 1; n < PB.length; n++) {
@@ -5281,18 +5281,22 @@ select.inp, .inp, .cell { background: var(--card); }
         const t = ((c.x - a.x) * r2y - (c.y - a.y) * r2x) / den, u = ((c.x - a.x) * r1y - (c.y - a.y) * r1x) / den;
         if (t < -eps || t > 1 + eps || u < -eps || u > 1 + eps) continue;
         const stA = a.s + t * (b.s - a.s), zA = a.z + t * (b.z - a.z), stB = c.s + u * (e.s - c.s), zB = c.z + u * (e.z - c.z);
-        out.push({ stA: stA, stB: stB, zA: zA, zB: zB, dz: zA - zB });
+        out.push({ stA: stA, stB: stB, zA: zA, zB: zB, dz: zA - zB, x: a.x + t * r1x, y: a.y + t * r1y });
       }
       return out;
     };
     const blankSlope = function (v) { return v === undefined || v === null || v === '' || !isFinite(Number(v)); };
+    const K3 = ['left', 'axis', 'right'];
+    /* ۹ ترکیب: هر سه خط خیابان X (چپ، محور، راست) با هر سه خط خیابان Y */
     const sideHits = function (X, Y) {
       const sx = secMap[X], sy = secMap[Y];
       const noFall = (its[X].s.sections || []).some(function (r) { return blankSlope(r.sL) || blankSlope(r.sR); });
-      if (!sx.length || !sy.length) return { noSec: true, noFall: noFall, sides: {} };
-      const axisY = polyOf(sy, 'axis'), sides = {};
-      ['left', 'axis', 'right'].forEach(function (k) { sides[k] = segHits(polyOf(sx, k), axisY); });
-      return { noSec: false, noFall: noFall, sides: sides };
+      if (!sx.length || !sy.length) return { noSec: true, noFall: noFall, flat: false, lines: {}, hits: [] };
+      const lx = {}, ly = {}, hits = [];
+      K3.forEach(function (k) { lx[k] = polyOf(sx, k); ly[k] = polyOf(sy, k); });
+      K3.forEach(function (k) { K3.forEach(function (m) { segHits(lx[k], ly[m]).forEach(function (h) { h.k = k; h.m = m; hits.push(h); }); }); });
+      const onAxis = function (ln) { return ln.length > 0 && ln.every(function (p) { const a = lx.axis.find(function (r) { return Math.abs(r.s - p.s) < 1e-6; }); return !a || Math.abs(p.z - a.z) < 1e-9; }); };
+      return { noSec: false, noFall: noFall, flat: onAxis(lx.left) && onAxis(lx.right), lines: lx, hits: hits.sort(function (a, b) { return a.stB - b.stB; }) };
     };
     for (let i = 0; i < its.length; i++) for (let j = i + 1; j < its.length; j++) {
       const A = its[i], B = its[j], found = [];
@@ -5335,31 +5339,138 @@ select.inp, .inp, .cell { background: var(--card); }
     });
     return w;
   }
+  /** تقاطع دو پاره‌خط برای کارت تلاقی: کیلومتراژ و ارتفاع هر دو خط در نقطه‌ی برخورد */
+  function planSegHits(PA, PB) {
+    const out = [], eps = 1e-6;
+    for (let m = 1; m < PA.length; m++) for (let n = 1; n < PB.length; n++) {
+      const a = PA[m - 1], b = PA[m], c = PB[n - 1], e = PB[n];
+      const r1x = b.x - a.x, r1y = b.y - a.y, r2x = e.x - c.x, r2y = e.y - c.y, den = r1x * r2y - r1y * r2x;
+      if (Math.abs(den) < 1e-12) continue;
+      const t = ((c.x - a.x) * r2y - (c.y - a.y) * r2x) / den, u = ((c.x - a.x) * r1y - (c.y - a.y) * r1x) / den;
+      if (t < -eps || t > 1 + eps || u < -eps || u > 1 + eps) continue;
+      out.push({ sB: a.s + t * (b.s - a.s), zB: a.z + t * (b.z - a.z), sA: c.s + u * (e.s - c.s), zA: c.z + u * (e.z - c.z), x: a.x + t * r1x, y: a.y + t * r1y });
+    }
+    return out;
+  }
+  /** نیم‌رخ کوتاه (±۱۰ م) یک خیابان در محل تلاقی: سه خط، بازه‌ی مقطع دیگر و نقاط برخورد */
+  function planXProf(lines, c, nm, marks, col) {
+    const w = 10, W = 232, H = 84, L = 34, R = 6, T = 8, B = 18;
+    if (!fin(c) || !lines) return '';
+    const at = function (poly, s) { for (let i = 1; i < poly.length; i++) { const a = poly[i - 1], b = poly[i]; if (s >= a.s && s <= b.s && b.s > a.s) return a.z + (b.z - a.z) * (s - a.s) / (b.s - a.s); } return NaN; };
+    const clip = function (poly) {
+      if (poly.length < 2) return [];
+      const lo = c - w, hi = c + w, out = [], z0 = at(poly, lo), z1 = at(poly, hi);
+      if (fin(z0)) out.push({ s: lo, z: z0 });
+      poly.forEach(function (p) { if (p.s > lo && p.s < hi) out.push({ s: p.s, z: p.z }); });
+      if (fin(z1)) out.push({ s: hi, z: z1 });
+      return out;
+    };
+    const cl = {}; let zmin = Infinity, zmax = -Infinity;
+    ['left', 'axis', 'right'].forEach(function (k) { cl[k] = clip(lines[k] || []); cl[k].forEach(function (p) { zmin = Math.min(zmin, p.z); zmax = Math.max(zmax, p.z); }); });
+    const mk = marks.filter(function (m) { return fin(m.s) && fin(m.z) && Math.abs(m.s - c) <= w + 1e-6; });
+    mk.forEach(function (m) { zmin = Math.min(zmin, m.z); zmax = Math.max(zmax, m.z); });
+    if (!isFinite(zmin)) return '<small class="muted">نیم‌رخ «' + esc(nm) + '» در ±۱۰ متر داده ندارد.</small>';
+    if (zmax - zmin < 0.02) { const mid = (zmax + zmin) / 2; zmin = mid - .01; zmax = mid + .01; }
+    const sx = function (s) { return L + (s - (c - w)) / (2 * w) * (W - L - R); }, sz = function (z) { return T + (zmax - z) / (zmax - zmin) * (H - T - B); };
+    const f = function (v) { return v.toFixed(1); };
+    let g = '';
+    if (mk.length) {
+      const s0 = Math.min.apply(null, mk.map(function (m) { return m.s; })), s1 = Math.max.apply(null, mk.map(function (m) { return m.s; }));
+      g += '<rect x="' + f(sx(s0)) + '" y="' + T + '" width="' + f(Math.max(sx(s1) - sx(s0), 2)) + '" height="' + (H - T - B) + '" fill="' + col + '" fill-opacity=".12"/>';
+    }
+    [zmin, zmax].forEach(function (z) { g += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + f(sz(z)) + '" y2="' + f(sz(z)) + '" stroke="#d5dde3" stroke-width=".7"/><text x="' + (L - 3) + '" y="' + f(sz(z) + 2.6) + '" text-anchor="end" font-size="7.5" fill="#5a6875" direction="ltr">' + C.fmt(z, 3) + '</text>'; });
+    ['left', 'axis', 'right'].forEach(function (k) {
+      const pts = cl[k]; if (pts.length < 2) return;
+      g += '<polyline points="' + pts.map(function (p) { return f(sx(p.s)) + ',' + f(sz(p.z)); }).join(' ') + '" fill="none" stroke="' + col + '" stroke-width="' + (k === 'axis' ? 2 : 1.2) + '"' + (k === 'axis' ? '' : ' stroke-dasharray="3 2"') + '/>';
+    });
+    g += '<line x1="' + f(sx(c)) + '" x2="' + f(sx(c)) + '" y1="' + T + '" y2="' + (H - B) + '" stroke="#263238" stroke-dasharray="2 2"/>';
+    mk.forEach(function (m) { g += '<circle cx="' + f(sx(m.s)) + '" cy="' + f(sz(m.z)) + '" r="2.6" fill="#b42318" stroke="#fff" stroke-width=".6"/>'; });
+    g += '<text x="' + L + '" y="' + (H - 7) + '" font-size="7.5" fill="#5a6875" direction="ltr">' + esc(stn(c - w)) + '</text><text x="' + (W - R) + '" y="' + (H - 7) + '" text-anchor="end" font-size="7.5" fill="#5a6875" direction="ltr">' + esc(stn(c + w)) + '</text>';
+    return '<div style="margin-top:6px"><small style="color:' + col + ';font-weight:700;font-size:11px">نیم‌رخ «' + esc(nm) + '» ±۱۰ م</small><svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;height:auto;display:block;background:#fff;border:1px solid var(--line);border-radius:6px;margin-top:2px" role="img" aria-label="نیم‌رخ ' + esc(nm) + '">' + g + '</svg></div>';
+  }
+  /** پلان نزدیک تلاقی (±۲۵ م): خط‌های A و B و نقاط برخورد؛ قرمز = روی سطح A، نارنجی = خارج از A */
+  function planXPlan(q, AL, BL, colA, colB, nmA, nmB, hits, okOf) {
+    const R = 25, Wp = 260, S = 120 / R, cx = Wp / 2, X = function (x) { return cx + (x - q.x) * S; }, Y = function (y) { return cx - (y - q.y) * S; };
+    let g = '';
+    const drawSet = function (H, col) {
+      ['left', 'axis', 'right'].forEach(function (k) {
+        const pts = (H[k] || []).filter(function (p) { return Math.hypot(p.x - q.x, p.y - q.y) <= R * 1.6; });
+        if (pts.length < 2) return;
+        g += '<polyline points="' + pts.map(function (p) { return X(p.x).toFixed(1) + ',' + Y(p.y).toFixed(1); }).join(' ') + '" fill="none" stroke="' + col + '" stroke-width="' + (k === 'axis' ? 2 : 1.2) + '"' + (k === 'axis' ? '' : ' stroke-dasharray="3 2"') + '/>';
+      });
+    };
+    drawSet(AL, colA); drawSet(BL, colB);
+    hits.forEach(function (h) { g += '<circle cx="' + X(h.x).toFixed(1) + '" cy="' + Y(h.y).toFixed(1) + '" r="2.8" fill="' + (okOf[h.k] ? '#b42318' : '#e07a00') + '" stroke="#fff" stroke-width=".6"/>'; });
+    g += '<path d="M' + cx + ',' + (cx - 5) + ' L' + (cx + 5) + ',' + cx + ' L' + cx + ',' + (cx + 5) + ' L' + (cx - 5) + ',' + cx + 'Z" fill="#263238"/>';
+    return '<svg viewBox="0 0 ' + Wp + ' ' + Wp + '" style="width:100%;height:auto;display:block;background:#fff;border:1px solid var(--line);border-radius:6px" role="img" aria-label="پلان نزدیک تلاقی">' + g + '</svg>' +
+      '<small class="muted" style="font-size:10px;line-height:1.6"><span style="color:' + colA + '">■ A</span> <span style="color:' + colB + '">■ B</span> <span style="color:#b42318">●</span> روی A <span style="color:#e07a00">●</span> خارج</small>';
+  }
   function planTipHtml(q) {
     const zf = function (z) { return fin(z) ? C.fmt(z, 3) : '—'; };
     const mm = function (v) { return fin(v) ? '<bdi dir="ltr">' + (v > 0 ? '+' : '') + C.fmt(v * 1000, 0) + ' mm</bdi>' : '—'; };
-    const sideName = { left: 'لبه‌ی چپ', axis: 'محور', right: 'لبه‌ی راست' };
-    const lines = function (H, name, otherName) {
-      if (H.noSec) return '<small style="color:#b45f00;display:block;margin-top:4px">⚠ این خیابان مقطع (عرض/شیب) ندارد؛ لبه‌ها نامعلوم‌اند.</small>';
-      const L = H.sides.left && H.sides.left[0], A = H.sides.axis && H.sides.axis[0], R = H.sides.right && H.sides.right[0];
-      if (L && A && R && Math.abs(L.zA - A.zA) < 1e-9 && Math.abs(R.zA - A.zA) < 1e-9)
-        return '<small style="color:#b45f00;display:block;margin-top:4px">⚠ لبه‌ها روی محور هستند؛ عرض یا شیب عرضی این خیابان ثبت نشده است.</small>';
-      return ['left', 'axis', 'right'].map(function (k) {
-        const h = H.sides[k] && H.sides[k][0];
-        if (!h) return '<div style="margin-top:5px"><b>' + sideName[k] + '</b> <small class="muted">تلاقی با «' + esc(otherName) + '» ندارد</small></div>';
-        return '<div style="margin-top:5px"><b>' + sideName[k] + '</b> <small class="muted">• روی «' + esc(otherName) + '»: <bdi dir="ltr">' + stnL(h.stB) + '</bdi></small>' +
-          '<div style="font-size:12.5px;margin-top:1px">ارتفاع: <b dir="ltr">' + zf(h.zA) + '</b> در برابر مسیر <b dir="ltr">' + zf(h.zB) + '</b> • اختلاف <b>' + mm(h.dz) + '</b></div></div>';
-      }).join('');
+    const K = { left: 'لبه‌ی چپ', axis: 'محور', right: 'لبه‌ی راست' };
+    const K3 = ['left', 'axis', 'right'];
+    const none = { noSec: true, noFall: false, flat: false, lines: {}, hits: [] };
+    const ea = q.ea || none, eb = q.eb || none;
+    const role = S.plan.xrole === 'b' ? 'b' : 'a';
+    const Ast = role === 'a' ? { nm: q.a.name, H: ea, st: q.st1, z: q.z1, col: '#2f6fdb' } : { nm: q.b.name, H: eb, st: q.st2, z: q.z2, col: '#0b6e4f' };
+    const Bst = role === 'a' ? { nm: q.b.name, H: eb, st: q.st2, z: q.z2, col: '#0b6e4f' } : { nm: q.a.name, H: ea, st: q.st1, z: q.z1, col: '#2f6fdb' };
+    const unsure = ea.noFall || eb.noFall;
+    const note = function (t) { return '<small style="display:block;margin-top:4px;padding:4px 8px;border-radius:6px;background:#fff3e0;color:#b45f00">⚠ ' + t + '</small>'; };
+    const sideWarn = function (H, nm) {
+      if (H.noSec) return note('«' + esc(nm) + '» مقطع (عرض/شیب) ندارد؛ لبه‌ها نامعلوم‌اند.');
+      return (H.noFall ? note('شیب عرضی «' + esc(nm) + '» ثبت نشده؛ لبه‌ها روی ارتفاع محور فرض شده‌اند.') : '') +
+        (H.flat ? note('لبه‌های «' + esc(nm) + '» روی محور هستند؛ عرض یا شیب عرضی ثبت نشده است.') : '');
     };
-    const block = function (name, st, z, H, otherName) {
-      const warnFall = H && H.noFall && !H.noSec ? '<small style="display:block;margin-top:4px;padding:4px 8px;border-radius:6px;background:#fff3e0;color:#b45f00">⚠ شیب عرضی «' + esc(name) + '» ثبت نشده؛ لبه‌ها روی ارتفاع محور فرض شده‌اند.</small>' : '';
-      return '<div style="margin-top:8px;padding-top:6px;border-top:1px dashed var(--line, #d5d9df)"><div>«' + esc(name) + '» <small class="muted">• کیلومتراژ محور <bdi dir="ltr">' + (fin(st) ? stnL(st) : '—') + '</bdi></small></div>' +
-        warnFall + (H ? lines(H, name, otherName) : '') + '</div>';
+    /* ۳ خط B (چپ، محور، راست) با خطوط A؛ هر برخورد: کیلومتراژ و ارتفاع هر دو */
+    let hits = [];
+    if (!Ast.H.noSec && !Bst.H.noSec) K3.forEach(function (kb) { K3.forEach(function (ma) {
+      planSegHits(Bst.H.lines[kb] || [], Ast.H.lines[ma] || []).forEach(function (h) { hits.push({ k: kb, m: ma, sA: h.sA, zA: h.zA, sB: h.sB, zB: h.zB, x: h.x, y: h.y }); });
+    }); });
+    hits.sort(function (a, b) { return K3.indexOf(a.k) - K3.indexOf(b.k) || a.sA - b.sA; });
+    /* خط B روی سطح A است اگر هم لبه‌ی چپ و هم لبه‌ی راست A را قطع کند */
+    /* محدوده‌ی سطح A: چند‌ضلعی از لبه‌ی چپ و راست A؛ نقطه‌ای از B که داخل آن باشد یعنی روی سطح A است (مثلاً ابتدای B روی A) */
+    const inA = function (x, y) {
+      const L = Ast.H.lines.left || [], R = (Ast.H.lines.right || []).slice().reverse();
+      const poly = L.concat(R); let c = false;
+      for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+        const xi = poly[i].x, yi = poly[i].y, xj = poly[j].x, yj = poly[j].y;
+        if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) c = !c;
+      }
+      return c && poly.length >= 3;
     };
-    const unsure = (q.ea && q.ea.noFall) || (q.eb && q.eb.noFall);
-    return '<div class="plan-tip" id="planTip"><div class="wn-h"><b>ارتفاع تقاطع</b>' + (unsure ? ' <span style="font-size:11px;background:#fff3e0;color:#b45f00;border-radius:6px;padding:1px 6px">نامطمئن</span>' : '') + '<button class="btn sm" data-act="planTipX" aria-label="بستن" style="min-height:0;height:24px;padding:0 9px;line-height:1">✕</button></div>' +
-      block(q.a.name, q.st1, q.z1, q.ea, q.b.name) + block(q.b.name, q.st2, q.z2, q.eb, q.a.name) +
-      (fin(q.dz) ? '<div style="margin-top:8px">اختلاف محورها: <b>' + mm(q.dz) + '</b></div>' : '') + '</div>';
+    const okOf = {};
+    K3.forEach(function (k) {
+      const crosses = hits.some(function (h) { return h.k === k && h.m === 'left'; }) && hits.some(function (h) { return h.k === k && h.m === 'right'; });
+      const pts = (Bst.H.lines[k] || []).filter(function (p) { return Math.abs(p.s - Bst.st) <= 12; });
+      okOf[k] = crosses || pts.some(function (p) { return inA(p.x, p.y); });
+    });
+    const sideTxt = { left: 'لبه‌ی چپ', axis: 'محور', right: 'لبه‌ی راست' };
+    const status = K3.map(function (k) {
+      const has = hits.some(function (h) { return h.k === k; });
+      if (!has) return '<div style="margin-top:3px">' + sideTxt[k] + ' B: <b style="color:#b42318">⚠ اصلاً به «' + esc(Ast.nm) + '» نمی‌رسد</b></div>';
+      return '<div style="margin-top:3px">' + sideTxt[k] + ' B: ' + (okOf[k] ? '<b style="color:#0b6e4f">✓ روی سطح «' + esc(Ast.nm) + '»</b>' : '<b style="color:#b42318">⚠ خارج از سطح «' + esc(Ast.nm) + '»؛ آب عبور نمی‌کند</b>') + '</div>';
+    }).join('');
+    const head = '<div class="wn-h"><b>ارتفاع تقاطع</b>' + (unsure ? ' <span style="font-size:11px;background:#fff3e0;color:#b45f00;border-radius:6px;padding:1px 6px">نامطمئن</span>' : '') +
+      '<button class="btn sm" data-act="planTipX" aria-label="بستن" style="min-height:0;height:24px;padding:0 9px;line-height:1">✕</button></div>' +
+      '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"><button class="btn sm' + (role === 'a' ? ' primary' : '') + '" data-act="planXRole" data-k="a">A: «' + esc(q.a.name) + '»</button><button class="btn sm' + (role === 'b' ? ' primary' : '') + '" data-act="planXRole" data-k="b">A: «' + esc(q.b.name) + '»</button></div>';
+    const meta = '<div style="margin-top:6px">«' + esc(Ast.nm) + '» (A) کیلومتراژ محور <b dir="ltr">' + (fin(Ast.st) ? stnL(Ast.st) : '—') + '</b> • ارتفاع <b dir="ltr">' + zf(Ast.z) + '</b></div>' +
+      '<div style="margin-top:3px">«' + esc(Bst.nm) + '» (B) کیلومتراژ محور <b dir="ltr">' + (fin(Bst.st) ? stnL(Bst.st) : '—') + '</b> • ارتفاع <b dir="ltr">' + zf(Bst.z) + '</b></div>';
+    const warns = sideWarn(Ast.H, Ast.nm) + sideWarn(Bst.H, Bst.nm);
+    let body = '';
+    if (!Ast.H.noSec && !Bst.H.noSec) {
+      body = '<div style="margin-top:6px;font-size:12px">' + status + '</div>' +
+        '<div style="display:flex;gap:8px;align-items:flex-start;margin-top:6px"><div style="flex:0 0 150px">' + planXPlan(q, Ast.H.lines, Bst.H.lines, Ast.col, Bst.col, Ast.nm, Bst.nm, hits, okOf) + '</div>' +
+        '<div style="flex:1;min-width:0">' + planXProf(Ast.H.lines, Ast.st, Ast.nm, hits.map(function (h) { return { s: h.sA, z: h.zA }; }), Ast.col) +
+        planXProf(Bst.H.lines, Bst.st, Bst.nm, hits.map(function (h) { return { s: h.sB, z: h.zB }; }), Bst.col) + '</div></div>';
+    }
+    const rows = hits.map(function (h) {
+      return '<tr><td class="r">' + sideTxt[h.k] + ' B</td><td>' + sideTxt[h.m] + ' A</td><td>' + stnL(h.sA) + '</td><td>' + zf(h.zB) + '</td><td>' + zf(h.zA) + '</td><td>' + mm(h.zB - h.zA) + '</td></tr>';
+    }).join('');
+    const table = rows
+      ? '<div style="overflow-x:auto;margin-top:8px"><table style="width:100%;border-collapse:collapse;font-size:10px;white-space:nowrap"><thead><tr><th class="r">خط B</th><th>روی A</th><th>کیلومتراژ A</th><th>ارتفاع B</th><th>ارتفاع A</th><th>اختلاف</th></tr></thead><tbody>' + rows + '</tbody></table></div>'
+      : '<small class="muted" style="display:block;margin-top:6px">هیچ برخوردی بین خط‌های B و A نیست.</small>';
+    return '<div class="plan-tip" id="planTip" style="max-height:38vh;overflow:auto;font-size:12px">' + head + meta + warns + body + table + '</div>';
   }
   function planWnHtml(warns, lim) {
     const inpf = function (k, v) { return '<input class="inp" inputmode="decimal" dir="ltr" data-plim="' + k + '" value="' + v + '" style="width:56px;min-height:0;height:26px;padding:0 6px">'; };
@@ -8620,6 +8731,50 @@ select.inp, .inp, .cell { background: var(--card); }
       (cx.step ? '<p class="muted small" style="margin:6px 0 0">با گام <b class="num">' + cx.step + '</b> متر، <b class="num">' + cx.secs.length + '</b> مقطع از <b class="num">' + cx.total + '</b> نمایش داده می‌شود (ابتدا و انتها همیشه هست).</p>' : '') + '</div>';
   }
 
+  /* ============================== آزمایش تراکم خاک ============================== */
+  function densPts() { const p = P(); return p && Array.isArray(p.densityTests) ? p.densityTests : []; }
+  function densPage() {
+    if (!S.project) return '<div class="msg info small">برای ثبت آزمایش تراکم، یک پروژه باز کنید.</div>';
+    const list = densPts(), st = S.project.settings || {};
+    let h = '<section class="card"><h3>ثبت نقطه‌ی آزمایش تراکم</h3>' +
+      '<div class="small muted">روی خیابان بایستید و دکمه را بزنید. خیابان نزدیک، کیلومتراژ و موقعیت ثبت می‌شود.</div>' +
+      (st.coordSystem !== 'UTM' ? '<div class="msg warn small" style="margin-top:6px">سیستم مختصات پروژه UTM نیست؛ ثبت موقعیت GPS کار نمی‌کند.</div>' : '') +
+      '<label class="field" style="margin-top:8px"><span>یادداشت (اختیاری)</span><input class="inp" id="densNote" placeholder="مثلاً شماره‌ی آزمایش یا لایه" autocomplete="off"></label>' +
+      '<div class="row" style="margin-top:8px"><button class="btn primary" data-act="densRec">📍 ثبت موقعیت فعلی</button></div>' +
+      '<div id="densMsg" class="small muted" style="margin-top:6px"></div></section>';
+    h += '<section class="card"><h3>آزمایش‌های ثبت‌شده (' + list.length + ')</h3>';
+    if (!list.length) h += '<div class="small muted">هنوز آزمایشی ثبت نشده است.</div>';
+    else {
+      h += '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px;white-space:nowrap">' +
+        '<thead><tr><th>زمان</th><th>خیابان</th><th>کیلومتراژ</th><th>یادداشت</th><th></th></tr></thead><tbody>' +
+        list.map(function (r, i) {
+          const tm = new Date(r.t); const ts = isNaN(tm.getTime()) ? '' : tm.toLocaleString('fa-IR');
+          return '<tr><td>' + esc(ts) + '</td><td>' + esc(r.street || '—') + '</td><td>' + (fin(r.station) ? stnL(r.station) : '—') +
+            '</td><td>' + esc(r.note || '') + '</td>' +
+            '<td><button class="btn sm" data-act="densDel" data-i="' + i + '">حذف</button></td></tr>';
+        }).join('') + '</tbody></table></div>';
+    }
+    return h + '</section>';
+  }
+  function densRecord() {
+    const p = P(), st = p.settings || {};
+    const say = function (t, bad) { const m = $('#densMsg'); if (m) { m.textContent = t; m.style.color = bad ? '#b42318' : ''; } };
+    if (!navigator.geolocation) { toast('این دستگاه GPS ندارد.', 'err'); return; }
+    if (st.coordSystem !== 'UTM') { toast('ثبت موقعیت فقط با سیستم مختصات UTM کار می‌کند.', 'err'); return; }
+    say('در حال دریافت موقعیت…');
+    navigator.geolocation.getCurrentPosition(function (g) {
+      const r = llToUtm(g.coords.latitude, g.coords.longitude, parseInt(st.utmZone, 10), st.hemisphere === 'S');
+      const n = planNearest(planData(), { x: r.x, y: r.y })[0];
+      if (!n) { say('خیابانی با مختصات برای ثبت نیست.', true); return; }
+      const note = (($('#densNote') || {}).value || '').trim();
+      p.densityTests = densPts().concat([{ id: 'dt' + Date.now().toString(36), t: new Date().toISOString(), street: n.it.s.name, station: n.st, dist: n.dist, acc: g.coords.accuracy || 0, x: r.x, y: r.y, note: note }]);
+      saveProject();
+      toast('ثبت شد: «' + n.it.s.name + '» ' + (fin(n.st) ? '\u2066' + stn(n.st) + '\u2069' : '') + (n.dist > 30 ? ' (فاصله ' + C.fmt(n.dist, 0) + ' م؛ دقت پایین)' : ''));
+      render();
+    }, function (er) {
+      say(er && er.code === 1 ? 'اجازه‌ی دسترسی به موقعیت داده نشد.' : 'موقعیت دریافت نشد؛ GPS را روشن کنید.', true);
+    }, { enableHighAccuracy: true, maximumAge: 0, timeout: 20000 });
+  }
   function surveyPage() {
     if (S.sf.src === 'file') return streetBar(false) + svSrcBar() + svFilePage();
     const p = P(), cx = svCtx(), r = cx.r;
@@ -8845,6 +9000,7 @@ select.inp, .inp, .cell { background: var(--card); }
     stake: { render: stakePage },
     flood: { render: floodPage },
     survey: { render: surveyPage, live: svRefreshLive, after: svRefreshLive },
+    density: { render: densPage },
     export: { render: exportPage, live: exportLive, after: exportLive }
   };
 
@@ -10977,6 +11133,13 @@ select.inp, .inp, .cell { background: var(--card); }
       case 'planWn': S.plan.wn = !S.plan.wn; if (S.plan.wn) { S.plan.xsel = null; S.plan.bsel = null; S.plan.flp = false; } render(); break;
       case 'planBmX': S.plan.bsel = null; render(); break;
       case 'planTipX': S.plan.xsel = null; render(); break;
+      case 'planXRole': S.plan.xrole = b.dataset.k === 'b' ? 'b' : 'a'; render(); break;
+      case 'densRec': densRecord(); break;
+      case 'densDel': {
+        const i = parseInt(b.dataset.i, 10), list = densPts();
+        if (list[i] && await ask('آزمایش ردیف ' + (i + 1) + ' حذف شود؟', { danger: true, ok: 'حذف' })) { P().densityTests = list.filter(function (_, j) { return j !== i; }); saveProject(); render(); }
+        break;
+      }
       case 'planWarn': {
         const w = S.plan.warns[+b.dataset.k], pl = S.plan; if (!w) break;
         if (pl.vb && pl.b && fin(w.x)) { pl.vb[0] = (w.x - pl.b.x0) - pl.vb[2] / 2; pl.vb[1] = (pl.b.y1 - w.y) - pl.vb[3] / 2; }
