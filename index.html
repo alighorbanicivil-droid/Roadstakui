@@ -564,6 +564,33 @@ tr.ab-high td:last-child { color: #1b7a3d; } tr.ab-low td:last-child { color: #c
   #printArea.rpl .rpl-hash span { display: block; font-size: 6.5pt; color: #5a6875; }
   #printArea.rpl .rpl-hash code { display: block; direction: ltr; text-align: left; font-family: 'DejaVu Sans Mono', Consolas, 'Courier New', monospace; font-size: 7.6pt; letter-spacing: .01em; color: #0b2a40; word-break: break-all; }
   #printArea.rpl .rpl-note { font-size: 6.8pt; color: #5a6875; margin: 2pt 0 4pt; }
+  #printArea.rpl .rpl-sec { font-size: 11pt; font-weight: 700; color: #0b2a40; border-bottom: 1.5pt solid #c9962b; margin: 4pt 0 5pt; padding-bottom: 2pt; break-after: avoid; }
+  .cr-bars { margin: 3pt 0 5pt; }
+  .cr-row { display: grid; grid-template-columns: 28% 1fr 22%; gap: 6pt; align-items: center; font-size: 8pt; margin: 2.5pt 0; }
+  .cr-row > span { color: #0b2a40; } .cr-row > b { text-align: left; font-weight: 600; font-size: 7.5pt; padding-inline: 4pt; white-space: nowrap; }
+  .cr-bar { height: 7pt; background: #e6ecf1; border-radius: 4pt; overflow: hidden; display: flex; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .cr-bar i { display: block; height: 100%; }
+  .cr-pt { font-size: 7pt; color: #5a6875; margin-top: 1pt; }
+  td .cr-bar { min-width: 34mm; } td .cr-pt { white-space: nowrap; }
+  #printArea.rpl .cr-cover { min-height: 256mm; display: flex; flex-direction: column; border: 1pt solid #0b2a40; box-sizing: border-box; overflow: hidden; }
+  #printArea.rpl .cr-cv-band { background: linear-gradient(135deg, #0b2a40 0%, #1d4f6e 60%, #2d6e8f 100%); color: #fff; padding: 12mm 12mm 14mm; border-bottom: 5pt solid #c9962b; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  #printArea.rpl .cr-cv-top { display: flex; justify-content: space-between; align-items: center; }
+  #printArea.rpl .cr-cv-brand { font-size: 13pt; font-weight: 800; letter-spacing: .5pt; color: #fff; }
+  #printArea.rpl .cr-cv-date { font-size: 9pt; color: #cfe3ef; }
+  #printArea.rpl .cr-cv-kicker { font-size: 10pt; color: #f3d48a; font-weight: 700; margin-top: 16mm; }
+  #printArea.rpl .cr-cv-title { font-size: 28pt; font-weight: 800; color: #fff; margin: 4pt 0 6pt; line-height: 1.3; }
+  #printArea.rpl .cr-cv-range { font-size: 11pt; color: #dbe9f2; }
+  #printArea.rpl .cr-cv-kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4mm; padding: 8mm 12mm 0; }
+  #printArea.rpl .cr-cv-kpi { border: .6pt solid #c4ced6; border-top: 3pt solid #c9962b; border-radius: 3pt; padding: 5mm 3mm; text-align: center; }
+  #printArea.rpl .cr-cv-kpi b { display: block; font-size: 16pt; color: #0b2a40; }
+  #printArea.rpl .cr-cv-kpi span { font-size: 8.5pt; color: #5a6875; }
+  #printArea.rpl .cr-cv-body { padding: 8mm 12mm 0; flex: 1; }
+  #printArea.rpl .cr-cv-tbl { width: 100%; border-collapse: collapse; font-size: 9.5pt; }
+  #printArea.rpl .cr-cv-tbl th, #printArea.rpl .cr-cv-tbl td { border-bottom: .6pt solid #c4ced6; padding: 5pt 4pt; text-align: right; }
+  #printArea.rpl .cr-cv-tbl th { color: #5a6875; font-weight: 600; width: 40%; }
+  #printArea.rpl .cr-cv-tbl th, #printArea.rpl .cr-cv-tbl td { background: none !important; }
+  #printArea.rpl .cr-cv-tbl td { color: #0b2a40; }
+  #printArea.rpl .cr-cv-foot { font-size: 8pt; color: #5a6875; text-align: center; padding: 8mm 0 6mm; border-top: .6pt solid #c4ced6; margin: 0 12mm; }
   #printArea.rpl .pt-tbl { font-size: 8.4pt !important; }
   #printArea.rpl .pt-tbl th { position: static !important; }
   #printArea.rpl .pt-tbl th { background: #0b2a40 !important; color: #fff; border: .6pt solid #0b2a40; border-bottom: 1.6pt solid #c9962b; padding: 3pt 4pt; font-size: 7.8pt; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -3297,6 +3324,35 @@ select.inp, .inp, .cell { background: var(--card); }
     };
     const SIDES = ['axis', 'left', 'right'];
     const str = function (v) { return String(v == null ? '' : v); };
+    /* عملیات اجرایی: فقط مقدارهای معتبر نگه داشته می‌شوند (رنگ فقط #rgb / #rrggbb؛ وضعیت فقط از سه حالت) */
+    const WK_ST = ['done', 'active', 'planned'];
+    const normWorks = function (arr) {
+      return (Array.isArray(arr) ? arr : []).slice(0, 2000).filter(function (w) { return w && typeof w === 'object'; }).map(function (w) {
+        const d = str(w.date).slice(0, 10);
+        return { id: str(w.id || C.uid('w')).slice(0, 40), operation: str(w.operation).slice(0, 40), fromKm: num(w.fromKm), toKm: num(w.toKm), status: WK_ST.indexOf(w.status) >= 0 ? w.status : 'planned', date: /^\d{4}-\d{2}-\d{2}$/.test(d) ? d : '', note: str(w.note).slice(0, 200) };
+      }).filter(function (w) { return w.operation && w.fromKm !== null && w.toKm !== null && w.toKm > w.fromKm; });
+    };
+    const normOps = function (arr) {
+      const seen = {};
+      return (Array.isArray(arr) ? arr : []).slice(0, 30).filter(function (o) { return o && typeof o === 'object' && str(o.key).trim(); }).map(function (o) {
+        const wt = num(o.weight), col = str(o.color);
+        return { key: str(o.key).trim().slice(0, 40), label: str(o.label || o.key).slice(0, 60), weight: wt !== null && wt >= 0 && wt <= 1000 ? wt : 1, color: /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(col) ? col : '#607d8b', enabled: o.enabled !== false };
+      }).filter(function (o) { if (seen[o.key]) return false; seen[o.key] = 1; return true; });
+    };
+    /* آزمایش‌های تراکم و گزارش کار (ثبت متنی) */
+    const normDens = function (arr) {
+      return (Array.isArray(arr) ? arr : []).slice(0, 5000).filter(function (r) { return r && typeof r === 'object'; }).map(function (r) {
+        const o = { id: str(r.id || C.uid('dt')).slice(0, 40), t: str(r.t).slice(0, 30), src: r.src === 'manual' ? 'manual' : 'gps', street: str(r.street).slice(0, 80), sid: str(r.sid).slice(0, 60), station: num(r.station), dist: num(r.dist), acc: num(r.acc), place: str(r.place).slice(0, 60), note: str(r.note).slice(0, 300) };
+        if (r.inside === true) o.inside = true; else if (r.inside === false) o.inside = false;
+        const x = num(r.x), y = num(r.y); if (x !== null && y !== null) { o.x = x; o.y = y; }
+        return o;
+      });
+    };
+    const normWorkLog = function (arr) {
+      return (Array.isArray(arr) ? arr : []).slice(0, 5000).filter(function (r) { return r && typeof r === 'object'; }).map(function (r) {
+        return { id: str(r.id || C.uid('wl')).slice(0, 40), t: str(r.t).slice(0, 30), kind: ['survey', 'density', 'layer', 'visit', 'stop', 'other'].indexOf(r.kind) >= 0 ? r.kind : 'other', sid: str(r.sid).slice(0, 60), street: str(r.street).slice(0, 80), station: num(r.station), side: ['left', 'center', 'right'].indexOf(r.side) >= 0 ? r.side : '', raw: str(r.raw).slice(0, 300) };
+      });
+    };
     const normSurvey = function (arr) {
       return (Array.isArray(arr) ? arr : []).filter(function (r) { return r && (SIDES.indexOf(r.side) >= 0 || /^mid_/.test(String(r.side))) && num(r.station) !== null; }).map(function (r) {
         return {
@@ -3338,6 +3394,7 @@ select.inp, .inp, .cell { background: var(--card); }
         if (s.slopeMode === 'point') o.slopeMode = 'point';
         if (Array.isArray(s.layers)) o.layers = normLayers(s.layers);
         if (Array.isArray(s.survey)) o.survey = normSurvey(s.survey);
+        o.works = normWorks(s.works);
         if (Array.isArray(s.mids)) o.mids = normMids(s.mids);
         if (Array.isArray(s.mats)) o.mats = s.mats.filter(function (m) { return m && typeof m === 'object'; }).map(function (m) {
           const sw = num(m.swell), rw = num(m.rows);
@@ -3461,6 +3518,9 @@ select.inp, .inp, .cell { background: var(--card); }
         return o;
       });
     }
+    { const ops = normOps(p.operations); if (ops.length) base.operations = ops; }
+    if (Array.isArray(p.densityTests)) base.densityTests = normDens(p.densityTests);
+    if (Array.isArray(p.workLog)) base.workLog = normWorkLog(p.workLog);
     base.signOn = p.signOn !== false;
     base.stakeStep = typeof p.stakeStep === 'string' ? p.stakeStep.slice(0, 12) : '';
     base.stakeMidStep = typeof p.stakeMidStep === 'string' ? p.stakeMidStep.slice(0, 12) : '';
@@ -3810,12 +3870,162 @@ select.inp, .inp, .cell { background: var(--card); }
 });
 </script>
   <script>/*!
+ * WorksCore — محاسبات «عملیات اجرایی» (بدون وابستگی به صفحه)
+ * هر بازه: عملیات + از/تا کیلومتر (متر) + وضعیت (انجام‌شده، در حال انجام، برنامه) + تاریخ.
+ * پیشرفت هر عملیات = طول اجتماعِ بازه‌های «انجام‌شده» تقسیم بر طول محور؛ بازه‌ی «در حال انجام» پیشرفت حساب نمی‌شود.
+ * درصد کل = میانگین وزنی درصد عملیات‌ها (وزن صفر یا منفی نادیده گرفته می‌شود).
+ */
+(function (root, factory) {
+  if (typeof module === 'object' && module.exports) module.exports = factory();
+  else root.WorksCore = factory();
+})(typeof self !== 'undefined' ? self : this, function () {
+  'use strict';
+
+  var STATUSES = ['done', 'active', 'planned'];
+  var DEFAULT_OPERATIONS = [
+    { key: 'cut', label: 'خاکبرداری', weight: 1, color: '#8d6e63' },
+    { key: 'fill', label: 'خاکریزی', weight: 1, color: '#d4a017' },
+    { key: 'subgrade', label: 'بسترسازی', weight: 1, color: '#7e57c2' },
+    { key: 'subbase', label: 'زیراساس', weight: 1, color: '#26a69a' },
+    { key: 'base', label: 'اساس', weight: 1, color: '#1e88e5' },
+    { key: 'asphalt', label: 'آسفالت', weight: 1, color: '#455a64' }
+  ];
+  var EPS = 1e-6;
+
+  function fin(v) { return typeof v === 'number' && isFinite(v); }
+  function uid() { return 'w' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+  function isoDate(s) { return /^\d{4}-\d{2}-\d{2}$/.test(String(s || '')); }
+
+  /** ابتدا و انتهای محور از کیلومتراژ نقاط (متر)؛ null اگر محور معتبر نباشد */
+  function streetRange(st) {
+    var s0 = Infinity, s1 = -Infinity;
+    (st && Array.isArray(st.points) ? st.points : []).forEach(function (q) {
+      var v = q ? Number(q.station) : NaN;
+      if (isFinite(v)) { if (v < s0) s0 = v; if (v > s1) s1 = v; }
+    });
+    return s1 > s0 ? { s0: s0, s1: s1 } : null;
+  }
+
+  /** طول اجتماع چند بازه [from,to] */
+  function unionLen(list) {
+    var a = list.slice().sort(function (x, y) { return x[0] - y[0]; }), sum = 0, cf = null, ct = null;
+    a.forEach(function (r) {
+      if (cf === null) { cf = r[0]; ct = r[1]; }
+      else if (r[0] <= ct) { if (r[1] > ct) ct = r[1]; }
+      else { sum += ct - cf; cf = r[0]; ct = r[1]; }
+    });
+    if (cf !== null) sum += ct - cf;
+    return sum;
+  }
+
+  /** آیا بازه‌ی تازه با بازه‌ی غیر برنامه‌ای همان عملیات هم‌پوشانی دارد */
+  function overlaps(list, op, f, t, skipId) {
+    return list.some(function (w) {
+      if (!w || w.id === skipId || w.operation !== op || w.status === 'planned') return false;
+      var a = Number(w.fromKm), b = Number(w.toKm);
+      return isFinite(a) && isFinite(b) && Math.min(b, t) - Math.max(a, f) > EPS;
+    });
+  }
+
+  /**
+   * افزودن یک بازه به خیابان. خروجی: { ok, errors[], warnings[], work }
+   * خطا = ثبت نمی‌شود؛ هشدار = ثبت می‌شود.
+   */
+  function addWork(street, input) {
+    var errors = [], warnings = [], i = input || {};
+    var op = String(i.operation || '').trim(), status = String(i.status || '');
+    var f = Number(i.fromKm), t = Number(i.toKm), date = String(i.date || '').trim();
+    if (!street) return { ok: false, errors: ['خیابانی انتخاب نشده است.'], warnings: [] };
+    if (!op) errors.push('عملیات را انتخاب کنید.');
+    if (STATUSES.indexOf(status) < 0) errors.push('وضعیت را انتخاب کنید.');
+    if (i.fromKm === '' || i.toKm === '' || i.fromKm == null || i.toKm == null || !isFinite(f) || !isFinite(t)) errors.push('از کیلومتر و تا کیلومتر را انتخاب کنید.');
+    else if (Math.abs(f - t) < EPS) errors.push('بازه‌ی نامعتبر: ابتدا و انتها یکی است.');
+    if (status === 'done' && !date) errors.push('برای بازه‌ی انجام‌شده، تاریخ لازم است.');
+    if (date && !isoDate(date)) errors.push('قالب تاریخ معتبر نیست.');
+    var range = streetRange(street);
+    if (!range) errors.push('برای این خیابان محور معتبر وارد نشده است.');
+    if (errors.length) return { ok: false, errors: errors, warnings: [] };
+    if (f > t) { var sw = f; f = t; t = sw; }
+    if (t <= range.s0 || f >= range.s1) return { ok: false, errors: ['بازه کاملاً بیرون از مسیر خیابان است.'], warnings: [] };
+    var wbase = { street: street.name, streetId: street.id, operation: op };
+    if (f < range.s0 || t > range.s1) {
+      f = Math.max(f, range.s0); t = Math.min(t, range.s1);
+      warnings.push(Object.assign({ type: 'clipped' }, wbase));
+    }
+    if (!Array.isArray(street.works)) street.works = [];
+    if (status !== 'planned' && overlaps(street.works, op, f, t)) warnings.push(Object.assign({ type: 'overlap' }, wbase));
+    var work = { id: uid(), operation: op, fromKm: f, toKm: t, status: status, date: date, note: String(i.note || '').slice(0, 200) };
+    street.works.push(work);
+    return { ok: true, errors: [], warnings: warnings, work: work };
+  }
+
+  /** گزارش پیشرفت کل پروژه و به تفکیک خیابان */
+  function buildWorksReport(p) {
+    var allOps = Array.isArray(p && p.operations) ? p.operations : [], skip = Array.isArray(p && p.disabledOps) ? p.disabledOps : [], streets = Array.isArray(p && p.streets) ? p.streets : [];
+    var ops = allOps.filter(function (o) { return skip.indexOf(o.key) < 0; });
+    var opKeys = allOps.map(function (o) { return o.key; });
+    var warnings = [], counts = { done: 0, active: 0, planned: 0 };
+    var totalLen = 0, coveredSum = 0, doneSum = {};
+    ops.forEach(function (o) { doneSum[o.key] = 0; });
+    var out = streets.map(function (st) {
+      var range = streetRange(st), len = range ? range.s1 - range.s0 : 0;
+      var works = Array.isArray(st.works) ? st.works : [];
+      var rec = [], perOp = {}, grp = {};
+      var base = function (type, w, extra) { return Object.assign({ type: type, street: st.name, streetId: st.id, operation: w && w.operation }, extra || {}); };
+      works.forEach(function (w) {
+        if (!w || typeof w !== 'object') return;
+        var f = Number(w.fromKm), t = Number(w.toKm), bad = [];
+        if (!isFinite(f) || !isFinite(t) || w.fromKm === null || w.toKm === null || w.fromKm === '' || w.toKm === '') bad.push('کیلومتر معتبر نیست');
+        else if (t <= f) bad.push('انتها از ابتدا بزرگ‌تر نیست');
+        if (STATUSES.indexOf(w.status) < 0) bad.push('وضعیت ناشناخته');
+        if (bad.length) { warnings.push(base('invalid', w, { messages: bad })); return; }
+        if (skip.indexOf(w.operation) >= 0) return;
+        counts[w.status]++;
+        if (opKeys.indexOf(w.operation) < 0) warnings.push(base('unknownOp', w));
+        if (!range) return;
+        if (t <= range.s0 || f >= range.s1) { warnings.push(base('outside', w)); return; }
+        if (f < range.s0 || t > range.s1) warnings.push(base('clipped', w));
+        var cf = Math.max(f, range.s0), ct = Math.min(t, range.s1);
+        if (w.status !== 'planned') { rec.push([cf, ct]); (grp[w.operation] = grp[w.operation] || []).push([cf, ct]); }
+        if (w.status === 'done') (perOp[w.operation] = perOp[w.operation] || []).push([cf, ct]);
+      });
+      Object.keys(grp).forEach(function (k) {
+        var a = grp[k].slice().sort(function (x, y) { return x[0] - y[0]; }), mx = -Infinity;
+        for (var q = 0; q < a.length; q++) { if (a[q][0] < mx - EPS) { warnings.push(base('overlap', { operation: k })); break; } if (a[q][1] > mx) mx = a[q][1]; }
+      });
+      var covered = unionLen(rec), pctByOp = {};
+      ops.forEach(function (o) {
+        var d = unionLen(perOp[o.key] || []);
+        doneSum[o.key] += d;
+        pctByOp[o.key] = len > 0 ? Math.min(100, d / len * 100) : 0;
+      });
+      totalLen += len; coveredSum += covered;
+      return { id: st.id, name: st.name, len: len, range: range || { s0: 0, s1: 0 }, covered: covered, unrecorded: Math.max(0, len - covered), pctByOp: pctByOp };
+    });
+    var pctByOp = {}, wsum = 0, acc = 0;
+    ops.forEach(function (o) {
+      var v = totalLen > 0 ? Math.min(100, doneSum[o.key] / totalLen * 100) : 0;
+      pctByOp[o.key] = v;
+      var w = Number(o.weight);
+      if (isFinite(w) && w > 0) { wsum += w; acc += w * v; }
+    });
+    return {
+      streets: out, totalLen: totalLen, pctByOp: pctByOp, overall: wsum > 0 ? acc / wsum : 0,
+      coveredPct: totalLen > 0 ? Math.min(100, coveredSum / totalLen * 100) : 0, unrecordedLen: Math.max(0, totalLen - coveredSum),
+      counts: counts, warnings: warnings
+    };
+  }
+
+  return { STATUSES: STATUSES, DEFAULT_OPERATIONS: DEFAULT_OPERATIONS, streetRange: streetRange, unionLen: unionLen, addWork: addWork, buildWorksReport: buildWorksReport };
+});
+</script>
+  <script>/*!
  * رابط کاربری اپ «پیاده‌سازی راه و نیوو»
  * تمام محاسبات در RoadCore انجام می‌شود؛ این فایل فقط نمایش و ورودی است.
  */
 (function () {
   'use strict';
-  const C = window.RoadCore, IO = window.RoadIO, ST = window.RoadStore;
+  const C = window.RoadCore, IO = window.RoadIO, ST = window.RoadStore, WK = window.WorksCore;
 
   /* ============================== ابزارهای عمومی ============================== */
   const $ = function (s, el) { return (el || document).querySelector(s); };
@@ -3826,7 +4036,7 @@ select.inp, .inp, .cell { background: var(--card); }
   const PAGE_SIZE = 50;       // ردیف در هر صفحه‌ی جدول نقاط
   const TABLE_STATIONS = 30;  // مقطع در هر صفحه‌ی جدول سه‌نقطه‌ای
 
-  const APP_VERSION = 'UI-3.11.16 (بر پایه‌ی 1.22.1)';
+  const APP_VERSION = 'UI-3.11.25 (بر پایه‌ی 1.22.1)';
   try { const spv = document.getElementById('spVer'); if (spv) spv.innerHTML = 'نسخه <bdi dir="ltr">' + APP_VERSION + '</bdi>'; } catch (e) { /* ignore */ }
   const S = {
     project: null, dirty: false, rev: 0, calc: null, calcRev: -1,
@@ -3834,6 +4044,7 @@ select.inp, .inp, .cell { background: var(--card); }
     pvSt: '', wake: null, dt: null, lySel: null, lyPage: 0, slPage: 0, lnPage: 0, stakeLayer: '', bmImp: null, bmImpErr: '',
     tx: { open: false, type: (function () { try { return localStorage.getItem('roadstakeui:txType') === 'pdf' ? 'pdf' : 'txt'; } catch (_) { return 'txt'; } })(), dec: null }, exp: { delim: ',', share: false, split: false, newoSel: null, fmt: {}, fmtSel: {}, layer: 'all', svLayer: 'all' },
     sv: { idx: 0, bmId: '', bs: '', layer: '', reads: { left: '', axis: '', right: '' }, all: false, page: 0, st: -1 },
+    wk: { op: '', status: 'done', date: '', note: '' },
     crossAll: false, tplName: '', svPage: 0
   };
 
@@ -4121,6 +4332,9 @@ select.inp, .inp, .cell { background: var(--card); }
     projects: '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
     points: '<circle cx="6" cy="18" r="2"/><circle cx="18" cy="6" r="2"/><path d="M8 18h6a3 3 0 0 0 0-6h-4a3 3 0 0 1 0-6h6"/>',
     permit: '<path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h6M9 17h6"/>',
+    worklog: '<path d="M5 4h14v16H5z"/><path d="M8 9h8M8 13h8M8 17h5"/>',
+    works: '<path d="M4 20h16M6 16l4-8 4 5 3-3 1 6"/>',
+    creport: '<path d="M4 20V10M10 20V4M16 20v-7M2 20h20"/>',
     layers: '<path d="M12 3 3 8l9 5 9-5z"/><path d="m3 13 9 5 9-5"/>',
     slopes: '<path d="M3 19 21 9"/><path d="M3 19h18"/><path d="M9 19a6 6 0 0 0-.8-2.6"/>',
     table: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M3 15h18M9 4v16"/>',
@@ -4133,8 +4347,8 @@ select.inp, .inp, .cell { background: var(--card); }
   };
   const NAV_L = [['home', 'پروژه‌ها'], ['newo', 'بنچ‌مارک']];
   const NAV_R = [['stake', 'پیاده'], ['survey', 'برداشت']];
-  const NAV_ALL = [['home', 'شروع'], ['projects', 'پروژه‌ها و پشتیبان'], ['points', 'محور و لبه‌ها'], ['slopes', 'شیب عرضی'], ['layers', 'لایه‌ها'], ['newo', 'بنچ‌مارک'], ['stake', 'پیاده‌سازی'], ['survey', 'برداشت'], ['density', 'تراکم خاک'], ['permit', 'مجوز'], ['mat', 'مصالح و تخلیه'], ['export', 'خروجی و گزارش'], ['flood', 'تحلیل آب‌گرفتگی'], ['security', 'کلید، قفل و اثرانگشت']];
-  const MENU_GROUPS = [['اجرا', ['points', 'slopes', 'layers', 'newo', 'stake', 'survey', 'density']], ['محاسبه و تحویل', ['mat', 'export', 'flood', 'permit', 'projects']], ['امنیت', ['security']]];
+  const NAV_ALL = [['home', 'شروع'], ['projects', 'پروژه‌ها و پشتیبان'], ['points', 'محور و لبه‌ها'], ['slopes', 'شیب عرضی'], ['layers', 'لایه‌ها'], ['newo', 'بنچ‌مارک'], ['stake', 'پیاده‌سازی'], ['survey', 'برداشت'], ['density', 'تراکم خاک'], ['works', 'عملیات اجرایی'], ['worklog', 'گزارش کار'], ['creport', 'گزارش جامع'], ['permit', 'مجوز'], ['mat', 'مصالح و تخلیه'], ['export', 'خروجی و گزارش'], ['flood', 'تحلیل آب‌گرفتگی'], ['security', 'کلید، قفل و اثرانگشت']];
+  const MENU_GROUPS = [['اجرا', ['points', 'slopes', 'layers', 'newo', 'stake', 'survey', 'density', 'works', 'worklog']], ['محاسبه و تحویل', ['creport', 'mat', 'export', 'flood', 'permit', 'projects']], ['امنیت', ['security']]];
   const MENU_NAME = {}; NAV_ALL.forEach(function (n) { MENU_NAME[n[0]] = n[1]; });
   ICONS.home = ICONS.projects;
   ICONS.security = '<circle cx="8" cy="15" r="4"/><path d="M11 12 20 3M16 7l3 3M14 9l2 2"/>';
@@ -4167,7 +4381,7 @@ select.inp, .inp, .cell { background: var(--card); }
   }
   function closeMenu() { const d = document.getElementById('menuSheet'); if (d) d.remove(); }
 
-  const PAGE_TITLE = { home: 'پروژه‌ها', flood: 'تحلیل آب‌گرفتگی', preport: 'گزارش پروژه', projects: 'ساخت پروژه و پشتیبان', points: 'محور و لبه‌ها', slopes: 'شیب عرضی', layers: 'لایه‌ها', mat: 'مصالح و تخلیه', newo: 'بنچ‌مارک', stake: 'پیاده‌سازی', survey: 'برداشت', density: 'تراکم خاک', permit: 'مجوز', export: 'خروجی و گزارش', security: 'امنیت' };
+  const PAGE_TITLE = { home: 'پروژه‌ها', flood: 'تحلیل آب‌گرفتگی', preport: 'گزارش پروژه', projects: 'ساخت پروژه و پشتیبان', points: 'محور و لبه‌ها', slopes: 'شیب عرضی', layers: 'لایه‌ها', mat: 'مصالح و تخلیه', newo: 'بنچ‌مارک', stake: 'پیاده‌سازی', survey: 'برداشت', density: 'تراکم خاک', worklog: 'گزارش کار', works: 'عملیات اجرایی', creport: 'گزارش جامع', permit: 'مجوز', export: 'خروجی و گزارش', security: 'امنیت' };
   function renderTop() {
     const p = S.project, ttl = PAGE_TITLE[S.page] || 'RoadStake';
     let sub;
@@ -8364,18 +8578,7 @@ select.inp, .inp, .cell { background: var(--card); }
   function exportPage() {
     const p = P(), r = calc(), st = p.settings;
     if (!r.sections) return streetBar(false) + '<div class="msg err"><b>خروجی ممکن نیست.</b> ابتدا خطاهای زیر را رفع کنید.</div>' + blockedBanner(r);
-    let h = streetBar(false) + '<section class="card"><h2>گزینه‌های خروجی (خیابان «' + esc(activeStreet().name) + '»)</h2><div class="grid2">' +
-      field('جداکننده در فایل TXT', '<select class="inp" id="expDelim"><option value=","' + (S.exp.delim === ',' ? ' selected' : '') + '>کاما (,)</option><option value="\t"' + (S.exp.delim === '\t' ? ' selected' : '') + '>تب</option><option value=" "' + (S.exp.delim === ' ' ? ' selected' : '') + '>فاصله</option><option value=";"' + (S.exp.delim === ';' ? ' selected' : '') + '>سمی‌کالن (;)</option></select>') + '</div>' +
-      '<p class="muted small">CSV با کاما و نقطه‌ی اعشار، UTF-8 و پایان سطر ویندوز است. دقت: ' + st.decimals + ' رقم اعشار (تغییر در «پروژه‌ها»).</p>' +
-      (navigator.canShare ? '<label class="row"><input type="checkbox" id="expShare"' + (S.exp.share ? ' checked' : '') + '> اشتراک‌گذاری فایل به‌جای دانلود</label>' : '') + '</section>';
-    h += fmtCard('points', 'نقاط (محور + لبه چپ + لبه راست) — قالب خروجی',
-      '<p class="muted small">قالب آماده انتخاب کنید یا ستون‌ها را خودتان بچینید (مثلاً PENZD برای دستگاه توتال‌استیشن).</p>', exportBtns('exp', 'points', true));
-    h += gpsCard();
-    h += '<section class="card"><h2>محاسبات نیوو (به تفکیک استقرار)</h2><code>Station,Point,Side,X,Y,Z,HI,StaffReading,Setup</code>' + setupPickCard() +
-      '<p class="muted small">قرائت‌های غیرقابل اجرا (منفی، صفر، خارج از شاخص) در ستون StaffReading خالی خروجی داده می‌شوند.</p>' + exportBtns('exp', 'newo', true) +
-      '<div id="newoSkipped"></div><pre class="code" id="pvNewo"></pre></section>';
-    h += layerExportCard();
-    h += surveyExportCard();
+    let h = streetBar(false);
     h += reportCard();
     h += '<section class="card"><h3>پشتیبان کامل پروژه</h3><p class="muted small">شامل نقاط، شیب‌ها، لایه‌ها، بنچ‌مارک‌ها، استقرارها، برداشت‌ها، قالب‌های ورودی و خروجی و تنظیمات.</p><button class="btn" data-act="backupCur">دریافت پشتیبان JSON</button></section>';
     return h;
@@ -8732,7 +8935,7 @@ select.inp, .inp, .cell { background: var(--card); }
   }
 
   /* ============================== آزمایش تراکم خاک ============================== */
-  const DENS_MAX_DIST = 5, DENS_MAX_ACC = 15;   // بیشترین فاصله از محور خیابان و دقت GPS برای ثبت خودکار کیلومتراژ (م)
+  const DENS_MAX_DIST = 8, DENS_MAX_ACC = 25, DENS_TOL = 2;   // بیشترین فاصله از محور وقتی عرض ثبت نشده، بیشترین دقت GPS و تلورانس عرض مسیر (م)
   function densPts() { const p = P(); return p && Array.isArray(p.densityTests) ? p.densityTests : []; }
   function densValid(r) { return r.src === 'manual' || r.inside === true || (r.inside === undefined && fin(r.dist) && r.dist <= DENS_MAX_DIST); }
   /** نیم‌عرض چپ و راست خیابان در کیلومتراژ داده‌شده (از مقاطع)؛ null اگر ثبت نشده باشد */
@@ -8749,20 +8952,38 @@ select.inp, .inp, .cell { background: var(--card); }
     return null;
   }
   /** آیا نقطه‌ی GPS داخل عرض مسیر است؛ و موقعیت آن (وسط/چپ/راست) */
-  function densPlace(n) {
-    const w = densWidths(n.it.s, n.st), tol = 1;
-    const half = w ? (n.side > 0 ? w.l : w.r) : 0;
-    const center = n.side === 0 || n.dist < 0.25 * (half || 1);
-    const txt = center ? 'وسط مسیر' : (n.side > 0 ? 'سمت چپ' : 'سمت راست');
+  /** موقعیت انتخاب‌شده‌ی کاربر نسبت به محور: 1 چپ، 0 وسط، -1 راست */
+  function densSideVal() { const v = S.densSide || 'center'; return v === 'left' ? 1 : (v === 'right' ? -1 : 0); }
+  function densSideTxt() { const s = densSideVal(); return s === 0 ? 'وسط مسیر' : (s > 0 ? 'سمت چپ' : 'سمت راست'); }
+  /** آیا نقطه (با موقعیت دستی) داخل عرض مسیر است */
+  function densPlace(n, side) {
+    const w = densWidths(n.it.s, n.st);
+    const half = w ? (side > 0 ? w.l : (side < 0 ? w.r : Math.max(w.l, w.r))) : 0;
+    const txt = side === 0 ? 'وسط مسیر' : (side > 0 ? 'سمت چپ' : 'سمت راست');
     if (!w) return { inside: n.dist <= DENS_MAX_DIST, place: txt + ' (عرض ثبت نشده)', off: n.dist };
-    return { inside: n.dist <= half + tol, place: txt, off: n.dist };
+    return { inside: n.dist <= half + DENS_TOL, place: txt, off: n.dist };
+  }
+  function densSideBtns() {
+    const cur = S.densSide || 'center';
+    return [['left', 'چپ'], ['center', 'وسط'], ['right', 'راست']].map(function (o) {
+      const on = o[0] === cur;
+      return '<button class="btn sm' + (on ? ' primary' : '') + '" data-act="densSide" data-v="' + o[0] + '" aria-pressed="' + (on ? 'true' : 'false') + '">' + o[1] + '</button>';
+    }).join('');
+  }
+  function densSideSet(b) {
+    S.densSide = b.dataset.v;
+    document.querySelectorAll('[data-act="densSide"]').forEach(function (x) {
+      const on = x.dataset.v === S.densSide;
+      x.classList.toggle('primary', on); x.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
   }
   function densPage() {
     if (!S.project) return '<div class="msg info small">برای ثبت آزمایش تراکم، یک پروژه باز کنید.</div>';
     const list = densPts(), st = S.project.settings || {}, streets = P().streets || [];
     let h = '<section class="card"><h3>ثبت نقطه‌ی آزمایش تراکم</h3>' +
-      '<div class="small muted">کنار خیابان بایستید و دکمه را بزنید. کیلومتراژ فقط وقتی ثبت می‌شود که فاصله‌ی شما از محور خیابان کمتر از ' + DENS_MAX_DIST + ' متر و دقت GPS بهتر از ' + DENS_MAX_ACC + ' متر باشد.</div>' +
+      '<div class="small muted">هر جای داخل عرض مسیر که هستید، موقعیت خود را (چپ، وسط یا راست) انتخاب کنید و دکمه را بزنید. کیلومتراژ ثبت می‌شود به شرط اینکه داخل عرض مسیر باشید و دقت GPS بهتر از ' + DENS_MAX_ACC + ' متر باشد.</div>' +
       (st.coordSystem !== 'UTM' ? '<div class="msg warn small" style="margin-top:6px">سیستم مختصات پروژه UTM نیست؛ ثبت موقعیت GPS کار نمی‌کند.</div>' : '') +
+      '<div class="small" style="margin-top:8px">موقعیت شما در عرض مسیر:</div><div class="seg" style="margin-top:4px">' + densSideBtns() + '</div>' +
       '<label class="field" style="margin-top:8px"><span>یادداشت (اختیاری)</span><input class="inp" id="densNote" placeholder="مثلاً شماره‌ی آزمایش یا لایه" autocomplete="off"></label>' +
       '<div class="row" style="margin-top:8px"><button class="btn primary" data-act="densRec">📍 ثبت موقعیت فعلی</button></div>' +
       '<div id="densMsg" class="small muted" style="margin-top:6px"></div>' +
@@ -8797,9 +9018,9 @@ select.inp, .inp, .cell { background: var(--card); }
       const r = llToUtm(g.coords.latitude, g.coords.longitude, parseInt(st.utmZone, 10), st.hemisphere === 'S');
       const n = planNearest(planData(), { x: r.x, y: r.y })[0];
       if (!n) { say('خیابانی با مختصات برای ثبت نیست.', true); return; }
-      const pl = densPlace(n);
+      const pl = densPlace(n, densSideVal());
       if (!fin(n.st) || !pl.inside || acc > DENS_MAX_ACC) {
-        say('شما ' + (pl.inside ? '' : 'بیرون از عرض «' + n.it.s.name + '» ') + 'و حدود ' + C.fmt(n.dist, 1) + ' متر از محور آن هستید؛ دقت GPS ' + C.fmt(acc, 0) + ' متر. کیلومتراژ حدسی ثبت نشد. داخل مسیر بایستید یا از «ثبت دستی» استفاده کنید.', true);
+        say((pl.inside ? '' : 'بیرون از عرض «' + n.it.s.name + '» ') + 'حدود ' + C.fmt(n.dist, 1) + ' متر از محور؛ دقت GPS ' + C.fmt(acc, 0) + ' متر. ' + (pl.inside ? '' : 'داخل مسیر بایستید. ') + (acc > DENS_MAX_ACC ? 'دقت GPS کم است؛ کمی صبر کنید. ' : '') + 'کیلومتراژ ثبت نشد؛ یا از «ثبت دستی» استفاده کنید.', true);
         return;
       }
       const note = (($('#densNote') || {}).value || '').trim();
@@ -8818,7 +9039,7 @@ select.inp, .inp, .cell { background: var(--card); }
     if (!s) { toast('خیابان را انتخاب کنید.', 'err'); return; }
     if (!fin(km)) { toast('کیلومتراژ را مثل 0+140 وارد کنید.', 'err'); return; }
     const note = (($('#densNote') || {}).value || '').trim();
-    p.densityTests = densPts().concat([{ id: 'dt' + Date.now().toString(36), t: new Date().toISOString(), src: 'manual', street: s.name, sid: s.id, station: km, dist: null, acc: null, note: note }]);
+    p.densityTests = densPts().concat([{ id: 'dt' + Date.now().toString(36), t: new Date().toISOString(), src: 'manual', street: s.name, sid: s.id, station: km, dist: null, acc: null, place: densSideTxt(), note: note }]);
     saveProject(); toast('ثبت دستی انجام شد.'); render();
   }
   async function densReport() {
@@ -8851,6 +9072,834 @@ select.inp, .inp, .cell { background: var(--card); }
     window.print();
     setTimeout(function () { pa.innerHTML = ''; pa.className = ''; document.title = oldTitle; }, 1000);
   }
+  /* ============================== عملیات اجرایی (بازه‌های کیلومتری) ============================== */
+  function worksProject(p) {
+    p = p || S.project;
+    if (!Array.isArray(p.operations) || !p.operations.length) p.operations = WK.DEFAULT_OPERATIONS.map(function (o) { return Object.assign({}, o); });
+    (p.streets || []).forEach(function (s) { if (!Array.isArray(s.works)) s.works = []; });
+    return p;
+  }
+  const WK_STATUS = { done: 'انجام‌شده', active: 'در حال انجام', planned: 'برنامه' };
+  const WK_WARN = {
+    overlap: function (w) { return 'هم‌پوشانی دوباره‌کاری در عملیات «' + (w.operation || '') + '»'; },
+    clipped: function () { return 'بخشی از یک بازه بیرون از مسیر بود و بریده شد'; },
+    outside: function () { return 'یک بازه کاملاً بیرون از مسیر خیابان است'; },
+    invalid: function (w) { return 'بازه‌ی نامعتبر: ' + (w.messages || []).join('، '); },
+    unknownOp: function (w) { return 'عملیات ناشناخته: ' + w.operation; }
+  };
+  const wkColor = function (c) { return /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(String(c)) ? String(c) : '#607d8b'; };
+  const wkWarnTxt = function (w) { return (WK_WARN[w.type] || function () { return w.type; })(w); };
+
+  function worksPage() {
+    if (!S.project) return '<div class="msg info small">برای ثبت عملیات اجرایی، یک پروژه باز کنید.</div>';
+    if (!WK) return '<div class="msg err">فایل works-core.js بارگذاری نشد. برنامه را یک‌بار با اینترنت باز کنید و دوباره تلاش کنید.</div>';
+    const p = worksProject(), a = activeStreet();
+    let h = streetBar(false);
+    if (!a.points.length) return h + '<div class="msg warn">برای این خیابان نقطه‌ی محور وارد نشده است. <a href="#/points"><b>رفتن به محور</b></a></div>';
+
+    const allOps = p.operations, ops = allOps.filter(function (o) { return o.enabled !== false; });
+    const rep = WK.buildWorksReport(Object.assign({}, p, { disabledOps: allOps.filter(function (o) { return o.enabled === false; }).map(function (o) { return o.key; }) })), sr = rep.streets.find(function (s) { return s.id === a.id; });
+    const col = function (k) { return wkColor((ops.find(function (o) { return o.key === k; }) || {}).color); };
+    const pct = function (v) { return C.fmt(v, 1) + '٪'; };
+
+    h += '<section class="card"><h2>خلاصه‌ی پروژه</h2><div class="kpi">' +
+      '<div><b>' + pct(rep.overall) + '</b><span>پیشرفت کل</span></div>' +
+      '<div><b>' + C.fmt(rep.totalLen, 0) + '</b><span>طول محورها (m)</span></div>' +
+      '<div><b>' + pct(rep.coveredPct) + '</b><span>پوشش کیلومتری</span></div>' +
+      '<div><b>' + C.fmt(rep.unrecordedLen, 0) + '</b><span>بدون ثبت (m)</span></div>' +
+      '<div><b>' + rep.counts.done + ' / ' + rep.counts.active + ' / ' + rep.counts.planned + '</b><span>انجام / جاری / برنامه</span></div>' +
+      '</div><div class="bar"><i style="width:' + Math.min(100, rep.overall) + '%"></i></div>' +
+      '<p class="muted small">پیشرفت فقط از بازه‌های «انجام‌شده» حساب می‌شود.</p></section>';
+
+    h += '<section class="card"><h2>پیشرفت به تفکیک عملیات</h2>' + ops.map(function (o) {
+      const v = rep.pctByOp[o.key] || 0, c = wkColor(o.color);
+      return '<div class="lrow"><span><i style="display:inline-block;width:10px;height:10px;border-radius:50%;background:' + c + '"></i> ' + esc(o.label) + '</span>' +
+        '<b class="num">' + pct(v) + '</b><div class="bar"><i style="width:' + Math.min(100, v) + '%;background:' + c + '"></i></div></div>';
+    }).join('') + '</section>';
+
+    if (sr && sr.len > 0) {
+      const W = 1000, x = function (km) { return (km - sr.range.s0) / sr.len * W; };
+      let g = '<rect x="0" y="0" width="' + W + '" height="34" fill="#eef2f5" stroke="#9fb0bd"/>';
+      a.works.forEach(function (w) {
+        if (w.status === 'planned' || !fin(w.fromKm) || !fin(w.toKm)) return;
+        const f = Math.max(w.fromKm, sr.range.s0), t = Math.min(w.toKm, sr.range.s1);
+        if (t <= f) return;
+        const done = w.status === 'done';
+        g += '<rect x="' + x(f) + '" y="' + (done ? 0 : 22) + '" width="' + (x(t) - x(f)) + '" height="' + (done ? 22 : 12) + '" fill="' + col(w.operation) + '" opacity="' + (done ? 0.9 : 0.5) + '"/>';
+      });
+      h += '<section class="card"><h2>نقشه‌ی کیلومتری: «' + esc(a.name) + '»</h2>' +
+        '<svg viewBox="0 0 1000 34" preserveAspectRatio="none" style="width:100%;height:44px;direction:ltr;display:block">' + g + '</svg>' +
+        '<div class="small muted" style="direction:ltr;display:flex;justify-content:space-between"><span>' + esc(stn(sr.range.s0)) + '</span><span>' + esc(stn(sr.range.s1)) + '</span></div>' +
+        '<p class="small muted">بالا = انجام‌شده، پایین = در حال انجام. فضای خالی = ثبت‌نشده.</p></section>';
+    }
+
+    const msgs = rep.warnings.filter(function (w) { return w.streetId === a.id; }).map(function (w) { return { msg: wkWarnTxt(w) }; });
+    if (msgs.length) h += msgList(msgs, 'warn', 8);
+
+    const sts = axisStations(), F = S.wk;
+    const opt = function (arr, cur) { return arr.map(function (y) { return '<option value="' + esc(y[0]) + '"' + (String(y[0]) === String(cur) ? ' selected' : '') + '>' + esc(y[1]) + '</option>'; }).join(''); };
+    const kmOpts = sts.map(function (v) { return [String(v), stn(v)]; });
+    h += '<section class="card"><h2>افزودن بازه‌ی اجرایی</h2><div class="grid2">' +
+      field('عملیات', '<select class="inp" id="wkOp">' + opt(ops.map(function (o) { return [o.key, o.label]; }), F.op || ops[0].key) + '</select>') +
+      field('وضعیت', '<select class="inp" id="wkStatus">' + opt([['done', 'انجام‌شده'], ['active', 'در حال انجام'], ['planned', 'برنامه‌ریزی‌شده']], F.status) + '</select>') +
+      field('از کیلومتر', '<select class="inp" dir="ltr" id="wkFrom"><option value="">—</option>' + opt(kmOpts, '') + '</select>') +
+      field('تا کیلومتر', '<select class="inp" dir="ltr" id="wkTo"><option value="">—</option>' + opt(kmOpts, '') + '</select>') +
+      field('تاریخ (برای انجام‌شده الزامی)', jdField(' data-wkdate="1"', F.date)) +
+      field('یادداشت', '<input class="inp" id="wkNote" maxlength="200" value="' + esc(F.note) + '">') +
+      '</div><div class="row" style="margin-top:10px"><button class="btn primary grow" data-act="wkAdd">افزودن بازه</button></div></section>';
+
+    const list = a.works.slice().sort(function (x, y) { return x.fromKm - y.fromKm; });
+    h += '<section class="card"><h2>بازه‌های ثبت‌شده (' + list.length + ')</h2>';
+    if (!list.length) h += '<p class="muted">هنوز بازه‌ای ثبت نشده است.</p>';
+    else h += '<div class="tbl-wrap"><table><thead><tr><th>عملیات</th><th>از</th><th>تا</th><th>وضعیت</th><th>تاریخ</th><th></th></tr></thead><tbody>' +
+      list.map(function (w) {
+        const o = ops.find(function (y) { return y.key === w.operation; }), c = col(w.operation);
+        return '<tr><td><span class="chip" style="color:' + c + ';border-color:' + c + '">' + esc(o ? o.label : w.operation) + '</span></td>' +
+          '<td class="n" dir="ltr">' + esc(stn(w.fromKm)) + '</td><td class="n" dir="ltr">' + esc(stn(w.toKm)) + '</td>' +
+          '<td>' + esc(WK_STATUS[w.status] || w.status) + '</td><td class="n">' + esc(w.date || '—') + '</td>' +
+          '<td class="nw"><button class="btn icon danger sm" data-act="wkDel" data-id="' + esc(w.id) + '" aria-label="حذف بازه">×</button></td></tr>';
+      }).join('') + '</tbody></table></div>';
+    h += '</section>';
+
+    h += '<section class="card"><h2>وزن عملیات در درصد کل</h2><div class="grid3">' +
+      allOps.map(function (o) { return field(esc(o.label), '<label class="row small"><input type="checkbox" data-wkon="' + esc(o.key) + '"' + (o.enabled === false ? '' : ' checked') + '> فعال</label> <input class="inp ltr" dir="ltr" inputmode="decimal" data-wkw="' + esc(o.key) + '" value="' + esc(o.weight) + '">'); }).join('') +
+      '</div><p class="muted small">درصد کل، میانگین وزنی درصد هر عملیات است. وزن صفر یعنی آن عملیات در درصد کل حساب نمی‌شود.</p></section>';
+    return h;
+  }
+
+  function worksAdd() {
+    const g = function (id) { return ($('#' + id) || {}).value || ''; }, st = activeStreet();
+    worksProject();
+    const date = (document.querySelector('[data-wkdate]') || {}).value || '';
+    const r = WK.addWork(st, { operation: g('wkOp'), fromKm: g('wkFrom') === '' ? null : C.toNumber(g('wkFrom')), toKm: g('wkTo') === '' ? null : C.toNumber(g('wkTo')), status: g('wkStatus'), date: date, note: g('wkNote').trim() });
+    if (!r.ok) { toast(r.errors[0], 'err'); return; }
+    S.wk = { op: g('wkOp'), status: g('wkStatus'), date: date, note: '' };
+    structural();
+    const first = r.warnings[0];
+    toast(first ? 'بازه ثبت شد؛ هشدار: ' + wkWarnTxt(first) : 'بازه ثبت شد.', first ? 'err' : undefined);
+  }
+
+  /* ============================== گزارش کار (ثبت متنی) ============================== */
+  const WL_KINDS = [['survey', 'برداشت'], ['density', 'تراکم'], ['layer', 'لایه'], ['visit', 'بازدید'], ['stop', 'توقف'], ['other', 'کار دیگر']];
+  const WL_SIDES = [['left', 'چپ'], ['center', 'وسط'], ['right', 'راست']];
+  function wlLabel(list, v) { const x = list.find(function (k) { return k[0] === v; }); return x ? x[1] : '—'; }
+  function wlNorm(s) {
+    return String(s || '').replace(/[۰-۹]/g, function (d) { return String(d.charCodeAt(0) - 0x6F0); })
+      .replace(/[٠-٩]/g, function (d) { return String(d.charCodeAt(0) - 0x660); })
+      .replace(/‌/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase();
+  }
+  /** تحلیل یک خط متن؛ هر بخشی که مطمئن نیستیم خالی می‌ماند (حدس نمی‌زنیم) */
+  function wlParse(text, p) {
+    const t = wlNorm(text), words = t.split(' ');
+    const out = { kind: '', sid: '', street: '', station: null, side: '' };
+    const kw = WL_KINDS.find(function (k) { return k[0] !== 'other' && words.indexOf(k[1]) >= 0; });
+    if (kw) out.kind = kw[0];
+    const sd = WL_SIDES.find(function (s) { return words.indexOf(s[1]) >= 0; });
+    if (sd) out.side = sd[0];
+    const km = t.match(/(\d+)\s*\+\s*(\d+(?:\.\d+)?)/);
+    if (km) out.station = Number(km[1]) * 1000 + Number(km[2]);
+    const hay = ' ' + words.join(' ') + ' ';
+    const hit = (p.streets || []).filter(function (s) { const nm = wlNorm(s.name); return nm && hay.indexOf(' ' + nm + ' ') >= 0; })
+      .sort(function (a, b) { return wlNorm(b.name).length - wlNorm(a.name).length; })[0];
+    if (hit) { out.sid = hit.id; out.street = hit.name; }
+    return out;
+  }
+  function wlState() { return S.wl || (S.wl = { text: '', draft: null }); }
+  function wlPage() {
+    if (!S.project) return '<div class="msg info small">برای ثبت گزارش کار، یک پروژه باز کنید.</div>';
+    const p = P(), list = Array.isArray(p.workLog) ? p.workLog : [], wl = wlState(), d = wl.draft;
+    const kindOpts = function (cur) { return '<option value="">— انتخاب کنید —</option>' + WL_KINDS.map(function (k) { return '<option value="' + k[0] + '"' + (cur === k[0] ? ' selected' : '') + '>' + k[1] + '</option>'; }).join(''); };
+    let h = '<section class="card"><h3>ثبت کار با متن</h3>' +
+      '<div class="small muted">کار را یک‌خطی بنویسید، مثلاً <b dir="ltr">برداشت WE7 0+120 وسط</b>. اعداد فارسی و لاتین هر دو قابل قبول‌اند و کیلومتراژ را با فرم «0+120» بنویسید. بعد «بررسی» را بزنید و قبل از ثبت، هر بخش را اصلاح کنید.</div>' +
+      '<div class="seg" style="margin-top:8px;flex-wrap:wrap">' + WL_KINDS.filter(function (k) { return k[0] !== 'other'; }).map(function (k) { return '<button class="btn sm" data-act="wlChip" data-v="' + k[1] + '">' + k[1] + '</button>'; }).join('') + '</div>' +
+      '<label class="field" style="margin-top:8px"><span>شرح کار</span><textarea class="inp" id="wlIn" rows="2" autocomplete="off">' + esc(wl.text) + '</textarea></label>' +
+      '<div class="row" style="margin-top:8px"><button class="btn primary" data-act="wlCheck">بررسی</button></div>';
+    if (d) {
+      const miss = [!d.kind && 'نوع کار', !d.sid && 'خیابان', d.station === null && 'کیلومتراژ', !d.side && 'موقعیت'].filter(Boolean);
+      h += '<div class="msg ' + (miss.length ? 'warn' : 'info') + ' small" style="margin-top:8px">' + (miss.length ? 'این بخش‌ها پیدا نشد؛ دستی انتخاب کنید: ' + miss.join('، ') : 'همه‌ی بخش‌ها پیدا شد. اگر درست است، ثبت کنید.') + '</div>' +
+        '<div class="grid2" style="margin-top:8px">' +
+        field('نوع کار', '<select class="inp" id="wlKind">' + kindOpts(d.kind) + '</select>') +
+        field('خیابان', '<select class="inp" id="wlSt"><option value="">— انتخاب کنید —</option>' + (p.streets || []).map(function (s) { return '<option value="' + esc(s.id) + '"' + (d.sid === s.id ? ' selected' : '') + '>' + esc(s.name) + '</option>'; }).join('') + '</select>') +
+        field('کیلومتراژ', '<input class="inp ltr" id="wlKm" dir="ltr" value="' + (d.station === null ? '' : esc(stn(d.station))) + '" placeholder="0+120" autocomplete="off">') +
+        field('موقعیت', '<select class="inp" id="wlSide"><option value="">— انتخاب کنید —</option>' + WL_SIDES.map(function (s) { return '<option value="' + s[0] + '"' + (d.side === s[0] ? ' selected' : '') + '>' + s[1] + '</option>'; }).join('') + '</select>') +
+        '</div><div class="row" style="margin-top:8px"><button class="btn primary" data-act="wlSave">ثبت در گزارش</button><button class="btn" data-act="wlCancel">انصراف</button></div>';
+    }
+    h += '</section>';
+    const rg = wlRange(wl), inR = wlInRange(list, rg), cn = wlCounts(inR);
+    h += '<section class="card"><h3>گزارش کار</h3><div class="seg" style="flex-wrap:wrap">' +
+      WL_RANGES.map(function (o) { const on = (wl.range || 'week') === o[0]; return '<button class="btn sm' + (on ? ' primary' : '') + '" data-act="wlRange" data-v="' + o[0] + '" aria-pressed="' + (on ? 'true' : 'false') + '">' + o[1] + '</button>'; }).join('') + '</div>' +
+      ((wl.range || 'week') === 'custom' ? '<div class="grid2" style="margin-top:8px">' + field('از تاریخ', '<input class="inp" type="date" id="wlFrom" value="' + esc(wl.from || '') + '">') + field('تا تاریخ', '<input class="inp" type="date" id="wlTo" value="' + esc(wl.to || '') + '">') + '</div><div class="row" style="margin-top:8px"><button class="btn" data-act="wlApply">اعمال بازه</button></div>' : '') +
+      '<div class="small" style="margin-top:8px">' + esc(wlRangeTxt(rg)) + ' — <b class="num">' + inR.length + '</b> کار' +
+      (inR.length ? ' (' + WL_KINDS.filter(function (k) { return cn.kinds[k[0]]; }).map(function (k) { return k[1] + ' <b class="num">' + cn.kinds[k[0]] + '</b>'; }).join('، ') + ')' : '') + '</div>' +
+      '<div class="row" style="margin-top:8px"><button class="btn primary" data-act="wlReport">📄 گزارش کار</button></div></section>';
+    h += '<section class="card"><h3>کارهای ثبت‌شده (' + list.length + ')</h3>';
+    if (!list.length) h += '<div class="small muted">هنوز کاری ثبت نشده است.</div>';
+    else h += '<div style="overflow-x:auto;margin-top:8px"><table style="width:100%;border-collapse:collapse;font-size:12px;white-space:nowrap"><thead><tr><th>زمان</th><th>کار</th><th>خیابان</th><th>کیلومتراژ</th><th>موقعیت</th><th></th></tr></thead><tbody>' +
+      list.map(function (r, i) {
+        const tm = new Date(r.t), ts = isNaN(tm.getTime()) ? '' : tm.toLocaleString('fa-IR');
+        return '<tr><td>' + esc(ts) + '</td><td>' + esc(wlLabel(WL_KINDS, r.kind)) + '</td><td>' + esc(r.street || '—') + '</td><td>' + (fin(r.station) ? '<bdi dir="ltr">' + esc(stn(r.station)) + '</bdi>' : '—') +
+          '</td><td>' + esc(wlLabel(WL_SIDES, r.side)) + '</td><td><button class="btn sm" data-act="wlDel" data-i="' + i + '">حذف</button></td></tr>';
+      }).join('') + '</tbody></table></div>';
+    return h + '</section>';
+  }
+  /* ---- بازه‌های گزارش (هفته: شنبه تا جمعه، ماه: ماه شمسی) ---- */
+  const WL_RANGES = [['week', 'این هفته'], ['lastweek', 'هفته‌ی قبل'], ['month', 'این ماه'], ['lastmonth', 'ماه قبل'], ['custom', 'بازه‌ی دلخواه']];
+  const WL_JF = (function () { try { return new Intl.DateTimeFormat('en-u-ca-persian-nu-latn', { year: 'numeric', month: 'numeric', day: 'numeric' }); } catch (e) { return null; } })();
+  function wlSOD(d) { return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
+  function wlAdd(d, n) { return new Date(d.getFullYear(), d.getMonth(), d.getDate() + n); }
+  function wlJd(d) { if (!WL_JF) return d.getDate(); const o = WL_JF.formatToParts(d).find(function (x) { return x.type === 'day'; }); return o ? Number(o.value) : d.getDate(); }
+  function wlMonthStart(d) { let s = wlSOD(d), n = 0; while (wlJd(s) > 1 && n++ < 40) s = wlAdd(s, -1); return s; }
+  function wlMonthEnd(start) { let e = wlAdd(start, 1), n = 0; while (wlJd(e) > 1 && n++ < 40) e = wlAdd(e, 1); return e; }
+  /** بازه‌ی انتخاب‌شده: from شامل، to شامل‌نشده (نیمه‌شب روز بعد) */
+  function wlRange(wl) {
+    const now = wlSOD(new Date()), k = wl.range || 'week';
+    let from, to;
+    if (k === 'week' || k === 'lastweek') { from = wlAdd(now, -((now.getDay() + 1) % 7) - (k === 'lastweek' ? 7 : 0)); to = wlAdd(from, 7); }
+    else if (k === 'month') { from = wlMonthStart(now); to = wlMonthEnd(from); }
+    else if (k === 'lastmonth') { from = wlMonthStart(wlAdd(wlMonthStart(now), -1)); to = wlMonthEnd(from); }
+    else {
+      let a = wl.from ? new Date(wl.from + 'T00:00:00') : now, b = wl.to ? new Date(wl.to + 'T00:00:00') : a;
+      if (isNaN(a.getTime())) a = now; if (isNaN(b.getTime())) b = a;
+      from = a <= b ? a : b; to = wlAdd(a <= b ? b : a, 1);
+    }
+    return { from: from, to: to };
+  }
+  function wlRangeTxt(r) { return r.from.toLocaleDateString('fa-IR') + ' تا ' + wlAdd(r.to, -1).toLocaleDateString('fa-IR'); }
+  function wlInRange(list, r) {
+    return list.filter(function (x) { const t = new Date(x.t).getTime(); return t >= r.from.getTime() && t < r.to.getTime(); })
+      .sort(function (a, b) { return new Date(a.t) - new Date(b.t); });
+  }
+  function wlCounts(rows) {
+    const kinds = {}, streets = {};
+    rows.forEach(function (r) {
+      kinds[r.kind] = (kinds[r.kind] || 0) + 1;
+      const sn = r.street || '—'; (streets[sn] = streets[sn] || {})[r.kind] = ((streets[sn] || {})[r.kind] || 0) + 1;
+    });
+    return { kinds: kinds, streets: streets };
+  }
+  async function wlReport() {
+    const p = P(), wl = wlState(), list = Array.isArray(p.workLog) ? p.workLog : [], rg = wlRange(wl), rows = wlInRange(list, rg), st = p.settings || {};
+    if (!rows.length) { toast('در این بازه کاری ثبت نشده است.', 'err'); return; }
+    if (!(await rptAsk())) return;
+    const bd = function (t) { return '<bdi dir="ltr">' + esc(t) + '</bdi>'; };
+    const date = new Date().toLocaleDateString('fa-IR'), cs = st.coordSystem === 'UTM' ? 'UTM ' + st.utmZone + (st.hemisphere === 'S' ? 'S' : 'N') + ' / ' + st.datum : 'محلی';
+    const rlab = (WL_RANGES.find(function (x) { return x[0] === (wl.range || 'week'); }) || [0, ''])[1], cnt = wlCounts(rows);
+    const card = function (lab, val, sub) { return '<div class="rp-card"><span>' + lab + '</span><b>' + val + '</b>' + (sub ? '<small>' + sub + '</small>' : '') + '</div>'; };
+    const days = []; let curKey = '', curDay = null;
+    rows.forEach(function (r) {
+      const d = new Date(r.t), key = d.getFullYear() + '-' + d.getMonth() + '-' + d.getDate();
+      if (key !== curKey) { curKey = key; curDay = { d: d, rows: [] }; days.push(curDay); }
+      curDay.rows.push(r);
+    });
+    const kindRows = WL_KINDS.filter(function (k) { return cnt.kinds[k[0]]; }).map(function (k) { return '<tr><td>' + k[1] + '</td><td>' + bd(String(cnt.kinds[k[0]])) + '</td></tr>'; }).join('');
+    const streetRows = Object.keys(cnt.streets).map(function (sn) {
+      const m = cnt.streets[sn], tot = Object.keys(m).reduce(function (a, k) { return a + m[k]; }, 0);
+      return '<tr><td>' + esc(sn) + '</td><td>' + bd(String(tot)) + '</td><td>' + WL_KINDS.filter(function (k) { return m[k[0]]; }).map(function (k) { return k[1] + ' ' + bd(String(m[k[0]])); }).join('، ') + '</td></tr>';
+    }).join('');
+    const dayRows = days.map(function (g) {
+      const dl = g.d.toLocaleDateString('fa-IR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+      return '<tr><td colspan="5"><b>' + esc(dl) + '</b> — ' + bd(String(g.rows.length)) + ' کار</td></tr>' + g.rows.map(function (r) {
+        const tm = new Date(r.t), ts = isNaN(tm.getTime()) ? '' : tm.toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' });
+        return '<tr><td>' + esc(ts) + '</td><td>' + esc(wlLabel(WL_KINDS, r.kind)) + '</td><td>' + esc(r.street || '—') + '</td><td>' + (fin(r.station) ? bd(stn(r.station)) : '—') + '</td><td>' + esc(wlLabel(WL_SIDES, r.side)) + '</td></tr>';
+      }).join('');
+    }).join('');
+    let h = '<div class="rp-page"><div class="rp-cover"><div class="rp-l"><div class="rp-brand">RoadStake</div><div class="rp-sub">گزارش کار — ' + esc(rlab) + '</div></div>' +
+      '<div class="rp-title">' + esc(p.name) + '</div><div class="rp-r"><div>' + esc(date) + '</div><div>' + esc(wlRangeTxt(rg)) + '</div><div dir="ltr">' + esc(cs) + '</div></div></div>';
+    h += '<div class="rp-cards">' + card('تعداد کارها', bd(String(rows.length)), '') + card('روزهای کاری', bd(String(days.length)), '') + card('خیابان‌های درگیر', bd(String(Object.keys(cnt.streets).length)), '') + '</div>';
+    h += '<div class="rp-box"><h3>خلاصه به تفکیک نوع کار</h3><table class="pt-tbl"><thead><tr><th>نوع کار</th><th>تعداد</th></tr></thead><tbody>' + kindRows + '</tbody></table></div>';
+    h += '<div class="rp-box"><h3>خلاصه به تفکیک خیابان</h3><table class="pt-tbl"><thead><tr><th>خیابان</th><th>تعداد</th><th>نوع کارها</th></tr></thead><tbody>' + streetRows + '</tbody></table></div>';
+    h += '<div class="rp-box"><h3>فهرست کارها به تفکیک روز</h3><table class="pt-tbl"><thead><tr><th>ساعت</th><th>کار</th><th>خیابان</th><th>کیلومتراژ</th><th>موقعیت</th></tr></thead><tbody>' + dayRows + '</tbody></table></div>';
+    h += signBlock() + '<div class="pt-foot">RoadStake • ' + esc(p.name) + ' • ' + esc(date) + '</div></div>';
+    const pa = $('#printArea'), oldTitle = document.title;
+    pa.className = 'pt rp'; pa.innerHTML = h;
+    document.title = slugFa(p.name) + '_work_report';
+    await new Promise(function (res) { setTimeout(res, 250); });
+    if (!(await rptSignOld(pa, document.title))) { pa.innerHTML = ''; pa.className = ''; document.title = oldTitle; return; }
+    window.print();
+    setTimeout(function () { pa.innerHTML = ''; pa.className = ''; document.title = oldTitle; }, 1000);
+  }
+  function wlSaveFromForm() {
+    const wl = wlState(), p = P();
+    const kind = ($('#wlKind') || {}).value || '', sid = ($('#wlSt') || {}).value || '', side = ($('#wlSide') || {}).value || '';
+    const km = C.parseStation((($('#wlKm') || {}).value || '').trim());
+    const s = (p.streets || []).find(function (x) { return x.id === sid; });
+    if (!kind || !s || !fin(km) || !side) { toast('نوع کار، خیابان، کیلومتراژ و موقعیت را کامل کنید.', 'err'); return; }
+    p.workLog = (Array.isArray(p.workLog) ? p.workLog : []).concat([{ id: 'wl' + Date.now().toString(36), t: new Date().toISOString(), kind: kind, sid: s.id, street: s.name, station: km, side: side, raw: wl.text || '' }]);
+    saveProject();
+    S.wl = { text: '', draft: null };
+    toast('ثبت شد: ' + wlLabel(WL_KINDS, kind) + ' — «' + s.name + '» ⁦' + stn(km) + '⁩');
+    render();
+  }
+
+  /* ============================== گزارش جامع کارفرما ============================== */
+  const CR_SECS = [['sum', 'خلاصه‌ی مدیریتی'], ['streets', 'مشخصات خیابان‌ها'], ['works', 'عملیات و کیلومتراژ هر خیابان'], ['permits', 'مجوزها'], ['dens', 'آزمایش‌های تراکم'], ['log', 'گزارش کار'], ['sign', 'امضاها']];
+  const CR_RANGES = [['all', 'کل پروژه']].concat(typeof WL_RANGES !== 'undefined' ? WL_RANGES : []);
+  const CR_DENS_OPS = ['fill', 'subgrade', 'subbase', 'base'];
+  const CR_MAX_LOG = 300, CR_MAX_IV = 4;
+  const CR_PAL = { ok: '#2e7d32', wait: '#d4a017', rej: '#c62828', done: '#1e88e5', act: '#90caf9' };
+  function crState() {
+    const c = S.cr || (S.cr = { range: 'all', from: '', to: '' });
+    if (!c.off) c.off = {}; if (!c.permOff) c.permOff = {};
+    return c;
+  }
+  const crPad = function (n) { return String(n).padStart(2, '0'); };
+  const crIso = function (d) { return d.getFullYear() + '-' + crPad(d.getMonth() + 1) + '-' + crPad(d.getDate()); };
+  function crRange() {
+    const c = crState(); if (c.range === 'all') return null;
+    const r = wlRange({ range: c.range, from: c.from, to: c.to });
+    return { f: crIso(r.from), t: crIso(r.to), txt: wlRangeTxt(r) };
+  }
+  const crIn = function (R, iso) { return !R || (!!iso && iso >= R.f && iso < R.t); };
+  const crLen = function (list) { return list.reduce(function (a, r) { return a + (r[1] - r[0]); }, 0); };
+  function crMerge(list) {
+    const a = list.slice().sort(function (x, y) { return x[0] - y[0]; }), out = [];
+    a.forEach(function (r) { const l = out[out.length - 1]; if (l && r[0] <= l[1]) { if (r[1] > l[1]) l[1] = r[1]; } else out.push([r[0], r[1]]); });
+    return out;
+  }
+  /** a منهای b؛ هر دو ادغام‌شده */
+  function crSub(a, b) {
+    const out = [];
+    a.forEach(function (r) {
+      let s = r[0];
+      b.forEach(function (c) { if (c[1] <= s || c[0] >= r[1]) return; if (c[0] > s) out.push([s, c[0]]); s = Math.max(s, c[1]); });
+      if (s < r[1]) out.push([s, r[1]]);
+    });
+    return out;
+  }
+  const crKm = function (a, b) { return '<bdi dir="ltr">' + esc(stn(a)) + ' — ' + esc(stn(b)) + '</bdi>'; };
+  const crBd = function (t) { return '<bdi dir="ltr">' + esc(t) + '</bdi>'; };
+  const crPct = function (a, b) { return b > 0 ? Math.min(100, a / b * 100) : 0; };
+  const crPctTxt = function (v) { return fin(v) ? C.fmt(v, v >= 10 || v === 0 ? 0 : 1) + '٪' : '—'; };
+  const crIvTxt = function (list) {
+    if (!list.length) return '—';
+    return list.slice(0, CR_MAX_IV).map(function (r) { return crKm(r[0], r[1]); }).join('<br>') +
+      (list.length > CR_MAX_IV ? '<br><span class="muted">و ' + crBd(String(list.length - CR_MAX_IV)) + ' بازه‌ی دیگر</span>' : '');
+  };
+  /** نوار پیشرفت؛ parts = [[مقدار، رنگ، خط‌دار؟]] پشت‌سرهم از چپ؛ total = مقدار کل */
+  const crBar = function (parts, total) {
+    let segs = '', x = 0;
+    parts.forEach(function (q) {
+      if (!(total > 0) || !(q[0] > 0)) return;
+      const w = Math.min(100 - x, q[0] / total * 100); if (w <= 0) return;
+      segs += '<i style="width:' + w.toFixed(2) + '%;background:' + q[1] + (q[2] ? ';background-image:repeating-linear-gradient(45deg,rgba(255,255,255,.6) 0 3px,transparent 3px 6px)' : '') + '"></i>';
+      x += w;
+    });
+    return '<div class="cr-bar">' + segs + '</div>';
+  };
+  /** فهرست نوارها: [{label, parts, total, txt}] */
+  const crBars = function (list) {
+    if (!list || !list.length) return '';
+    return '<div class="cr-bars">' + list.map(function (b) {
+      return '<div class="cr-row"><span>' + esc(b.label) + '</span>' + crBar(b.parts, b.total) + '<b>' + b.txt + '</b></div>';
+    }).join('') + '</div>';
+  };
+
+  /** همه‌ی داده‌ها؛ مجوزهای غیرتیک‌خورده کنار گذاشته می‌شوند؛ آزمایش تراکم از مجوزها */
+  function crData() {
+    const p = S.project, c = crState(), R = crRange(), v = projInfo(p.id, p.updatedAt) || { n: 0, len: 0, area: 0, streets: [] };
+    const allOps = worksProject(p).operations, ops = allOps.filter(function (o) { return o.enabled !== false; }), streets = p.streets || [];
+    const rep = WK ? WK.buildWorksReport(Object.assign({}, p, { disabledOps: allOps.filter(function (o) { return o.enabled === false; }).map(function (o) { return o.key; }) })) : null;
+    const opLabel = {}; ops.forEach(function (o) { opLabel[o.key] = o.label; });
+    const permsAll = (Array.isArray(p.permits) ? p.permits : []).slice().sort(function (a, b) { return a.no - b.no; });
+    const selected = function (x) { return !c.permOff[x.id]; };
+    const isTest = function (x) { return /آزمایش/.test(x.formName || x.title || ''); };
+    const testType = function (x) { return String((x.vals && x.vals['نوع تست']) || ''); };
+    const isDens = function (x) { return isTest(x) && (/تراکم|دانسیته/.test(x.formName || '') || /تراکم|دانسیته/.test(testType(x))); };
+    const perms = permsAll.filter(function (x) { return crIn(R, x.date) && selected(x); });
+    const dens = perms.filter(isDens), otherTests = perms.filter(function (x) { return isTest(x) && !isDens(x); });
+    const denOk = permsAll.filter(function (x) { return isDens(x) && (x.status === 'wait' || x.status === 'ok') && selected(x); });
+
+    // هر خیابان و هر عملیات: بازه‌های انجام‌شده، در حال انجام و مانده (کیلومتر، با طول محور به‌عنوان کل)
+    const sRows = streets.map(function (s) {
+      const rg = WK ? WK.streetRange(s) : null, len = rg ? rg.s1 - rg.s0 : 0, o = {};
+      ops.forEach(function (op) {
+        const ws = (s.works || []).filter(function (w) { return w && w.operation === op.key && isFinite(w.fromKm) && isFinite(w.toKm) && w.toKm > w.fromKm; });
+        const clip = function (st) {
+          return crMerge(ws.filter(function (w) { return w.status === st; })
+            .map(function (w) { return [Math.max(w.fromKm, rg ? rg.s0 : 0), Math.min(w.toKm, rg ? rg.s1 : 0)]; })
+            .filter(function (r) { return r[1] > r[0]; }));
+        };
+        const done = rg ? clip('done') : [], act = rg ? crSub(clip('active'), done) : [];
+        const rem = rg ? crSub([[rg.s0, rg.s1]], done) : [];
+        const dl = crLen(done), al = crLen(act);
+        o[op.key] = { done: done, act: act, rem: rem, dl: dl, al: al, rl: len - dl, pct: crPct(dl, len) };
+      });
+      const anyDone = crMerge([].concat.apply([], ops.map(function (op) { return o[op.key].done; })));
+      const covered = crLen(anyDone);
+      return { s: s, rg: rg, len: len, ops: o, covered: covered, unrec: len - covered };
+    });
+    const totLen = sRows.reduce(function (a, r) { return a + r.len; }, 0);
+    const covTotal = sRows.reduce(function (a, r) { return a + r.covered; }, 0);
+    const opTot = {};
+    ops.forEach(function (op) {
+      opTot[op.key] = { dl: 0, al: 0 };
+      sRows.forEach(function (r) { if (r.ops[op.key]) { opTot[op.key].dl += r.ops[op.key].dl; opTot[op.key].al += r.ops[op.key].al; } });
+    });
+
+    // کار انجام‌شده در بازه (بر اساس تاریخ بازه‌های انجام‌شده)
+    const perOpPeriod = {}; let periodLen = 0;
+    if (R) sRows.forEach(function (r) {
+      if (!r.rg) return;
+      (r.s.works || []).forEach(function (w) {
+        if (!w || w.status !== 'done' || !crIn(R, w.date) || !isFinite(w.fromKm) || !isFinite(w.toKm)) return;
+        const l = Math.min(w.toKm, r.rg.s1) - Math.max(w.fromKm, r.rg.s0);
+        if (l > 0) { perOpPeriod[w.operation] = (perOpPeriod[w.operation] || 0) + l; periodLen += l; }
+      });
+    });
+
+    // پوشش آزمایش تراکم: بازه‌ی انجام‌شده‌ی عملیات‌های نیازمند تراکم، منهای بازه‌ی مجوزهای آزمایش در همان خیابان
+    const cov = []; let uncTotal = 0;
+    sRows.forEach(function (r) {
+      if (!r.rg) return;
+      const ti = crMerge(denOk.filter(function (x) { return x.streetId === r.s.id || (!x.streetId && x.streetName === r.s.name); }).map(function (x) {
+        const a = Number(x.from); let b = Number(x.to);
+        if (x.range === 'none' || x.from == null || !isFinite(a)) return null;
+        if (!isFinite(b)) b = a;
+        return a <= b ? [a, b] : [b, a];
+      }).filter(Boolean));
+      CR_DENS_OPS.forEach(function (k) {
+        const od = r.ops[k]; if (!od || !od.dl) return;
+        const un = crSub(od.done, ti), ul = crLen(un); uncTotal += ul;
+        cov.push({ street: r.s.name, op: opLabel[k] || k, done: od.dl, covered: od.dl - ul, unc: ul, ranges: un });
+      });
+    });
+
+    const log = (Array.isArray(p.workLog) ? p.workLog : []).filter(function (r) { const t = new Date(r.t); return !isNaN(t.getTime()) && crIn(R, crIso(t)); }).sort(function (a, b) { return new Date(a.t) - new Date(b.t); });
+    return { p: p, R: R, v: v, rep: rep, ops: ops, sRows: sRows, totLen: totLen, covTotal: covTotal, coveredPct: crPct(covTotal, totLen), unrecTotal: totLen - covTotal, opTot: opTot, periodLen: periodLen, perOpPeriod: perOpPeriod, perms: perms, dens: dens, otherTests: otherTests, testType: testType, cov: cov, uncTotal: uncTotal, log: log, permsAll: permsAll };
+  }
+
+  const CR_PLAN_W = 720, CR_PLAN_H = 300;
+  /** وزن عملیات (غیرمنفی) */
+  const crWt = function (o) { const x = Number(o.weight); return isFinite(x) && x > 0 ? x : 0; };
+  /** نقطه‌های محور یک خیابان، مرتب‌شده بر اساس کیلومتراژ */
+  function crAxis(r) { return (r.s.points || []).filter(function (q) { return q && fin(q.station) && fin(q.x) && fin(q.y); }).sort(function (a, b) { return a.station - b.station; }); }
+  /** مختصات UTM نقطه‌ی روی محور در کیلومتراژ m */
+  function crAtM(pts, m) {
+    if (m <= pts[0].station) return { x: pts[0].x, y: pts[0].y };
+    for (let i = 0; i < pts.length - 1; i++) {
+      const a = pts[i], b = pts[i + 1];
+      if (m >= a.station && m <= b.station) { const t = (m - a.station) / Math.max(1e-9, b.station - a.station); return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t }; }
+    }
+    const e = pts[pts.length - 1]; return { x: e.x, y: e.y };
+  }
+  /** نقشه‌ی پس‌زمینه‌ی ماهواره‌ای برای کل پروژه (فقط UTM؛ اگر تصویرها بارگذاری نشوند، null) */
+  async function crMapCtx(d) {
+    const st = d.p.settings || {};
+    if (S.rpMap === false || st.coordSystem !== 'UTM') return null;
+    const zone = parseInt(st.utmZone, 10), south = st.hemisphere === 'S';
+    if (!isFinite(zone)) return null;
+    const all = [];
+    d.sRows.forEach(function (r) { (r.s.points || []).forEach(function (q) { if (q && fin(q.x) && fin(q.y)) all.push(q); }); });
+    if (all.length < 2) return null;
+    const stp = Math.max(1, Math.ceil(all.length / 300));
+    const sel = all.filter(function (q, i) { return i % stp === 0; }).map(function (q) { return C.utmToLatLon(q.x, q.y, zone, south); });
+    if (sel.some(function (q) { return !fin(q.lat) || !fin(q.lon) || Math.abs(q.lat) > 84; })) return null;
+    const W = CR_PLAN_W, H = CR_PLAN_H;
+    const mx = function (lon, z) { return (lon + 180) / 360 * 256 * Math.pow(2, z); };
+    const my = function (lat, z) { const r = lat * Math.PI / 180; return (1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2 * 256 * Math.pow(2, z); };
+    let z = 18;
+    for (; z > 2; z--) {
+      const xs = sel.map(function (q) { return mx(q.lon, z); }), ys = sel.map(function (q) { return my(q.lat, z); });
+      if (Math.max.apply(null, xs) - Math.min.apply(null, xs) <= W * 0.85 && Math.max.apply(null, ys) - Math.min.apply(null, ys) <= H * 0.85) break;
+    }
+    const xs = sel.map(function (q) { return mx(q.lon, z); }), ys = sel.map(function (q) { return my(q.lat, z); });
+    const cx = (Math.min.apply(null, xs) + Math.max.apply(null, xs)) / 2, cy = (Math.min.apply(null, ys) + Math.max.apply(null, ys)) / 2;
+    const left = cx - W / 2, top = cy - H / 2, tiles = [];
+    for (let tx = Math.floor(left / 256); tx <= Math.floor((left + W) / 256); tx++)
+      for (let ty = Math.floor(top / 256); ty <= Math.floor((top + H) / 256); ty++)
+        tiles.push({ x: tx * 256 - left, y: ty * 256 - top, url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/' + z + '/' + ty + '/' + tx });
+    const ok = await rpLoadTiles(tiles);
+    if (!ok) return null;
+    return { z: z, zone: zone, south: south, tiles: tiles, left: left, top: top, mx: mx, my: my };
+  }
+  /** تبدیل UTM به مختصات صفحه‌ی پلان (با نقشه یا بدون نقشه) */
+  function crProjector(d, W, H) {
+    if (d.map) {
+      const m = d.map;
+      return function (q) { const ll = C.utmToLatLon(q.x, q.y, m.zone, m.south); return [m.mx(ll.lon, m.z) - m.left, m.my(ll.lat, m.z) - m.top]; };
+    }
+    let X0 = Infinity, X1 = -Infinity, Y0 = Infinity, Y1 = -Infinity;
+    d.sRows.forEach(function (r) { (r.s.points || []).forEach(function (q) { if (q && fin(q.x) && fin(q.y)) { X0 = Math.min(X0, q.x); X1 = Math.max(X1, q.x); Y0 = Math.min(Y0, q.y); Y1 = Math.max(Y1, q.y); } }); });
+    if (!isFinite(X0)) return null;
+    const pad = 18, dx = Math.max(X1 - X0, 1), dy = Math.max(Y1 - Y0, 1), k = Math.min((W - 2 * pad) / dx, (H - 2 * pad) / dy), ox = (W - dx * k) / 2, oy = (H - dy * k) / 2;
+    return function (q) { return [ox + (q.x - X0) * k, H - (oy + (q.y - Y0) * k)]; };
+  }
+  /** تبدیل UTM برای بزرگ‌نمایی یک خیابان: محور آن با حاشیه در کل صفحه پخش می‌شود */
+  function crZoomProj(r, W, H) {
+    const pts = crAxis(r);
+    let X0 = Infinity, X1 = -Infinity, Y0 = Infinity, Y1 = -Infinity;
+    pts.forEach(function (q) { X0 = Math.min(X0, q.x); X1 = Math.max(X1, q.x); Y0 = Math.min(Y0, q.y); Y1 = Math.max(Y1, q.y); });
+    const pad = 22, dx = Math.max(X1 - X0, 1), dy = Math.max(Y1 - Y0, 1), k = Math.min((W - 2 * pad) / dx, (H - 2 * pad) / dy), ox = (W - dx * k) / 2, oy = (H - dy * k) / 2;
+    return function (q) { return [ox + (q.x - X0) * k, H - (oy + (q.y - Y0) * k)]; };
+  }
+  /**
+   * پلان کل پروژه. sel = null: همه‌ی خیابان‌ها (دید کلی)؛ sel = خیابان: همان خیابان با رنگ متفاوت
+   * و عملیات انجام‌شده‌اش روی آن، بقیه‌ی خیابان‌ها کم‌رنگ و در جانمایی کل پروژه.
+   */
+  function crPlanSvg(d, sel, W0, H0, zoom) {
+    const W = W0 || CR_PLAN_W, H = H0 || CR_PLAN_H, dm = !!d.map && !zoom, ow = zoom ? 12 : 8;
+    const pt = zoom ? crZoomProj(sel, W, H) : crProjector(d, W, H);
+    if (!pt) return '<div class="rp-none">مختصاتی برای رسم نیست.</div>';
+    const id = 'crc' + Math.random().toString(36).slice(2, 8);
+    const P = function (q) { const v = pt(q); return v[0].toFixed(1) + ' ' + v[1].toFixed(1); };
+    const line = function (list) { return list.map(function (q, i) { return (i ? 'L' : 'M') + P(q); }).join(''); };
+    const along = function (list, a, b) { const n = Math.max(2, Math.ceil((b - a) / 4)), out = []; for (let i = 0; i <= n; i++) out.push(crAtM(list, a + (b - a) * i / n)); return line(out); };
+    const rows = d.sRows.map(function (r) { return { r: r, pts: crAxis(r) }; }).filter(function (x) { return x.pts.length > 1 && (!zoom || x.r === sel); });
+    let g = '<defs><clipPath id="' + id + '"><rect width="' + W + '" height="' + H + '" rx="4"/></clipPath></defs><g clip-path="url(#' + id + ')">';
+    if (dm) {
+      d.map.tiles.forEach(function (t) { if (t.ok) g += '<image href="' + t.url + '" x="' + t.x.toFixed(1) + '" y="' + t.y.toFixed(1) + '" width="256.6" height="256.6"/>'; });
+      g += '<rect width="' + W + '" height="' + H + '" fill="#000" opacity=".2"/>';
+    } else g += '<rect width="' + W + '" height="' + H + '" fill="#f6f9fb"/>';
+    const halo = dm ? '#000' : '#fff';
+    rows.forEach(function (x) {
+      const on = sel === x.r;
+      const c = !sel ? (dm ? '#ffd54f' : '#1565c0') : on ? '#ff6d00' : (dm ? '#e3eaf0' : '#90a4ae');
+      const wd = !sel ? 3.5 : on ? 6 : 3;
+      g += '<path d="' + line(x.pts) + '" fill="none" stroke="' + halo + '" stroke-opacity=".55" stroke-width="' + (wd + 2.5) + '" stroke-linejoin="round" stroke-linecap="round"/>';
+      g += '<path d="' + line(x.pts) + '" fill="none" stroke="' + c + '" stroke-width="' + wd + '" stroke-linejoin="round" stroke-linecap="round"/>';
+    });
+    if (sel && zoom) {
+      const x = rows.find(function (y) { return y.r === sel; });
+      if (x) d.ops.forEach(function (o) {
+        const od = sel.ops[o.key]; if (!od) return; const c = wkColor(o.color);
+        od.done.forEach(function (iv) { g += '<path d="' + along(x.pts, iv[0], iv[1]) + '" fill="none" stroke="' + c + '" stroke-width="' + ow + '"/>'; });
+        od.act.forEach(function (iv) { g += '<path d="' + along(x.pts, iv[0], iv[1]) + '" fill="none" stroke="' + c + '" stroke-width="' + ow + '" stroke-dasharray="9 5" stroke-opacity=".6"/>'; });
+      });
+    }
+    rows.forEach(function (x) {
+      if (sel && sel !== x.r) return;
+      const m = crAtM(x.pts, (x.pts[0].station + x.pts[x.pts.length - 1].station) / 2), v = pt(m);
+      g += '<text x="' + v[0].toFixed(1) + '" y="' + (v[1] - 8).toFixed(1) + '" font-size="' + (sel ? 14 : 11) + '" font-weight="700" text-anchor="middle" fill="' + (dm ? '#fff' : '#0b2a40') + '" stroke="' + halo + '" stroke-width="3" paint-order="stroke">' + esc(x.r.s.name) + '</text>';
+    });
+    if (zoom && sel) { const x0 = crAxis(sel); if (x0.length > 1) [x0[0], x0[x0.length - 1]].forEach(function (q, i) { const v = pt(q); g += '<text x="' + v[0].toFixed(1) + '" y="' + (v[1] + (i ? -6 : 14)).toFixed(1) + '" font-size="10" fill="#0b2a40" text-anchor="middle" stroke="#fff" stroke-width="3" paint-order="stroke">' + esc(stn(q.station)) + '</text>'; }); }
+    g += '</g>';
+    return '<svg viewBox="0 0 ' + W + ' ' + H + '" width="100%" style="display:block;background:#fff;border:1px solid #dfe6ec;border-radius:6px">' + g + '</svg>' +
+      (dm ? '<div style="font-size:8px;color:#5a6875;margin-top:2px">تصویر: ArcGIS World Imagery</div>' : '');
+  }
+  /** پلان دید کلی همه‌ی خیابان‌ها (بدون علامت عملیات) */
+  function crOverviewVis(d) {
+    return '<div class="cr-vis" style="margin:4pt 0 6pt">' + crPlanSvg(d, null) + '<div style="font-size:9px;margin-top:3px">خطوط = محور خیابان‌های پروژه (جانمایی کل)</div></div>';
+  }
+  /** نوارهای دید کلی: پوشش کیلومتری و پیشرفت وزنی نسبت به کل پروژه */
+  function crOverviewBars(d) {
+    const L = rplL, wTot = d.ops.reduce(function (a, o) { return a + crWt(o) * d.totLen; }, 0);
+    const wDone = d.ops.reduce(function (a, o) { return a + crWt(o) * d.opTot[o.key].dl; }, 0);
+    return [
+      { label: 'پوشش کیلومتری کل', parts: [[d.covTotal, CR_PAL.done]], total: d.totLen, txt: L(crPctTxt(d.coveredPct)) + ' <span class="muted">(' + L(fmtN(d.covTotal)) + ' از ' + L(fmtN(d.totLen)) + ' m)</span>' },
+      { label: 'پیشرفت وزنی کل', parts: d.ops.map(function (o) { return [crWt(o) * d.opTot[o.key].dl, wkColor(o.color)]; }).concat(d.ops.map(function (o) { return [crWt(o) * d.opTot[o.key].al, wkColor(o.color), true]; })), total: wTot, txt: L(crPctTxt(crPct(wDone, wTot))) }
+    ];
+  }
+  /** دو نوار وزنی هر خیابان: نسبت به خود خیابان و نسبت به کل پروژه */
+  function crWeightBars(r, d) {
+    const L = rplL;
+    const own = d.ops.reduce(function (a, o) { return a + crWt(o) * r.len; }, 0);
+    const proj = d.sRows.reduce(function (a, rr) { return a + d.ops.reduce(function (b, o) { return b + crWt(o) * rr.len; }, 0); }, 0);
+    const dn = d.ops.reduce(function (a, o) { return a + crWt(o) * r.ops[o.key].dl; }, 0);
+    const parts = d.ops.map(function (o) { return [crWt(o) * r.ops[o.key].dl, wkColor(o.color)]; })
+      .concat(d.ops.map(function (o) { return [crWt(o) * r.ops[o.key].al, wkColor(o.color), true]; }));
+    return [
+      { label: 'نسبت به خود خیابان', parts: parts, total: own, txt: L(crPctTxt(crPct(dn, own))) },
+      { label: 'نسبت به کل پروژه', parts: parts, total: proj, txt: L(crPctTxt(crPct(dn, proj))) }
+    ];
+  }
+  /** پلان بزرگ‌نمایی خیابان (با جانمایی کل پروژه در گوشه) + راهنما + خطوط کیلومتری عملیات */
+  function crStreetVis(r, d) {
+    if (!r.rg || !(r.len > 0)) return '';
+    const ops = d.ops, s0 = r.rg.s0, pct = function (m) { return (m - s0) / r.len * 100; };
+    const seg = function (a, b, c, op) { return '<i style="position:absolute;top:0;bottom:0;left:' + a.toFixed(2) + '%;width:' + Math.max(0.4, b - a).toFixed(2) + '%;background:' + c + ';opacity:' + op + ';border-radius:2px"></i>'; };
+    const lane = function (label, inner, h) {
+      return '<div style="display:grid;grid-template-columns:100px 1fr;align-items:center;gap:8px;margin:3px 0"><span style="font-size:10px;color:#0b2a40;text-align:right;font-weight:700">' + label + '</span>' +
+        '<div style="position:relative;height:' + h + 'px">' + inner + '</div></div>';
+    };
+    let lanes = '';
+    ops.forEach(function (o) {
+      const od = r.ops[o.key] || { done: [], act: [] }, c = wkColor(o.color);
+      let inner = '<div style="position:absolute;top:0;bottom:0;left:0;right:0;background:#eef2f5;border-radius:3px"></div>';
+      od.act.forEach(function (iv) { inner += seg(pct(iv[0]), pct(iv[1]), c, .35); });
+      od.done.forEach(function (iv) { inner += seg(pct(iv[0]), pct(iv[1]), c, 1); });
+      lanes += lane(esc(o.label), inner, 12);
+    });
+    const step = r.len > 600 ? 200 : 100;
+    let ticks = '', last = -99;
+    for (let m = Math.ceil(s0 / step) * step; m <= r.rg.s1; m += step) {
+      const p = pct(m);
+      if (p - last < 12) continue;
+      last = p;
+      const tr = p < 6 ? 'translateX(0)' : p > 94 ? 'translateX(-100%)' : 'translateX(-50%)';
+      ticks += '<em style="position:absolute;top:0;left:' + p.toFixed(2) + '%;transform:' + tr + ';font-size:9px;color:#5a6875;font-style:normal;white-space:nowrap">' + esc(stn(m)) + '</em>';
+    }
+    lanes += lane('', ticks, 16);
+    const legend = '<div style="font-size:9px;margin-top:4px">' + ops.map(function (o) {
+      const od = r.ops[o.key] || { pct: 0 };
+      return '<span style="display:inline-block;margin:0 0 2px 0;padding-left:10px"><i style="display:inline-block;width:9px;height:9px;border-radius:50%;background:' + wkColor(o.color) + ';margin-left:4px"></i>' + esc(o.label) + ' ' + esc(crPctTxt(od.pct)) + '</span>';
+    }).join('') + '</div>';
+    return '<div class="cr-vis" style="margin:4pt 0 6pt">' +
+      '<div style="font-size:9px;margin-bottom:2px">جانمایی خیابان در کل پروژه</div>' + crPlanSvg(d, r, 720, 110) +
+      '<div style="font-size:10px;font-weight:700;margin:6px 0 3px">پلان بزرگ‌نمایی خیابان «' + esc(r.s.name) + '» — عملیات انجام‌شده با رنگ هر عملیات</div>' +
+      crPlanSvg(d, r, 720, 250, true) + legend + '<div style="margin-top:6px">' + lanes + '</div></div>';
+  }
+  /**
+   * صفحه‌بندی گزارش جامع: هر بخش (chunk) کامل روی یک صفحه می‌نشیند اگر جا باشد؛ اگر نه، صفحه‌ی تازه.
+   * بخش‌های کوتاه کنار هم جا می‌گیرند تا صفحه‌ی نیمه‌خالی یا خالی نماند. جدول‌های بلند بین صفحات تقسیم می‌شوند.
+   * ch.own = صفحه‌ی مستقل (روکش).
+   */
+  async function crFlowAll(chunks, foot) {
+    try { await document.fonts.ready; } catch (e) { /* ignore */ }
+    const o = S.rpoCur || {}, pa = $('#printArea'), key = S.ky && S.ky.info;
+    const dummy = { iso: new Date().toISOString(), docHash: new Array(65).join('0'), sig: new Array(89).join('A'), key: { name: key ? key.name : 'نام صاحب کلید', keyId: 'XXXXX-XXXXX', spki: key ? key.spki : new Array(125).join('A') } };
+    dummy.payload = 'RS-SIG-2|' + dummy.docHash + '|99|' + dummy.iso + '|' + dummy.key.name;
+    const boxes = o.boxes ? sigCompact() : '';
+    const decN = (o.client ? rptShort(dummy, 99, 99) : '') + boxes, decL = (o.client ? rptFull(dummy, 99) : '') + decN;
+    const css = document.createElement('style'); css.textContent = rplMeasureCss(); document.head.appendChild(css);
+    const oldCls = pa.className, oldStyle = pa.getAttribute('style'), oldHtml = pa.innerHTML;
+    pa.className = 'pt rp rpl'; pa.setAttribute('style', 'display:block;position:absolute;left:-10000px;top:0;width:186mm;visibility:hidden');
+    const LIM = 256 / 25.4 * 96 - 8;
+    const measure = function (inner, last) {
+      pa.innerHTML = '<div class="rpl-pg' + (last ? ' last' : '') + '" style="min-height:0">' + inner + '<div class="rpl-dec">' + (last ? decL : decN) + '</div>' + foot() + '</div>';
+      return pa.firstChild.getBoundingClientRect().height <= LIM;
+    };
+    const pages = []; let cur = '';
+    const push = function () { pages.push(cur); cur = ''; };
+    const tbl = function (ch, rows) { return ch.head + rows.join('') + '</tbody></table>'; };
+    try {
+      const addChunk = function (ch) {
+        const U = ch.units || [], whole = ch.top + (U.length ? tbl(ch, U) : '');
+        if (ch.own) { if (cur) push(); cur = whole; push(); return; }
+        if (cur && !ch.keep && measure(cur + whole, false)) { cur += whole; return; }
+        if (cur) push();
+        if (!U.length || measure(whole, false)) { cur = whole; return; }
+        if (ch.keep) {
+          const Z = [0.92, 0.85, 0.78, 0.7, 0.62].find(function (z) { return measure('<div style="zoom:' + z + '">' + whole + '</div>', false); });
+          if (Z !== undefined) { cur = '<div style="zoom:' + Z + '">' + whole + '</div>'; return; }
+        }
+        cur = ch.top;
+        const rest = U.slice();
+        while (rest.length) {
+          const take = [];
+          while (rest.length && measure(cur + tbl(ch, take.concat([rest[0]])), false)) take.push(rest.shift());
+          if (!take.length) { if (cur) { push(); continue; } take.push(rest.shift()); }
+          cur += tbl(ch, take);
+          if (rest.length) push();
+        }
+      };
+      chunks.forEach(function (ch) { addChunk(ch); if (ch.keep && cur) push(); });
+      if (cur) push();
+      if (!pages.length) return '';
+      if (!measure(pages[pages.length - 1], true)) pages.push('');
+      const N = pages.length;
+      return pages.map(function (inner, k) { return '<div class="rpl-pg' + (k === N - 1 ? ' last' : '') + '">' + inner + foot(k, N) + '</div>'; }).join('');
+    } finally {
+      css.remove(); pa.className = oldCls; if (oldStyle === null) pa.removeAttribute('style'); else pa.setAttribute('style', oldStyle); pa.innerHTML = oldHtml;
+    }
+  }
+
+  /** مشخصات هر بخش؛ هر عنصر یک صفحه‌ی مستقل در چاپ است. cards: [[برچسب، HTML]]، bars، notes، tables: [{title, cols, rows, empty}] */
+  /** دونات پیشرفت با درصد وسط آن */
+  function crDonut(v, col, label, sub) {
+    const pc = fin(v) ? Math.max(0, Math.min(100, v)) : 0, C = 2 * Math.PI * 44;
+    return '<div style="flex:1;min-width:0;text-align:center">' +
+      '<svg viewBox="0 0 120 120" width="120" height="120" style="display:block;margin:0 auto">' +
+      '<circle cx="60" cy="60" r="44" fill="none" stroke="#e3eaf0" stroke-width="14"/>' +
+      '<circle cx="60" cy="60" r="44" fill="none" stroke="' + col + '" stroke-width="14" stroke-linecap="round" stroke-dasharray="' + (C * pc / 100).toFixed(2) + ' ' + C.toFixed(2) + '" transform="rotate(-90 60 60)"/>' +
+      '<text x="60" y="67" text-anchor="middle" font-size="19" font-weight="800" fill="#0b2a40">' + esc(crPctTxt(v)) + '</text></svg>' +
+      '<div style="font-size:11px;font-weight:700;color:#0b2a40;margin-top:2px">' + esc(label) + '</div>' +
+      (sub ? '<div style="font-size:9px;color:#5a6875">' + sub + '</div>' : '') + '</div>';
+  }
+  /** نمای مدیریتی: دونات‌ها، پیشرفت هر عملیات و پوشش هر خیابان */
+  function crSumVis(d, pc, dc) {
+    const L = rplL, tot = d.totLen;
+    const overall = d.rep ? d.rep.overall : NaN;
+    const sec = function (t) { return '<div style="font-size:11px;font-weight:800;color:#0b2a40;margin:12px 0 4px;border-bottom:1.5pt solid #c9962b;padding-bottom:2px">' + t + '</div>'; };
+    const donuts = '<div style="display:flex;gap:6px;margin:6px 0 4px">' +
+      crDonut(overall, '#1e88e5', 'پیشرفت وزنی کل') +
+      crDonut(d.coveredPct, '#2e7d32', 'پوشش کیلومتری', L(fmtN(d.covTotal)) + ' از ' + L(fmtN(tot)) + ' m') +
+      crDonut(d.perms.length ? pc.ok / d.perms.length * 100 : NaN, '#c9962b', 'مجوزهای تأییدشده', L(pc.ok + ' از ' + d.perms.length)) +
+      crDonut(d.dens.length ? dc.ok / d.dens.length * 100 : NaN, '#7e57c2', 'آزمایش تراکم تأییدشده', L(dc.ok + ' از ' + d.dens.length)) + '</div>';
+    const opRows = d.ops.map(function (o) {
+      const t = d.opTot[o.key], p1 = crPct(t.dl, tot), p2 = crPct(t.al, tot), c = wkColor(o.color);
+      return '<div style="display:grid;grid-template-columns:96px 1fr 130px;align-items:center;gap:8px;margin:7px 0">' +
+        '<span style="font-size:11px;font-weight:700;color:#0b2a40">' + esc(o.label) + '</span>' +
+        '<div style="position:relative;height:16px;background:#eef2f5;border-radius:8px;overflow:hidden"><i style="position:absolute;top:0;bottom:0;left:0;width:' + p1.toFixed(2) + '%;background:' + c + '"></i><i style="position:absolute;top:0;bottom:0;left:' + p1.toFixed(2) + '%;width:' + p2.toFixed(2) + '%;background:' + c + ';opacity:.35"></i></div>' +
+        '<span style="font-size:10px;color:#0b2a40">' + L(crPctTxt(p1)) + ' <span style="color:#5a6875"><bdi dir="ltr">(' + esc(fmtN(t.dl)) + ' m)</bdi></span></span></div>';
+    }).join('');
+    const sr = d.sRows.filter(function (r) { return r.rg && r.len > 0; }).slice().sort(function (a, b) { return crPct(b.covered, b.len) - crPct(a.covered, a.len); });
+    const stRows = sr.map(function (r) {
+      const p = crPct(r.covered, r.len);
+      return '<div style="display:grid;grid-template-columns:96px 1fr 130px;align-items:center;gap:8px;margin:5px 0">' +
+        '<span style="font-size:10px;color:#0b2a40;font-weight:700">' + esc(r.s.name) + '</span>' +
+        '<div style="position:relative;height:12px;background:#eef2f5;border-radius:6px;overflow:hidden"><i style="position:absolute;top:0;bottom:0;left:0;width:' + p.toFixed(2) + '%;background:#2e7d32"></i></div>' +
+        '<span style="font-size:10px;color:#0b2a40">' + L(crPctTxt(p)) + ' <span style="color:#5a6875"><bdi dir="ltr">(' + esc(fmtN(r.len)) + ' m)</bdi></span></span></div>';
+    }).join('');
+    return '<div>' + donuts + sec('پیشرفت هر عملیات از کل طول محور') + opRows + sec('پوشش کیلومتری هر خیابان (مرتب‌شده)') + (stRows || '<div class="muted">خیابانی ثبت نشده است.</div>') + '</div>';
+  }
+  function crSpecs(d) {
+    const p = d.p, R = d.R, v = d.v, L = rplL, when = R ? ' — ' + R.txt : '';
+    const num = function (x, k) { return crBd(fmtN(x, k)); };
+    const cnt = function (list) { const o = { wait: 0, ok: 0, rej: 0, del: 0 }; list.forEach(function (x) { if (o[x.status] !== undefined) o[x.status]++; }); return o; };
+    const pc = cnt(d.perms), dc = cnt(d.dens);
+    const stLab = function (s) { return esc((PM_ST[s] || [s])[0]); };
+    const rng = function (x) { return x.range === 'none' || x.from == null ? '—' : (x.range === 'point' || x.to == null || x.to === x.from ? crBd(stn(x.from)) : crKm(x.from, x.to)); };
+    const sp = { sum: [], streets: [], works: [], permits: [], dens: [], log: [], sign: [] };
+    const overall = d.rep ? d.rep.overall : NaN;
+
+    const sumBars = d.ops.map(function (o) {
+      const t = d.opTot[o.key];
+      return { label: o.label, parts: [[t.dl, wkColor(o.color)], [t.al, wkColor(o.color), true]], total: d.totLen, txt: L(crPctTxt(crPct(t.dl, d.totLen))) + ' <span class="muted">(' + L(fmtN(t.dl)) + ' m)</span>' };
+    }).concat([
+      { label: 'وضعیت مجوزها', parts: [[pc.ok, CR_PAL.ok], [pc.wait, CR_PAL.wait], [pc.rej, CR_PAL.rej]], total: d.perms.length, txt: L(pc.ok + ' / ' + pc.wait + ' / ' + pc.rej) },
+      { label: 'وضعیت آزمایش تراکم', parts: [[dc.ok, CR_PAL.ok], [dc.wait, CR_PAL.wait], [dc.rej, CR_PAL.rej]], total: d.dens.length, txt: L(dc.ok + ' / ' + dc.wait + ' / ' + dc.rej) }
+    ]);
+    sp.sum.push({ title: 'خلاصه‌ی مدیریتی' + when,
+      cards: [['تعداد خیابان', L(String(v.n))], ['طول محورها (m)', num(d.totLen)], ['پیشرفت کل پروژه', L(crPctTxt(overall))], ['پوشش کیلومتری', L(crPctTxt(d.coveredPct))], ['بدون ثبت (m)', num(d.unrecTotal)],
+        ['مجوزها (تأییدشده / کل)', L(pc.ok + ' / ' + d.perms.length)], ['آزمایش تراکم (تأییدشده / کل)', L(dc.ok + ' / ' + d.dens.length)]].concat(R ? [['انجام‌شده در بازه (m)', num(d.periodLen)]] : []),
+      bars: [], raw: crSumVis(d, pc, dc),
+      notes: ['نوارها: سبز یا آبی = انجام‌شده، آبی روشن خط‌دار = در حال انجام، فضای خالی = مانده. درصدها از طول محور کل پروژه‌اند.'].concat(d.rep && d.rep.warnings.length ? ['هشدارهای عملیات اجرایی: ' + L(String(d.rep.warnings.length)) + ' مورد (هم‌پوشانی، بازه‌ی نامعتبر یا بیرون از مسیر).'] : []).concat(d.uncTotal > 0 ? ['بازه‌ی انجام‌شده‌ی نیازمند تراکم که مجوز آزمایش ندارد: ' + num(d.uncTotal) + ' متر.'] : []),
+      tables: [] });
+
+    sp.streets.push({ title: 'مشخصات خیابان‌ها' + when, cards: [], bars: crOverviewBars(d), raw: crOverviewVis(d),
+      notes: ['طول محور مبنای همه‌ی درصدهاست. پوشش کیلومتری یعنی بخشی از محور که حداقل یک عملیات روی آن ثبت شده است.'],
+      tables: [{ cols: ['#', 'خیابان', 'طول محور (m)', 'نقاط', 'مساحت (m²)', 'پوشش کیلومتری', 'بدون ثبت (m)'], empty: 'خیابانی ثبت نشده است.',
+        rows: d.sRows.map(function (r, k) {
+          const vs = (v.streets || []).find(function (x) { return x.name === r.s.name; });
+          return [L(String(k + 1)), esc(r.s.name), num(r.len), L(String(r.s.points.length)), vs && vs.hasEdges ? num(vs.area) : '—',
+            crBar([[r.covered, CR_PAL.done]], r.len) + '<div class="cr-pt">' + L(crPctTxt(crPct(r.covered, r.len))) + '</div>', num(r.unrec)];
+        }) }] });
+
+    d.sRows.forEach(function (r) {
+      if (!r.rg) return;
+      const doneLen = crLen(crMerge([].concat.apply([], d.ops.map(function (op) { return r.ops[op.key].done; }))));
+      sp.works.push({ title: 'خیابان «' + r.s.name + '» — طول ' + fmtN(r.len) + ' m' + when,
+        cards: [['پوشش کیلومتری', L(crPctTxt(crPct(r.covered, r.len)))], ['انجام‌شده (m)', num(doneLen)], ['مانده (m)', num(r.len - doneLen)], ['بدون ثبت (m)', num(r.unrec)]],
+        bars: crWeightBars(r, d), notes: ['وزن هر عملیات از «وزن‌ها» در تب عملیات خوانده می‌شود؛ نوار اول نسبت به کار کل همان خیابان، نوار دوم نسبت به کار کل پروژه.'], raw: crStreetVis(r, d),
+        tables: [{ cols: ['عملیات', 'نمودار و درصد', 'انجام‌شده (m)', 'مانده (m)', 'کیلومتراژ انجام‌شده', 'کیلومتراژ جاری و مانده'],
+          rows: d.ops.map(function (o) {
+            const od = r.ops[o.key];
+            return [esc(o.label), crBar([[od.dl, wkColor(o.color)], [od.al, wkColor(o.color), true]], r.len) + '<div class="cr-pt">' + L(crPctTxt(od.pct)) + '</div>',
+              num(od.dl), num(od.rl), crIvTxt(od.done), '<b>جاری:</b> ' + crIvTxt(od.act) + '<br><b>مانده:</b> ' + crIvTxt(od.rem)];
+          }) }] });
+    });
+    if (!sp.works.length) sp.works.push({ title: 'عملیات اجرایی' + when, cards: [], bars: [], notes: ['خیابانی با محور معتبر پیدا نشد.'], tables: [] });
+
+    const byForm = {}; d.perms.forEach(function (x) { const k = x.formName || x.title || '—'; (byForm[k] = byForm[k] || { wait: 0, ok: 0, rej: 0, del: 0 })[x.status]++; });
+    sp.permits.push({ title: 'مجوزها' + when, cards: [['کل مجوزها', L(String(d.perms.length))], ['تأییدشده', L(String(pc.ok))], ['ردشده', L(String(pc.rej))], ['در انتظار', L(String(pc.wait))]],
+      bars: [{ label: 'وضعیت مجوزها', parts: [[pc.ok, CR_PAL.ok], [pc.wait, CR_PAL.wait], [pc.rej, CR_PAL.rej]], total: d.perms.length, txt: L(pc.ok + ' / ' + pc.wait + ' / ' + pc.rej) }],
+      notes: [], tables: [{ cols: ['نوع مجوز', 'در انتظار', 'تأییدشده', 'ردشده', 'حذف‌شده', 'جمع'], empty: 'مجوزی انتخاب نشده است.',
+        rows: Object.keys(byForm).map(function (k) { const o = byForm[k]; return [esc(k), L(String(o.wait)), L(String(o.ok)), L(String(o.rej)), L(String(o.del)), L(String(o.wait + o.ok + o.rej + o.del))]; }) }] });
+    sp.permits.push({ title: 'فهرست مجوزهای گزارش' + when, cards: [], bars: [], notes: [], tables: [{ cols: ['شماره', 'نوع', 'خیابان', 'از — تا', 'لایه', 'تاریخ', 'وضعیت'], empty: 'مجوزی در این بازه ثبت نشده است.',
+      rows: d.perms.map(function (x) { return [L(pmNo(x.no)), esc(x.formName || x.title || ''), esc(x.streetName || ''), rng(x), esc(x.layerName || '—'), esc(pmDate(x.date)), stLab(x.status)]; }) }] });
+
+    const grp = {}; d.dens.forEach(function (x) { const k = (x.streetName || '—') + '\u0001' + (x.layerName || '—'); (grp[k] = grp[k] || { wait: 0, ok: 0, rej: 0, del: 0 })[x.status]++; });
+    sp.dens.push({ title: 'آزمایش‌های تراکم (از روی مجوزها)' + when,
+      cards: [['آزمایش تراکم (کل)', L(String(d.dens.length))], ['تأییدشده', L(String(dc.ok))], ['ردشده', L(String(dc.rej))], ['در انتظار', L(String(dc.wait))], ['سایر آزمایش‌ها', L(String(d.otherTests.length))]],
+      bars: [{ label: 'وضعیت آزمایش تراکم', parts: [[dc.ok, CR_PAL.ok], [dc.wait, CR_PAL.wait], [dc.rej, CR_PAL.rej]], total: d.dens.length, txt: L(dc.ok + ' / ' + dc.wait + ' / ' + dc.rej) }],
+      notes: ['آزمایش‌ها از مجوزهای «آزمایش تراکم» خوانده شده‌اند.'],
+      tables: [{ cols: ['خیابان', 'لایه', 'در انتظار', 'تأییدشده', 'ردشده', 'جمع'], empty: 'آزمایش تراکمی در این بازه ثبت نشده است.',
+        rows: Object.keys(grp).map(function (k) { const a = k.split('\u0001'), o = grp[k]; return [esc(a[0]), esc(a[1]), L(String(o.wait)), L(String(o.ok)), L(String(o.rej)), L(String(o.wait + o.ok + o.rej + o.del))]; }) }] });
+    sp.dens.push({ title: 'بازه‌های انجام‌شده بدون مجوز آزمایش' + when, cards: [['بدون آزمایش (کل، m)', num(d.uncTotal)]], bars: [], notes: ['برای خاکریزی، بسترسازی، زیراساس و اساس؛ بازه‌ی «انجام‌شده»ای که مجوز آزمایشِ در انتظار یا تأییدشده ندارد.'],
+      tables: [{ cols: ['خیابان', 'عملیات', 'انجام‌شده (m)', 'دارای آزمایش (m)', 'بدون آزمایش (m)', 'بازه‌ها'], empty: 'بازه‌ی انجام‌شده‌ی نیازمند تراکم ثبت نشده است.',
+        rows: d.cov.map(function (c2) { return [esc(c2.street), esc(c2.op), num(c2.done), num(c2.covered), num(c2.unc), crIvTxt(c2.ranges)]; }) }] });
+    sp.dens.push({ title: 'فهرست آزمایش‌های تراکم' + when, cards: [], bars: [], notes: [], tables: [{ cols: ['شماره', 'خیابان', 'از — تا', 'لایه', 'نوع تست', 'تاریخ', 'وضعیت'], empty: 'آزمایش تراکمی در این بازه ثبت نشده است.',
+      rows: d.dens.map(function (x) { return [L(pmNo(x.no)), esc(x.streetName || ''), rng(x), esc(x.layerName || '—'), esc(d.testType(x) || '—'), esc(pmDate(x.date)), stLab(x.status)]; }) }] });
+
+    const lk = {}; d.log.forEach(function (r) { lk[r.kind] = (lk[r.kind] || 0) + 1; });
+    sp.log.push({ title: 'گزارش کار' + when, cards: [['کارهای ثبت‌شده', L(String(d.log.length))]],
+      bars: WL_KINDS.filter(function (k) { return lk[k[0]]; }).map(function (k) { return { label: k[1], parts: [[lk[k[0]], CR_PAL.done]], total: d.log.length, txt: L(String(lk[k[0]])) }; }),
+      notes: d.log.length > CR_MAX_LOG ? ['فقط ' + L(String(CR_MAX_LOG)) + ' مورد آخر در فهرست نشان داده می‌شود.'] : [], tables: [] });
+    sp.log.push({ title: 'فهرست کارها' + when, cards: [], bars: [], notes: [], tables: [{ cols: ['زمان', 'کار', 'خیابان', 'کیلومتراژ', 'موقعیت'], empty: 'کاری در این بازه ثبت نشده است.',
+      rows: d.log.slice(-CR_MAX_LOG).map(function (r) { const tm = new Date(r.t); return [esc(tm.toLocaleString('fa-IR')), esc(wlLabel(WL_KINDS, r.kind)), esc(r.street || '—'), fin(r.station) ? crBd(stn(r.station)) : '—', esc(wlLabel(WL_SIDES, r.side))]; }) }] });
+
+    const sg = (p.signers || []).filter(function (x) { return x.title || x.name; });
+    sp.sign.push({ title: 'امضاکنندگان', cards: [], bars: [], tables: [], notes: sg.length ? sg.map(function (x) { return esc(x.title || '') + (x.name ? ' — ' + esc(x.name) : ''); }) : ['امضاکننده‌ای تعریف نشده است.'] });
+    return sp;
+  }
+
+  /** نمای داشبورد */
+  function crScreen(sp) {
+    let h = '<section class="card"><h2>' + esc(sp.title) + '</h2>';
+    if (sp.cards && sp.cards.length) h += '<div class="kpi">' + sp.cards.map(function (c) { return '<div><b>' + c[1] + '</b><span>' + esc(c[0]) + '</span></div>'; }).join('') + '</div>';
+    h += crBars(sp.bars);
+    if (sp.raw) h += sp.raw;
+    (sp.notes || []).forEach(function (n) { h += '<p class="muted small">' + n + '</p>'; });
+    (sp.tables || []).forEach(function (t) {
+      if (t.title) h += '<h3 style="margin:12px 0 4px">' + esc(t.title) + '</h3>';
+      h += t.rows.length ? '<div class="tbl-wrap"><table><thead><tr>' + t.cols.map(function (c) { return '<th>' + esc(c) + '</th>'; }).join('') + '</tr></thead><tbody>' +
+        t.rows.map(function (r) { return '<tr>' + r.map(function (c) { return '<td>' + c + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table></div>' :
+        '<p class="muted small">' + esc(t.empty || 'موردی نیست.') + '</p>';
+    });
+    return h + '</section>';
+  }
+
+  function crPage() {
+    if (!S.project) return '<div class="msg info small">برای دیدن گزارش، یک پروژه باز کنید.</div>';
+    const c = crState(), cur = c.range, R = crRange(), p = S.project;
+    const d = crData(), spec = crSpecs(d);
+    const list = (p.permits || []).filter(function (x) { return crIn(R, x.date); }).sort(function (a, b) { return a.no - b.no; });
+    const onCnt = list.filter(function (x) { return !c.permOff[x.id]; }).length;
+    let h = '<section class="card"><h2>گزارش جامع پروژه</h2><div class="seg" style="flex-wrap:wrap">' + CR_RANGES.map(function (o) {
+      return '<button class="btn sm' + (o[0] === cur ? ' primary' : '') + '" data-act="crRange" data-v="' + o[0] + '" aria-pressed="' + (o[0] === cur ? 'true' : 'false') + '">' + esc(o[1]) + '</button>';
+    }).join('') + '</div>' +
+      (cur === 'custom' ? '<div class="grid2" style="margin-top:8px">' + field('از تاریخ', '<input class="inp" type="date" id="crFrom" value="' + esc(c.from) + '">') + field('تا تاریخ', '<input class="inp" type="date" id="crTo" value="' + esc(c.to) + '">') + '</div><div class="row" style="margin-top:8px"><button class="btn" data-act="crApply">اعمال بازه</button></div>' : '') +
+      '<details style="margin-top:10px"><summary>بخش‌های گزارش</summary><div class="grid2" style="margin-top:6px">' + CR_SECS.map(function (s) {
+        return '<label class="row"><input type="checkbox" data-crsec="' + s[0] + '"' + (c.off[s[0]] ? '' : ' checked') + '> ' + esc(s[1]) + '</label>';
+      }).join('') + '</div></details>' +
+      '<details open style="margin-top:6px"><summary>مجوزهای گزارش (' + onCnt + ' از ' + list.length + ')</summary>' +
+      '<div class="row" style="margin-top:6px"><button class="btn sm" data-act="crPermAll" data-v="1">همه را در گزارش بیاور</button><button class="btn sm" data-act="crPermAll" data-v="0">هیچ‌کدام</button></div>' +
+      (list.length ? '<div style="margin-top:6px;max-height:260px;overflow:auto">' + list.map(function (x) {
+        return '<label class="row small"><input type="checkbox" data-crperm="' + esc(x.id) + '"' + (c.permOff[x.id] ? '' : ' checked') + '> ' + esc(pmNo(x.no)) + ' — ' + esc(x.formName || x.title || '') + ' — ' + esc(x.streetName || '') + ' — ' + esc((PM_ST[x.status] || [x.status])[0]) + '</label>';
+      }).join('') + '</div>' : '<p class="muted small">مجوزی در این بازه نیست.</p>') + '</details>' +
+      '<div class="row" style="margin-top:10px"><button class="btn primary grow" data-act="crPrint">🖨 چاپ / ذخیره PDF</button></div></section>';
+    CR_SECS.forEach(function (s) { if (!c.off[s[0]] && spec[s[0]]) spec[s[0]].forEach(function (x) { h += crScreen(x); }); });
+    return h;
+  }
+
+  /** یک صفحه‌ی چاپی ← بلوک برای rplFlow؛ آخرین جدول صفحه‌بندی می‌شود */
+  function crChunk(sp) {
+    const th = function (cols) { return '<tr class="hd">' + cols.map(function (c) { return '<th>' + esc(c) + '</th>'; }).join('') + '</tr>'; };
+    const tr = function (r, i) { return '<tr class="' + (i % 2 ? 'alt' : '') + '">' + r.map(function (c) { return '<td>' + c + '</td>'; }).join('') + '</tr>'; };
+    const tbs = sp.tables || [], last = tbs.length ? tbs[tbs.length - 1] : null;
+    let top = '<div class="rpl-sec">' + esc(sp.title) + '</div>';
+    if (sp.cards && sp.cards.length) top += rplMeta(sp.cards.map(function (c) { return [c[0], c[1], 0]; }));
+    top += crBars(sp.bars);
+    if (sp.raw) top += sp.raw;
+    (sp.notes || []).forEach(function (n) { top += '<div class="rpl-note">' + n + '</div>'; });
+    tbs.forEach(function (t) {
+      if (t === last) return;
+      if (t.title) top += '<div class="rpl-note"><b>' + esc(t.title) + '</b></div>';
+      top += t.rows.length ? '<table class="pt-tbl rpl-det"><tbody>' + th(t.cols) + t.rows.map(tr).join('') + '</tbody></table>' : '<div class="rpl-note">' + esc(t.empty || 'موردی نیست.') + '</div>';
+    });
+    if (!last) return { top: top, head: '', units: [], tail: '' };
+    if (!last.rows.length) return { top: top + '<div class="rpl-note">' + esc(last.empty || 'موردی نیست.') + '</div>', head: '', units: [], tail: '' };
+    return { top: top, head: (last.title ? '<div class="rpl-note"><b>' + esc(last.title) + '</b></div>' : '') + '<table class="pt-tbl rpl-det"><tbody>' + th(last.cols), units: last.rows.map(tr), tail: '' };
+  }
+
+  async function crPrint() {
+    const p = S.project; if (!p) return;
+    const c = crState(), sel = CR_SECS.filter(function (s) { return !c.off[s[0]]; });
+    if (!sel.length) { toast('حداقل یک بخش را انتخاب کنید.', 'err'); return; }
+    if (!(await rptAsk({ preset: true }))) return;
+    const d = crData(), spec = crSpecs(d), date = new Date().toLocaleDateString('fa-IR');
+    const chunks = [];
+    sel.forEach(function (s) { (spec[s[0]] || []).forEach(function (x) { chunks.push(Object.assign(crChunk(x), { keep: s[0] === 'works' || s[0] === 'sum' })); }); });
+    if (!chunks.length) { toast('داده‌ای برای چاپ نیست.', 'err'); return; }
+    const pc = p.permitCfg || {};
+    const kp = function (v, l) { return '<div class="cr-cv-kpi"><b>' + v + '</b><span>' + esc(l) + '</span></div>'; };
+    const coverHtml = '<div class="cr-cover">' +
+      '<div class="cr-cv-band"><div class="cr-cv-top"><div class="cr-cv-brand">RoadStake</div><div class="cr-cv-date">' + esc(date) + '</div></div>' +
+      '<div class="cr-cv-kicker">گزارش جامع پروژه</div><div class="cr-cv-title">' + esc(p.name) + '</div>' +
+      '<div class="cr-cv-range">بازه‌ی گزارش: ' + esc(d.R ? d.R.txt : 'کل پروژه') + '</div></div>' +
+      '<div class="cr-cv-kpis">' + kp(crPctTxt(d.rep ? d.rep.overall : NaN), 'پیشرفت وزنی کل') + kp(crPctTxt(d.coveredPct), 'پوشش کیلومتری') + kp(fmtN(d.totLen) + ' m', 'طول محورها') + kp(String(d.v.n), 'تعداد خیابان') + '</div>' +
+      '<div class="cr-cv-body"><table class="cr-cv-tbl"><tbody>' + [['دستگاه نظارت / کارفرما', pc.supervisor], ['پیمانکار', pc.contractor], ['محل پروژه', pc.site || pc.region], ['شماره‌ی قرارداد', pc.contractNo], ['کد پروژه', pc.projCode], ['سیستم مختصات', rplCs(p)]].map(function (x) { return '<tr><th>' + esc(x[0]) + '</th><td>' + esc(x[1] || '—') + '</td></tr>'; }).join('') + '</tbody></table></div>' +
+      '<div class="cr-cv-foot">RoadStake • ' + esc(p.name) + ' • ' + esc(date) + '</div></div>';
+    chunks.unshift({ top: coverHtml, head: '', units: [], tail: '', own: true });
+    const foot = function () { return rplFoot([esc(p.name), 'گزارش جامع'], '§P§', '§N§'); };
+    let html = await crFlowAll(chunks, foot);
+    html = html.split('rpl-pg last').join('rpl-pg');
+    const at = html.lastIndexOf('class="rpl-pg"'); if (at >= 0) html = html.slice(0, at) + 'class="rpl-pg last"' + html.slice(at + 'class="rpl-pg"'.length);
+    const total = (html.match(/§P§/g) || []).length; let k = 0;
+    html = html.replace(/§P§/g, function () { return String(++k); }).replace(/§N§/g, String(total));
+    await rplPrint(html, slugFa(p.name) + '_گزارش-جامع');
+  }
+
   function surveyPage() {
     if (S.sf.src === 'file') return streetBar(false) + svSrcBar() + svFilePage();
     const p = P(), cx = svCtx(), r = cx.r;
@@ -9077,6 +10126,9 @@ select.inp, .inp, .cell { background: var(--card); }
     flood: { render: floodPage },
     survey: { render: surveyPage, live: svRefreshLive, after: svRefreshLive },
     density: { render: densPage },
+    worklog: { render: wlPage },
+    works: { render: worksPage },
+    creport: { render: crPage },
     export: { render: exportPage, live: exportLive, after: exportLive }
   };
 
@@ -10441,6 +11493,15 @@ select.inp, .inp, .cell { background: var(--card); }
 
   function onChange(e) {
     const el = e.target;
+    if (el.dataset.crperm) { const c = crState(); if (el.checked) delete c.permOff[el.dataset.crperm]; else c.permOff[el.dataset.crperm] = 1; render(); return; }
+    if (el.dataset.wkon) { const o = worksProject().operations.find(function (x) { return x.key === el.dataset.wkon; }); if (o) { o.enabled = el.checked; markDirty(); render(); } return; }
+    if (el.dataset.crsec) { const c = crState(); if (el.checked) delete c.off[el.dataset.crsec]; else c.off[el.dataset.crsec] = 1; render(); return; }
+    if (el.dataset.wkw) {
+      const o = worksProject().operations.find(function (x) { return x.key === el.dataset.wkw; }), v = C.toNumber(el.value);
+      if (o && fin(v) && v >= 0 && v <= 1000) { o.weight = v; markDirty(); render(); }
+      else { toast('وزن باید عددی بین ۰ تا ۱۰۰۰ باشد.', 'err'); render(); }
+      return;
+    }
     if (el.dataset.sg) {
       const p = P(), k = el.dataset.sg, i = parseInt(el.dataset.i, 10);
       if (k === 'on') p.signOn = el.checked; else if (p.signers[i]) p.signers[i][k] = el.value.trim();
@@ -11019,7 +12080,7 @@ select.inp, .inp, .cell { background: var(--card); }
         if (!name) { toast('نام خیابان را وارد کنید.', 'err'); $('#stName').focus(); break; }
         if (act === 'addStreet') {
           if (p.streets.some(function (s) { return s.name === name; }) && !(await ask('خیابانی با نام «' + esc(name) + '» وجود دارد. خیابان جداگانه‌ای ساخته شود؟', { ok: 'ایجاد' }))) break;
-          const st = { id: C.uid('st'), name: name, points: [], sections: [], layers: [], survey: [], slopeMode: 'point', mids: [] };
+          const st = { id: C.uid('st'), name: name, points: [], sections: [], layers: [], survey: [], works: [], slopeMode: 'point', mids: [] };
           p.streets.push(st); p.activeStreetId = st.id; S.ptPage = 0; S.tPage = 0; S.stakeIdx = 0;
           structural(); toast('خیابان «' + name + '» ساخته شد؛ نقاط را در آن وارد کنید.');
         } else { activeStreet().name = name; structural(); toast('نام خیابان تغییر کرد.'); }
@@ -11211,6 +12272,25 @@ select.inp, .inp, .cell { background: var(--card); }
       case 'planTipX': S.plan.xsel = null; render(); break;
       case 'planXRole': S.plan.xrole = b.dataset.k === 'b' ? 'b' : 'a'; render(); break;
       case 'densRec': densRecord(); break;
+      case 'densSide': densSideSet(b); break;
+      case 'wlChip': { const wl = wlState(), ta = $('#wlIn'), cur = (ta ? ta.value : wl.text).trim(); wl.text = (cur ? cur + ' ' : '') + b.dataset.v; wl.draft = null; render(); break; }
+      case 'wlCheck': { const wl = wlState(), ta = $('#wlIn'), txt = ta ? ta.value : wl.text; wl.text = txt; if (!txt.trim()) { toast('ابتدا شرح کار را بنویسید.', 'err'); break; } wl.draft = wlParse(txt, P()); render(); break; }
+      case 'wlSave': wlSaveFromForm(); break;
+      case 'wkAdd': worksAdd(); break;
+      case 'crRange': crState().range = b.dataset.v; render(); break;
+      case 'crPermAll': { const c2 = crState(), R2 = crRange(), on2 = b.dataset.v === '1'; (P().permits || []).forEach(function (x) { if (!crIn(R2, x.date)) return; if (on2) delete c2.permOff[x.id]; else c2.permOff[x.id] = 1; }); render(); break; }
+      case 'crApply': { const c = crState(); c.from = ($('#crFrom') || {}).value || ''; c.to = ($('#crTo') || {}).value || ''; render(); break; }
+      case 'crPrint': await crPrint(); break;
+      case 'wkDel': {
+        const st2 = activeStreet(), w = (st2.works || []).find(function (x) { return x.id === b.dataset.id; });
+        if (w && await ask('این بازه حذف شود؟', { danger: true, ok: 'حذف' })) { st2.works = st2.works.filter(function (x) { return x.id !== w.id; }); structural(); }
+        break;
+      }
+      case 'wlRange': wlState().range = b.dataset.v; render(); break;
+      case 'wlApply': { const wl = wlState(); wl.from = ($('#wlFrom') || {}).value || ''; wl.to = ($('#wlTo') || {}).value || ''; render(); break; }
+      case 'wlReport': await wlReport(); break;
+      case 'wlCancel': wlState().draft = null; render(); break;
+      case 'wlDel': { const p = P(), list = Array.isArray(p.workLog) ? p.workLog : [], i = Number(b.dataset.i); if (list[i] && await ask('این کار از گزارش حذف شود؟', { danger: true, ok: 'حذف' })) { p.workLog = list.filter(function (_, j) { return j !== i; }); saveProject(); render(); } break; }
       case 'densManual': densManual(); break;
       case 'densReport': densReport(); break;
       case 'densDel': {
